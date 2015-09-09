@@ -1,5 +1,7 @@
 package org.dolphin.lib.binaryresource;
 
+import org.dolphin.lib.Preconditions;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;

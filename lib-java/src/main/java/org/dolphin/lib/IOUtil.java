@@ -25,7 +25,7 @@ public class IOUtil {
     public static final int DEFAULT_DISK_SIZE = 20 * M;
 
 
-    // delete methods
+    /*----------------------------------- delete methods ---------------------------------*/
     public static void safeDeleteIfExists(File file) {
         try {
             deleteIfExists(file);
@@ -73,7 +73,7 @@ public class IOUtil {
     }
 
 
-    // rename methods
+    /*----------------------------------- rename methods ---------------------------------*/
     public static void renameTo(File from, File to, boolean deleteDestination) throws IOException {
         if (deleteDestination) {
             deleteIfExists(to);
@@ -91,9 +91,8 @@ public class IOUtil {
         }
     }
 
-    // close module
 
-
+    /*----------------------------------- close methods ---------------------------------*/
     public static void safeClose(Closeable closeable) {
         if (null == closeable) return;
         try {
@@ -103,8 +102,20 @@ public class IOUtil {
         }
     }
 
+    public static void closeQuietly(/*Auto*/Closeable closeable) {
+        if (closeable != null) {
+            try {
+                closeable.close();
+            } catch (RuntimeException rethrown) {
+                throw rethrown;
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /*----------------------------------- read methods ---------------------------------*/
     // parse byte[] by inputStream.将byte[]转换成InputStream
-    public static InputStream bytesToInputStream(byte[] b) {
+    public static InputStream toStream(byte[] b) {
         ByteArrayInputStream res = new ByteArrayInputStream(b);
         return res;
     }
@@ -122,7 +133,7 @@ public class IOUtil {
         FileInputStream in = null;
         try {
             in = new FileInputStream(file);
-            return readFile(in, (int) in.getChannel().size());
+            return toByteArray(in, (int) in.getChannel().size());
         } finally {
             if (in != null) {
                 in.close();
@@ -130,26 +141,7 @@ public class IOUtil {
         }
     }
 
-    /**
-     * Reads a file of the given expected size from the given input stream, if
-     * it will fit into a byte array. This method handles the case where the file
-     * size changes between when the size is read and when the contents are read
-     * from the stream.
-     */
-    static byte[] readFile(InputStream in, int expectedSize) throws IOException {
-        if (expectedSize > Integer.MAX_VALUE) {
-            throw new OutOfMemoryError("file is too large to fit in a byte array: " + expectedSize + " bytes");
-        }
-
-        // some special files may return size 0 but have content, so read
-        // the file normally in that case
-//        return expectedSize == 0
-//                ? ByteStreams.toByteArray(in)
-//                : ByteStreams.toByteArray(in, (int) expectedSize);
-        return inputStreamToBytes(in, expectedSize);
-    }
-
-    public static final byte[] inputStreamToBytes(InputStream inStream) {
+    public static final byte[] toByteArray(InputStream inStream) {
         ByteArrayOutputStream swapStream = new ByteArrayOutputStream();
         byte[] buff = new byte[100];
         int rc = 0;
@@ -164,7 +156,11 @@ public class IOUtil {
         return in2b;
     }
 
-    public static final byte[] inputStreamToBytes(InputStream inStream, int expectedSize) {
+    public static final byte[] toByteArray(InputStream inStream, int expectedSize) {
+        if (expectedSize > Integer.MAX_VALUE) {
+            throw new OutOfMemoryError("file is too large to fit in a byte array: " + expectedSize + " bytes");
+        }
+
         ByteArrayOutputStream swapStream = new ByteArrayOutputStream();
         byte[] buff = new byte[100];
         int rc = 0;
@@ -201,16 +197,7 @@ public class IOUtil {
     }
 
 
-    public static void closeQuietly(/*Auto*/Closeable closeable) {
-        if (closeable != null) {
-            try {
-                closeable.close();
-            } catch (RuntimeException rethrown) {
-                throw rethrown;
-            } catch (Exception ignored) {
-            }
-        }
-    }
+
 
     public static void throwInterruptedIoException() throws InterruptedIOException {
         // This is typically thrown in response to an
@@ -225,6 +212,7 @@ public class IOUtil {
         return primaryKey + "_" + secondaryKey;
     }
 
+    /*----------------------------------- copy methods ---------------------------------*/
     /**
      * Copies all bytes from the input stream to the output stream. Does not close or flush either
      * stream.

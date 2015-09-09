@@ -13,7 +13,7 @@ import java.util.Map;
 public class ListUtil {
     /** Returns an immutable copy of {@code list}. */
     public static <T> List<T> immutableList(List<T> list) {
-        return Collections.unmodifiableList(new ArrayList<>(list));
+        return Collections.unmodifiableList(new ArrayList<T>(list));
     }
 
     /** Returns an immutable list containing {@code elements}. */
@@ -23,6 +23,6 @@ public class ListUtil {
 
     /** Returns an immutable copy of {@code map}. */
     public static <K, V> Map<K, V> immutableMap(Map<K, V> map) {
-        return Collections.unmodifiableMap(new LinkedHashMap<>(map));
+        return Collections.unmodifiableMap(new LinkedHashMap<K, V>(map));
     }
 }
