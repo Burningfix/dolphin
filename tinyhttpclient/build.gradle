@@ -1,8 +1,6 @@
-/*
- * Copyright (C) 2015 Baidu, Inc. All Rights Reserved.
- */
 apply plugin: 'java'
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile project(':lib-java')
 }

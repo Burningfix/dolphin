@@ -1,4 +1,1 @@
-/*
- * Copyright (C) 2015 Baidu, Inc. All Rights Reserved.
- */
 include ':tinyhttpclient', ':lib-java'
