@@ -1,15 +1,14 @@
 package org.dolphin.http;
 
-import hyn.com.lib.Preconditions;
-
+import static org.dolphin.lib.Preconditions.checkNotNull;
 /**
  * Created by hanyanan on 2015/5/10.
  * The precondition for http request body.
  */
 public class HttpPreconditions {
     public static void checkUrl(String url) {
-        Preconditions.checkNotNull(url);
-        //TODO
+        checkNotNull(url);
+        // TODO
     }
 
     public static boolean invalidatesCache(String method) {

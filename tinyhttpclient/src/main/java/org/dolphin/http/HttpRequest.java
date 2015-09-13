@@ -1,13 +1,5 @@
-/*
- * Copyright (C) 2015 Baidu, Inc. All Rights Reserved.
- */
 package org.dolphin.http;
 
-
-import com.hanyanan.http.internal.HttpPreconditions;
-import com.hanyanan.http.internal.TimeStatus;
-import com.hanyanan.http.internal.TrafficStatus;
-import com.hanyanan.http.job.HttpFingerPrint;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,10 +8,8 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import hyn.com.lib.binaryresource.BinaryResource;
-
-import static hyn.com.lib.Preconditions.checkNotNull;
-import static hyn.com.lib.Preconditions.checkState;
+import static org.dolphin.lib.Preconditions.checkNotNull;
+import static org.dolphin.lib.Preconditions.checkState;
 
 /**
  * Created by hanyanan on 2015/5/13.
@@ -27,7 +17,7 @@ import static hyn.com.lib.Preconditions.checkState;
  */
 public class HttpRequest implements Cloneable {
     /**
-     * http request body, it it's a
+     * http request body, it's a
      */
     private HttpRequestBody requestBody;
 
