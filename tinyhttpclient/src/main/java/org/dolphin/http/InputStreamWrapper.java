@@ -1,5 +1,7 @@
 package org.dolphin.http;
 
+import org.dolphin.lib.exception.AbortException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -7,11 +9,11 @@ import java.net.HttpURLConnection;
 /**
  * Created by hanyanan on 2015/5/12.
  */
-public class InputStreamWrapper extends InputStream{
+class InputStreamWrapper extends InputStream{
     private final InputStream inputStream;
     private final HttpURLConnection connection;
     private long readCount = 0;
-    public InputStreamWrapper(InputStream inputStream, HttpURLConnection connection) {
+    InputStreamWrapper(InputStream inputStream, HttpURLConnection connection) {
         this.inputStream = inputStream;
         this.connection = connection;
     }
@@ -60,6 +62,13 @@ public class InputStreamWrapper extends InputStream{
         inputStream.close();
         connection.disconnect();
     }
+
+    @Override
+    protected void finalize() throws Throwable {
+        connection.disconnect();
+        super.finalize();
+    }
+
     public synchronized void mark(int readlimit) {
         inputStream.mark(readlimit);
     }
@@ -70,7 +79,7 @@ public class InputStreamWrapper extends InputStream{
         return inputStream.markSupported();
     }
 
-    protected void onRead(long readCount) throws IOException{
+    protected void onRead(long readCount) throws IOException, AbortException {
         
     }
 }

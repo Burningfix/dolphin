@@ -1,6 +1,4 @@
-package org.dolphin.http;
-
-import org.dolphin.lib.Preconditions;
+package org.dolphin.lib;
 
 import java.lang.ref.SoftReference;
 import java.text.ParsePosition;
@@ -157,6 +155,17 @@ public final class DateUtils {
     private DateUtils() {
     }
 
+    /**
+     * Formats the current date according to the RFC 1123 pattern.
+     *
+     * @return An RFC 1123 formatted date string.
+     * @see #PATTERN_RFC1123
+     */
+    public static String getCurrentTime(){
+        long time = System.currentTimeMillis();
+        Date date = new Date(time);
+        return formatDate(date);
+    }
     /**
      * A factory for {@link SimpleDateFormat}s. The instances are stored in a
      * threadlocal way because SimpleDateFormat is not threadsafe as noted in

@@ -1,6 +1,7 @@
 package org.dolphin.http;
 
-import hyn.com.lib.binaryresource.BinaryResource;
+
+import org.dolphin.lib.binaryresource.BinaryResource;
 
 /**
  * Created by hanyanan on 2015/5/25.

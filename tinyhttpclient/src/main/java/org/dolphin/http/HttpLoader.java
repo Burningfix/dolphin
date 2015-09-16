@@ -1,12 +1,15 @@
 package org.dolphin.http;
 
+import org.dolphin.lib.exception.AbortException;
+
 import java.io.IOException;
+import java.net.HttpURLConnection;
 
 
 /**
  * Created by hanyanan on 2015/5/13.
  */
-public interface HttpLoader {
+public interface HttpLoader<T extends HttpURLConnection> {
     public static final String LOG_TAG = "HttpRequest";
     public static final int HTTP_TEMP_REDIRECT = 307;
     public static final int HTTP_PERM_REDIRECT = 308;
@@ -15,169 +18,101 @@ public interface HttpLoader {
     public static final String DASHDASH = "--";
     public static final String CRLF = "\r\n";
 
+    public HttpResponse performRequest(HttpRequest httpRequest) throws Throwable;
 
     /**
-     * The callback before current request running.
+     * open url connection
      *
-     * @param request the specify http request.
-     * @throws InterruptedException interrupt current request exception.
+     * @param httpRequest the specify http request
+     * @return the http url connection.
      */
-    public void onPrepareRunning(HttpRequest request) throws InterruptedException;
+    public T openUrlConnection(HttpRequest httpRequest) throws Throwable;
 
     /**
-     * The callback after the property has been setted.
+     * Set the basic attribute to current request;
      *
-     * @param request the specify http request on running.
-     * @throws InterruptedException interrupt current request exception.
+     * @param httpRequest the specify http request
+     * @param connection
      */
-    public void onPropertyInit(HttpRequest request) throws InterruptedException;
+    public void setBaseInfo(HttpRequest httpRequest, T connection) throws Throwable;
 
     /**
-     * The callback after request param has sent to server.
+     * Set request header property.
      *
-     * @param request the specify http request on running.
-     * @throws InterruptedException interrupt current request exception.
+     * @param httpRequest the specify http request
+     * @param connection
      */
-    public void onWriteRequestHeaderFinish(HttpRequest request) throws InterruptedException;
+    public void setRequestHeaderProperty(HttpRequest httpRequest, T connection) throws Throwable;
 
     /**
-     * The progress callback for current upload transport.
+     * Send request body to server, just useful in "Post" method.
      *
-     * @param request  the specify http request on running.
-     * @param position the cursor of current position.
-     * @param count    the size of body need send to server.
-     * @throws InterruptedException interrupt current request exception.
+     * @param httpRequest the specify http request
+     * @param connection
      */
-    public void onTransportUpProgress(HttpRequest request, long position, long count) throws IOException;
+    public void sendRequestBody(HttpRequest httpRequest, T connection)throws Throwable;
 
     /**
-     * The callback when send body complete.
+     * The progress of current upload.
+     * @param httpRequest the specify http request
+     */
+    public void onTransportUpProgress(HttpRequest httpRequest, long cursor, long count) throws AbortException;
+
+    /**
+     * Return response http code from server.
+     * @param httpRequest
+     * @param connection
+     */
+    public int getResponseCode(HttpRequest httpRequest, T connection)throws Throwable;
+
+    /**
+     * Return response http message from server.
+     * @param httpRequest
+     * @param connection
+     */
+    public String getResponseMessage(HttpRequest httpRequest, T connection)throws Throwable;
+
+    /**
+     * Get the response header from server.
+     * @param httpRequest
+     * @param connection
+     * @return
+     */
+    public HttpResponseHeader getResponseHeader(HttpRequest httpRequest, T connection)throws Throwable;
+
+    /**
      *
-     * @param request the specify http request on running.
-     * @throws InterruptedException interrupt current request exception.
+     * @param httpRequest
+     * @param connection
+     * @return
+     * @throws Throwable
      */
-    public void onWriteRequestBodyFinish(HttpRequest request) throws InterruptedException;
+    public RedirectedResponse getRedirectedResponse(HttpRequest httpRequest, T connection)throws Throwable;
 
     /**
-     * The callback when get the response code from server.
+     * Redirect to next url. Any throwable will abort current request.
+     * @param httpRequest
+     * @param redirectedResponse the redirect response.
+     */
+    public HttpResponse redirectNext(HttpRequest httpRequest, RedirectedResponse redirectedResponse)throws Throwable;
+
+    /**
+     * The progress of current download action..
+     * @param httpRequest the specify http request
+     */
+    public void onTransportDownProgress(HttpRequest httpRequest, long cursor, long count) throws AbortException;
+
+    /**
      *
-     * @param request the specify http request on running.
-     * @param code    the response code from server
-     * @return the response code.
-     * @throws InterruptedException interrupt current request exception.
+     * @param httpRequest
+     * @param connection
      */
-    public int onReadResponseCode(HttpRequest request, int code) throws InterruptedException;
+    public HttpResponseBody getHttpResponseBody(HttpRequest httpRequest, T connection)throws Throwable;
 
     /**
-     * The callback after read the response from server.
      *
-     * @param request        the specify http request on running.
-     * @param responseHeader the response header from server
-     * @return return the finally response header
-     * @throws InterruptedException interrupt current request exception.
+     * @return
+     * @throws Throwable
      */
-    public HttpResponseHeader onReadResponseHeader(HttpRequest request, HttpResponseHeader responseHeader) throws InterruptedException;
-
-    /**
-     * Prepare redirect to the next url, invoke this method after finish a redirect request and before redirect to the
-     * specify url. The imlments may be throw a InterruptedException to interrupted current request..
-     *
-     * @param request            the specify http request on running.
-     * @param redirectedResponse the redirectedResponse parsed from server.
-     * @return the target redirectedResponse
-     * @throws InterruptedException to abort current request
-     */
-    public RedirectedResponse onPrepareRedirect(HttpRequest request, RedirectedResponse redirectedResponse, int currCount) throws InterruptedException;
-
-    /**
-     * The progress callback for current download transport.
-     *
-     * @param request  the specify http request on running.
-     * @param position the cursor of current position.
-     * @param count    the size of body need send to server.
-     * @throws InterruptedException interrupt current request exception.
-     */
-    public void onTransportDownProgress(HttpRequest request, long position, long count) throws IOException;
-
-    /**
-     * The callback after get request body from server.
-     *
-     * @param request      the specify http request on running.
-     * @param responseBody the body received from server.
-     * @return the finally body received from server.
-     * @throws InterruptedException interrupt current request exception.
-     */
-    public HttpResponseBody onReadRequestBodyFinish(HttpRequest request, HttpResponseBody responseBody) throws InterruptedException;
-
-    /**
-     * The callback after finish current request.
-     *
-     * @param request  the specify http request on running.
-     * @param response the response get from server.
-     * @return the finally response.
-     * @throws InterruptedException interrupt current request exception.
-     */
-    public HttpResponse onAfterRunning(HttpRequest request, HttpResponse response) throws InterruptedException;
-
-    public HttpResponse performRequest(HttpRequest request) throws Throwable;
-
-    /**
-     * A base http loader, that has add log
-     */
-    public abstract class BaseHttpLoader implements HttpLoader {
-        @Override
-        public void onPrepareRunning(HttpRequest request) throws InterruptedException {
-
-        }
-
-        @Override
-        public void onPropertyInit(HttpRequest request) throws InterruptedException {
-
-        }
-
-        @Override
-        public void onWriteRequestHeaderFinish(HttpRequest request) throws InterruptedException {
-
-        }
-
-        @Override
-        public void onTransportUpProgress(HttpRequest request, long position, long count) throws IOException {
-
-        }
-
-        @Override
-        public void onWriteRequestBodyFinish(HttpRequest request) throws InterruptedException {
-
-        }
-
-        @Override
-        public int onReadResponseCode(HttpRequest request, int code) throws InterruptedException {
-            return code;
-        }
-
-        @Override
-        public HttpResponseHeader onReadResponseHeader(HttpRequest request, HttpResponseHeader responseHeader) throws InterruptedException {
-            return responseHeader;
-        }
-
-        @Override
-        public RedirectedResponse onPrepareRedirect(HttpRequest request, RedirectedResponse redirectedResponse, int currCount) throws InterruptedException {
-            return redirectedResponse;
-        }
-
-        @Override
-        public void onTransportDownProgress(HttpRequest request, long position, long count) throws IOException {
-
-        }
-
-        @Override
-        public HttpResponseBody onReadRequestBodyFinish(HttpRequest request, HttpResponseBody responseBody) throws InterruptedException {
-            return responseBody;
-        }
-
-        @Override
-        public HttpResponse onAfterRunning(HttpRequest request, HttpResponse response) throws InterruptedException {
-            return response;
-        }
-    }
+    public HttpResponse getHttpResponse(HttpRequest httpRequest,  T connection)throws Throwable;
 }

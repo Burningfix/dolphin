@@ -1,11 +1,11 @@
 package org.dolphin.http;
 
 /**
- * Created by hanyanan on 2015/5/11.
+ * Created by dolphin on 2015/5/11.
  * Record the traffic status of current http request.
  */
-public class TrafficStatus {
-    public static final TrafficStatus sGlobalTrafficStatus = new TrafficStatus();
+public class TrafficRecorder {
+    public static final TrafficRecorder sGlobalTrafficStatus = new TrafficRecorder();
     private static final TrafficListener sTrafficListener = new TrafficListener(){
         @Override
         public void onHeadIn(long length, long cost) {
@@ -28,8 +28,8 @@ public class TrafficStatus {
         }
     };
 
-    public synchronized static TrafficStatus creator(){
-        TrafficStatus trafficStatus = new TrafficStatus();
+    public synchronized static TrafficRecorder creator(){
+        TrafficRecorder trafficStatus = new TrafficRecorder();
         trafficStatus.setListener(sTrafficListener);
         return trafficStatus;
     }
@@ -54,14 +54,14 @@ public class TrafficStatus {
     private long outBodyCost;
 
     private TrafficListener listener;
-    private TrafficStatus(){
+    private TrafficRecorder(){
         outHeadBoundSize = 0;
         outBodyBoundSize = 0;
         inHeadBoundSize = 0;
         inBodyBoundSize = 0;
     }
 
-    private TrafficStatus(TrafficStatus other) {
+    private TrafficRecorder(TrafficRecorder other) {
         outHeadBoundSize = other.outHeadBoundSize;
         outBodyBoundSize = other.outBodyBoundSize;
         inHeadBoundSize = other.inHeadBoundSize;

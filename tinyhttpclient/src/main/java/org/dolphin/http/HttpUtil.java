@@ -1,6 +1,7 @@
 package org.dolphin.http;
 
-import com.hanyanan.http.internal.DateUtils;
+
+import org.dolphin.lib.DateUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
@@ -8,16 +9,20 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created by hanyanan on 2015/5/11.
+ * Created by dolphin on 2015/5/11.
  */
 public class HttpUtil {
-    public static final byte[] CRLF = { '\r', '\n' };
+    public static final byte[] CRLF = {'\r', '\n'};
     public static final String DEFAULT_CHARSET = "utf-8";
     public static final String DEFAULT_ENCODING = "gzip";
     public static final int DEFAULT_TIMEOUT = 5000;//5s
     public static final String DEFAULT_USER_AGENT = "horizontal-version 0.0.1 :)";
     public static final String CONNECTOR = ";";
     public static final String BREAK = ":";
+
+    public static long getCurrentTime() {
+        return System.currentTimeMillis();
+    }
 
     /**
      * Returns the next index in {@code input} at or after {@code pos} that
@@ -63,7 +68,7 @@ public class HttpUtil {
     /**
      * Retrieve a charset from headers
      *
-     * @param headers An {@link Map} of headers
+     * @param headers        An {@link Map} of headers
      * @param defaultCharset Charset to return if none can be found
      * @return Returns the charset specified in the Content-Type of this header,
      * or the defaultCharset if none can be found.

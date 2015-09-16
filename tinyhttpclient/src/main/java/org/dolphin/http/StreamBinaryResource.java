@@ -1,10 +1,11 @@
 package org.dolphin.http;
 
+import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.binaryresource.BinaryResource;
+
 import java.io.IOException;
 import java.io.InputStream;
 
-import hyn.com.lib.IOUtil;
-import hyn.com.lib.binaryresource.BinaryResource;
 
 /**
  * Created by hanyanan on 2015/5/26.
@@ -19,10 +20,11 @@ public class StreamBinaryResource implements BinaryResource {
         this.inputStream = stream;
         this.size = size;
     }
+
     @Override
     public InputStream openStream() throws IOException {
         if(null != data) {
-            return IOUtil.bytesToInputStream(data);
+            return IOUtil.toStream(data);
         }
         return inputStream;
 

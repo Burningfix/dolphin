@@ -1,21 +1,23 @@
 package org.dolphin.http;
 
 
+import org.dolphin.lib.DateUtils;
+import org.dolphin.lib.ValueUtil;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import hyn.com.lib.TimeUtils;
-import hyn.com.lib.ValueUtil;
+import static org.dolphin.http.HttpUtil.DEFAULT_CHARSET;
 
 /**
- * Created by hanyanan on 2015/5/9.
+ * Created by dolphin on 2015/5/9.
  */
-public class HttpResponseHeader extends HttpHeader {
+public class HttpResponseHeader extends BaseHeader {
     private MimeType mimeType;
-    private CacheControl cacheControl;
+//    private CacheControl cacheControl;
     private Range range = null;
     public HttpResponseHeader(Map<String, List<String>> headers) {
         super(headers);
@@ -35,15 +37,15 @@ public class HttpResponseHeader extends HttpHeader {
 
 
     public String getCookie() {
-        return value(Headers.SET_COOKIE);
+        return value(Headers.SET_COOKIE.value());
     }
 
-    ////Content-Range: bytes 21010-47021/47022
+    //Content-Range: bytes 21010-47021/47022
     public Range getRange() {
         if (null != this.range) {
             return this.range;
         }
-        String range = value(Headers.CONTENT_RANGE);
+        String range = value(Headers.CONTENT_RANGE.value());
         if (null == range) return null;
         Pattern pattern = Pattern.compile("(\\d+)-(\\d+)/(\\d+)");
         Matcher m = pattern.matcher(range);
@@ -59,37 +61,45 @@ public class HttpResponseHeader extends HttpHeader {
         return this.range;
     }
 
-    public long getFullSize() {
-        Range range = getRange();
-        return range.getFullLength();
-    }
-
-
     public boolean isSupportCache() {
+        // TODO
         return false;
     }
 
     public String getCharset() {
         MimeType mimeType = getMimeType();
-        if (null == mimeType.getCharset()) return "utf-8";
+        if (null == mimeType.getCharset()) return DEFAULT_CHARSET;
         return mimeType.getCharset();
     }
 
-    //Content-Type：WEB服务器告诉浏览器自己响应的对象的类型和字符集。例如：Content-Type: text/html; charset='gb2312'
+    /**
+     * Content-Type：WEB服务器告诉浏览器自己响应的对象的类型和字符集。
+     * 例如：Content-Type: text/html; charset='gb2312'
+     */
     public String getContentType() {
         return value(Headers.CONTENT_TYPE);
     }
 
+    /**
+     * Server response :
+     * Etag    "427fe7b6442f2096dff4f92339305444"
+     * Last-Modified   Fri, 04 Sep 2009 05:55:43 GMT
+     * Client send request
+     * If-None-Match   "427fe7b6442f2096dff4f92339305444"
+     * If-Modified-Since   Fri, 04 Sep 2009 05:55:43 GMT
+     *
+     * It's recommand to send both
+     */
     public String getETag() {
         return value(Headers.E_TAG);
     }
 
-    public CacheControl getCacheControl(){
-        if(null == cacheControl) {
-            cacheControl = CacheControl.parse(this);
-        }
-        return cacheControl;
-    }
+//    public CacheControl getCacheControl(){
+//        if(null == cacheControl) {
+//            cacheControl = CacheControl.parse(this);
+//        }
+//        return cacheControl;
+//    }
     /**
      * Cache-Control：
      * 请求：
@@ -146,16 +156,16 @@ public class HttpResponseHeader extends HttpHeader {
     //Cache-Control: max-age=30
     public long getExpireTime() {
         //TODO
-        CacheControl cacheControl = getCacheControl();
-        if(null != cacheControl) {
-            int maxAge = cacheControl.maxAgeSeconds();
-            maxAge = maxAge<=0?cacheControl.sMaxAgeSeconds():maxAge;
-            if(maxAge >= 0){
-                long serverDate = getServerDate();
-                serverDate = serverDate<=0? TimeUtils.getCurrentWallClockTime():serverDate;
-                return serverDate + maxAge;
-            }
-        }
+//        CacheControl cacheControl = getCacheControl();
+//        if(null != cacheControl) {
+//            int maxAge = cacheControl.maxAgeSeconds();
+//            maxAge = maxAge<=0?cacheControl.sMaxAgeSeconds():maxAge;
+//            if(maxAge >= 0){
+//                long serverDate = getServerDate();
+//                serverDate = serverDate<=0? TimeUtils.getCurrentWallClockTime():serverDate;
+//                return serverDate + maxAge;
+//            }
+//        }
         String expire = value(Headers.EXPIRES);
         if(ValueUtil.isEmpty(expire)) return -1;
         return HttpUtil.parseDateAsEpoch(expire);
@@ -178,13 +188,13 @@ public class HttpResponseHeader extends HttpHeader {
     }
 
     /**
-     * Return the origin server to suggest a default filename
-     * The server may be provide a default file name for current resource, most of time it will be return {@code null},
-     * So client cannot depende on this value.
+     * Return the origin server suggesting filename
+     * The server may be provide a default file name for current resource, most of time it will be return
+     * {@code null}, So client cannot depend on this value.
      * </pr>
-     * The Content-Disposition identify the default file name value in http headers which come from server.
-     * Content-Disposition: attachment; filename="fname.ext". it will return the fname.ext as the default download file
-     * name.
+     * The Content-Disposition identify the default file name value in http headers which come from server. ie.
+     * <b>Content-Disposition: attachment; filename="fname.ext"</b>. it will return the "fname.ext" as the default download
+     * file name.
      * </pr>
      */
     public String getDisposition() {

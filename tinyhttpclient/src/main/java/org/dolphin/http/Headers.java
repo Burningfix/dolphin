@@ -3,7 +3,7 @@ package org.dolphin.http;
 import java.util.Locale;
 
 /**
- * Created by hanyanan on 2015/5/10.
+ * Created by dolphin on 2015/5/10.
  * https://greenbytes.de/tech/webdav/draft-ietf-httpbis-p5-range-latest.html
  * http://stackoverflow.com/questions/18315787/http-1-1-response-to-multiple-range
  */
@@ -30,16 +30,13 @@ public enum Headers {
      */
 
 
-    /* *
-     *   请求头字段                         说明	                       响应头字段
-     *      Accept	               告知服务器发送何种媒体类型	             Content-Type
-     * Accept-Language	             告知服务器发送何种语言	                 Content-Language
+    /**
+     *    请求头字段                         说明	                          响应头字段
+     *     Accept	                告知服务器发送何种媒体类型	             Content-Type
+     * Accept-Language	            告知服务器发送何种语言	                 Content-Language
      * Accept-Charset	            告知服务器发送何种字符集	             Content-Type
      * Accept-Encoding	            告知服务器采用何种压缩方式	             Content-Encoding
-     * */
-
-
-    /**
+     *
      * 在HTTP中，与字符集和字符编码相关的消息头是Accept-Charset/Content-Type，另外主区区分Accept-Charset/Accept-Encoding/Accept-Language/Content-Type/Content-Encoding/Content-Language：
      * <p/>
      * Accept-Charset：浏览器申明自己接收的字符集，这就是本文前面介绍的各种字符集和字符编码，如gb2312，utf-8（通常我们说Charset包括了相应的字符编码方案）；
@@ -83,7 +80,7 @@ public enum Headers {
     IF_UNMODIFIED_SINCE("If-Unmodified-Since"),//If-Unmodified-Since: Sat, 29 Oct 2010 19:43:31 GMT
     MAX_FORWARDS("Max-Forwards"),//Max-Forwards: 10
     PROXY_AUTHORIZATION("Proxy-Authorization"),//Proxy-Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==
-    REFERER("Referer"),//Referer: http://www.zcmhi.com/archives/71.html
+    REFERER("Referer"),//Referer: http://www.zcmhi.com/archives/71.html, used for passing http Hotlinking checking
     USER_AGENT("User-Agent"),//User-Agent: Mozilla/5.0 (Linux; X11)
     UPGRADE("Upgrade"),//Upgrade: HTTP/2.0, SHTTP/1.3, IRC/6.9, RTA/x11
 

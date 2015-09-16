@@ -1,16 +1,16 @@
 package org.dolphin.http;
 
-import com.hanyanan.http.internal.DateUtils;
-import com.hanyanan.http.internal.HttpHeader;
+
+import org.dolphin.lib.DateUtils;
 
 import java.util.Date;
 
 /**
- * Created by hanyanan on 2015/5/9.
+ * Created by dolphin on 2015/5/9.
  */
-public class HttpRequestHeader extends HttpHeader {
+public class HttpRequestHeader extends BaseHeader {
     MimeType mimeType;
-    public HttpRequestHeader(HttpHeader header) {
+    public HttpRequestHeader(BaseHeader header) {
         super(header);
         this.headers.putAll(DEFAULT_HEADERS);
     }
@@ -64,24 +64,33 @@ public class HttpRequestHeader extends HttpHeader {
         if(!supportCache) {
             setHeadProperty(Headers.CACHE_CONTROL.value(), "no-cache");
         } else {
-            setHeadProperty(Headers.CACHE_CONTROL.value(), "no-cache");
-            setHeadProperty(Headers.PRAGMA.value(), "no-cache");
+            setHeadProperty(Headers.CACHE_CONTROL.value(), "public");
+            setHeadProperty(Headers.PRAGMA.value(), "public");
         }
         return this;
     }
 
+    /**
+     * Set request charset
+     */
     public HttpRequestHeader setRequestCharset(String charset) {
         setHeadProperty(Headers.ACCEPT_CHARSET.value(), charset);
         return this;
     }
 
+    /**
+     * Set Referer property for passing server's Hotlinking checking.
+     */
     public HttpRequestHeader setReferer(String referer) {
         setHeadProperty(Headers.REFERER.value(), referer);
         return this;
     }
 
+    /**
+     * TODO
+     */
     public HttpRequestHeader setAuthorization(String name, String passwd) {
-        //TODO
+        // TODO
         return this;
     }
 
@@ -92,8 +101,8 @@ public class HttpRequestHeader extends HttpHeader {
      * Client send request
      * If-None-Match   "427fe7b6442f2096dff4f92339305444"
      * If-Modified-Since   Fri, 04 Sep 2009 05:55:43 GMT
-     * @param eTag
-     * @return
+     *
+     * It's recommand to send both
      */
     public HttpRequestHeader setETag(String eTag){
         setHeadProperty(Headers.IF_NONE_MATCH.value(), eTag);
@@ -108,9 +117,7 @@ public class HttpRequestHeader extends HttpHeader {
     }
 
     public HttpRequestHeader clone(){
-        HttpRequestHeader res = new HttpRequestHeader();
-        res.headers.putAll(this.headers);
-        res.priorHeaders.putAll(this.priorHeaders);
+        HttpRequestHeader res = new HttpRequestHeader(this);
         res.mimeType = this.mimeType;
         return res;
     }

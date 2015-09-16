@@ -70,6 +70,21 @@ public final class Preconditions {
   }
 
   /**
+   * Ensure that all object references passed as parameters to calling methods are not null.
+   * @param objects all object references will be checked.
+   */
+  public static void checkNotNulls(Object ... objects){
+    if(null == objects) {
+      throw new NullPointerException();
+    }
+    for(Object obj : objects){
+      if(null == obj) {
+        throw new NullPointerException();
+      }
+    }
+  }
+
+  /**
    * Ensures that an object reference passed as a parameter to the calling method is not null.
    *
    * @param reference an object reference

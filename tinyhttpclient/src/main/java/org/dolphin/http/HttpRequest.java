@@ -1,6 +1,8 @@
 package org.dolphin.http;
 
 
+import org.dolphin.lib.binaryresource.BinaryResource;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,7 +14,7 @@ import static org.dolphin.lib.Preconditions.checkNotNull;
 import static org.dolphin.lib.Preconditions.checkState;
 
 /**
- * Created by hanyanan on 2015/5/13.
+ * Created by dolphin on 2015/5/13.
  * The main http request.
  */
 public class HttpRequest implements Cloneable {
@@ -21,38 +23,37 @@ public class HttpRequest implements Cloneable {
      */
     private HttpRequestBody requestBody;
 
+    /**
+     * Http request header.
+     */
     private HttpRequestHeader requestHeader;
 
+    /**
+     * The raw url need to rquest.
+     */
     private final String url;
 
     //The redirect url
     private String forwardUrl;
 
+    /** Method such as Get or Post, @see{Method} */
     private final Method method;
 
+    /** Current requesr protocaol, such as Http 1.0 or 1.1 */
     private final Protocol protocol;
+
     /**
      * A monitor to record the traffic.
      */
-    private final TrafficStatus trafficStatus;
-    /**
-     * A monitor to record the http time status
-     */
-    private final TimeStatus timeStatus;
+    private final TrafficRecorder trafficStatus;
+
     /**
      * The tag user for caller identify the request.
      */
     private Object tag;
     /**  */
     private final Map<String, Object> params = new HashMap<String, Object>();
-    /**
-     * The callback bind to current request.
-     */
-    private TransportProgress transportProgress;
-    /**
-     * The finger print of current request.
-     */
-    private HttpFingerPrint fingerPrint;
+
 
     public HttpRequest(String url, Method method, Protocol protocol) {
         this.url = url;
@@ -60,8 +61,7 @@ public class HttpRequest implements Cloneable {
         this.protocol = protocol;
         this.requestBody = new HttpRequestBody();
         this.requestHeader = new HttpRequestHeader();
-        this.trafficStatus = TrafficStatus.creator();
-        this.timeStatus = new TimeStatus();
+        this.trafficStatus = TrafficRecorder.creator();
     }
 
     /**
@@ -87,23 +87,23 @@ public class HttpRequest implements Cloneable {
         this(url, Method.GET, Protocol.HTTP_1_1);
     }
 
-    public HttpRequest setTransportProgress(TransportProgress transportProgress) {
-        this.transportProgress = transportProgress;
-        return this;
-    }
-
-    public TransportProgress getTransportProgress() {
-        return transportProgress;
-    }
+//    public HttpRequest setTransportProgress(TransportProgress transportProgress) {
+//        this.transportProgress = transportProgress;
+//        return this;
+//    }
+//
+//    public TransportProgress getTransportProgress() {
+//        return transportProgress;
+//    }
 
     public HttpRequest setForwardUrl(String url) {
         this.forwardUrl = url;
         return this;
     }
 
-    public HttpFingerPrint getFingerPrint(){
-        return fingerPrint;
-    }
+//    public HttpFingerPrint getFingerPrint(){
+//        return fingerPrint;
+//    }
 
 //    public String getFingerPrint() {
 //        if (null == fingerPrint) {
@@ -112,7 +112,7 @@ public class HttpRequest implements Cloneable {
 //        return fingerPrint;
 //    }
 
-    public String getForwardUrl() {
+    public String getNextUrl() {
         return forwardUrl;
     }
 
@@ -145,7 +145,7 @@ public class HttpRequest implements Cloneable {
         return method.toString();
     }
 
-    public final TrafficStatus getTrafficStatus() {
+    public final TrafficRecorder getTrafficStatus() {
         return trafficStatus;
     }
 
@@ -219,7 +219,7 @@ public class HttpRequest implements Cloneable {
     public HttpRequest setHeadProperty(String key, String value) {
         checkNotNull(key);
         checkNotNull(value);
-        getRequestHeader().setPriorHeadProperty(key, value);
+        getRequestHeader().setHeadProperty(key, value);
         return this;
     }
 
@@ -232,6 +232,7 @@ public class HttpRequest implements Cloneable {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("[").append(getMethod().toString())
+                .append(' ')
                 .append(getLogInfo(this))
                 .append(']');
         return sb.toString();

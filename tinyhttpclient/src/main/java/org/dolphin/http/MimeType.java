@@ -1,14 +1,14 @@
 package org.dolphin.http;
 
+import org.dolphin.lib.Preconditions;
+import org.dolphin.lib.ValueUtil;
+
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import hyn.com.lib.Preconditions;
-import hyn.com.lib.ValueUtil;
 
-import static com.hanyanan.http.HttpUtil.CONNECTOR;
 
 /**
  * Created by hanyanan on 2015/5/16.
@@ -1168,7 +1168,7 @@ public class MimeType {
         if(ValueUtil.isEmpty(contentType)) {
             return new MimeType(DEFAULT_MIME_TYPE, null);
         }
-        String[] strings = contentType.split(CONNECTOR);
+        String[] strings = contentType.split(HttpUtil.CONNECTOR);
         if(strings.length < 2) return new MimeType(contentType, null);
 
         return new MimeType(strings[0], strings[1]);

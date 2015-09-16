@@ -31,4 +31,9 @@ public class RedirectedResponse {
     public String getMsg() {
         return msg;
     }
+
+    public String getForwardUrl(){
+        return this.responseHeader.getForwardUrl();
+    }
+
 }

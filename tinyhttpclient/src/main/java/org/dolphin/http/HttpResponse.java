@@ -1,11 +1,11 @@
 package org.dolphin.http;
 
+import org.dolphin.lib.IOUtil;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-
-import hyn.com.lib.IOUtil;
 
 /**
  * Created by hanyanan on 2015/5/11.
@@ -48,7 +48,7 @@ public class HttpResponse implements Closeable{
         return this;
     }
     public List<RedirectedResponse> getRedirectedResponse(){
-        return new LinkedList<>(redirectedResponse);
+        return new LinkedList<RedirectedResponse>(redirectedResponse);
     }
 //    /**
 //     * Returns the response as a string decoded with the charset of the
@@ -163,6 +163,7 @@ public class HttpResponse implements Closeable{
 
     }
 
+
     @Override public String toString() {
         return "Response{protocol="
                 + protocol
@@ -170,20 +171,10 @@ public class HttpResponse implements Closeable{
                 + code
                 + ", message="
                 + msg
+                + ", url="
+                + httpRequest.urlString()
                 + '}';
     }
-
-//    @Override public String toString() {
-//        return "Response{protocol="
-//                + protocol
-//                + ", code="
-//                + code
-//                + ", message="
-//                + msg
-//                + ", url="
-//                + httpRequest.urlString()
-//                + '}';
-//    }
 
     public void dispose(){
         synchronized (this) {
