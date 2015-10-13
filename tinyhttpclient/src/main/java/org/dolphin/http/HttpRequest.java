@@ -61,7 +61,7 @@ public class HttpRequest implements Cloneable {
         this.protocol = protocol;
         this.requestBody = new HttpRequestBody();
         this.requestHeader = new HttpRequestHeader();
-        this.trafficStatus = TrafficRecorder.creator();
+        this.trafficStatus = new TrafficRecorder.TrafficRecorderImpl();
     }
 
     /**

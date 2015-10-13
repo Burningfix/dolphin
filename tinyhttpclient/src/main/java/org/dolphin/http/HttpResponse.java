@@ -10,25 +10,35 @@ import java.util.List;
 /**
  * Created by hanyanan on 2015/5/11.
  */
-public class HttpResponse implements Closeable{
-    /** The raw http request */
+public class HttpResponse implements Closeable {
+    /**
+     * The raw http request
+     */
     private final HttpRequest httpRequest;
-    /** Http response header for current request. */
+    /**
+     * Http response header for current request.
+     */
     private final HttpResponseHeader responseHeader;
 
     private final List<RedirectedResponse> redirectedResponse = new LinkedList<RedirectedResponse>();
 
-    /** The real body which store the content response from server. */
+    /**
+     * The real body which store the content response from server.
+     */
     private HttpResponseBody bodyResource;
-    /** http resonse code */
+    /**
+     * http resonse code
+     */
     private final int code;
-    /** http status message */
+    /**
+     * http status message
+     */
     private final String msg;
 
     private final Protocol protocol;
 
     private HttpResponse(int code, String msg, HttpRequest httpRequest, Protocol protocol, HttpResponseHeader responseHeader,
-                         HttpResponseBody bodyResource){
+                         HttpResponseBody bodyResource) {
         this.code = code;
         this.msg = msg;
         this.httpRequest = httpRequest;
@@ -37,17 +47,18 @@ public class HttpResponse implements Closeable{
         this.protocol = protocol;
     }
 
-    public MimeType mimeType(){
+    public MimeType mimeType() {
         return getResponseHeader().getMimeType();
     }
 
-    public HttpResponse putRedirectedResponses(List<RedirectedResponse> redirectedResponses){
-        if(null != redirectedResponses) {
+    public HttpResponse putRedirectedResponses(List<RedirectedResponse> redirectedResponses) {
+        if (null != redirectedResponses) {
             redirectedResponse.addAll(redirectedResponses);
         }
         return this;
     }
-    public List<RedirectedResponse> getRedirectedResponse(){
+
+    public List<RedirectedResponse> getRedirectedResponse() {
         return new LinkedList<RedirectedResponse>(redirectedResponse);
     }
 //    /**
@@ -71,7 +82,7 @@ public class HttpResponse implements Closeable{
     /**
      *
      */
-    public final Protocol getProtocol(){
+    public final Protocol getProtocol() {
         return protocol;
     }
 
@@ -95,15 +106,15 @@ public class HttpResponse implements Closeable{
         return msg;
     }
 
-    public HttpResponseBody body(){
+    public HttpResponseBody body() {
         return bodyResource;
     }
 
-    public String getCookie(){
-        return  getResponseHeader().getCookie();
+    public String getCookie() {
+        return getResponseHeader().getCookie();
     }
 
-    public Range getRange(){
+    public Range getRange() {
         return getResponseHeader().getRange();
     }
 
@@ -120,19 +131,19 @@ public class HttpResponse implements Closeable{
         return getResponseHeader().getContentType();
     }
 
-    public String getETag(){
+    public String getETag() {
         return getResponseHeader().getETag();
     }
 
-    public long getExpireTime(){
+    public long getExpireTime() {
         return getResponseHeader().getExpireTime();
     }
 
-    public long getServerDate(){
+    public long getServerDate() {
         return getResponseHeader().getServerDate();
     }
 
-    public long getLastModified(){
+    public long getLastModified() {
         return getResponseHeader().getLastModified();
     }
 
@@ -141,12 +152,12 @@ public class HttpResponse implements Closeable{
      * The server may be provide a default file name for current resource, most of time it will be return {@code null},
      * So client cannot depende on this value.
      * </pr>
-     *  The Content-Disposition identify the default file name value in http headers which come from server.
-     *  Content-Disposition: attachment; filename="fname.ext". it will return the fname.ext as the default download file
-     *  name.
-     *  </pr>
+     * The Content-Disposition identify the default file name value in http headers which come from server.
+     * Content-Disposition: attachment; filename="fname.ext". it will return the fname.ext as the default download file
+     * name.
+     * </pr>
      */
-    public String getDisposition(){
+    public String getDisposition() {
         return getResponseHeader().getDisposition();
     }
 
@@ -160,11 +171,12 @@ public class HttpResponse implements Closeable{
 
     @Override
     public void close() throws IOException {
-
+        dispose();
     }
 
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "Response{protocol="
                 + protocol
                 + ", code="
@@ -176,7 +188,8 @@ public class HttpResponse implements Closeable{
                 + '}';
     }
 
-    public void dispose(){
+    public void dispose() {
+        // TODO
         synchronized (this) {
             if (null != bodyResource && bodyResource.getResource() != null) {
                 try {
@@ -196,24 +209,35 @@ public class HttpResponse implements Closeable{
     }
 
     final static class Builder {
-        /** The raw http request */
+        /**
+         * The raw http request
+         */
         private HttpRequest httpRequest;
-        /** Http response header for current request. */
+        /**
+         * Http response header for current request.
+         */
         private HttpResponseHeader responseHeader;
 
         private List<RedirectedResponse> redirectedResponses = new LinkedList<RedirectedResponse>();
 
-        /** The real body which store the content response from server. */
+        /**
+         * The real body which store the content response from server.
+         */
         private HttpResponseBody responseBody;
-        /** http resonse code */
+        /**
+         * http resonse code
+         */
         private int code;
-        /** http status message */
+        /**
+         * http status message
+         */
         private String msg;
 
         private Protocol protocol;
 
         private int redirectCount = 0;
-        Builder(HttpRequest request){
+
+        Builder(HttpRequest request) {
             this.httpRequest = request;
         }
 
@@ -227,7 +251,7 @@ public class HttpResponse implements Closeable{
             return this;
         }
 
-        public Builder addRedirectedResponse(RedirectedResponse redirectedResponse){
+        public Builder addRedirectedResponse(RedirectedResponse redirectedResponse) {
             this.redirectedResponses.add(redirectedResponse);
             return this;
         }
@@ -242,17 +266,17 @@ public class HttpResponse implements Closeable{
             return this;
         }
 
-        public Builder setBody(HttpResponseBody responseBody){
+        public Builder setBody(HttpResponseBody responseBody) {
             this.responseBody = responseBody;
             return this;
         }
 
-        public int increaseAndGetRedirectCount(){
+        public int increaseAndGetRedirectCount() {
             ++redirectCount;
             return redirectCount;
         }
 
-        HttpResponse build(){
+        HttpResponse build() {
             HttpResponse response = new HttpResponse(code, msg, httpRequest, protocol, responseHeader, responseBody);
             response.putRedirectedResponses(redirectedResponses);
             return response;

@@ -18,12 +18,12 @@ public class MainTest {
         String url = "http://httpbin.org/redirect-to";
         HttpRequest request = new HttpRequest(url, Method.GET);
         Map<String, String> params = new HashMap<String, String>();
-//        params.put("cityid", "100010000");
+        params.put("cityid", "100010000");
         params.put("url", "http://httpbin.org/get");
         request.params(params);
-//        HttpRequestBody body = new HttpRequestBody();
-//        body.add("json", new ByteArrayBinaryResource("{data:dddddddddddddddddddddddddddddddddddddddddd}".getBytes()));
-//        request.setHttpRequestBody(body);
+        HttpRequestBody body = new HttpRequestBody();
+        body.add("json", new ByteArrayBinaryResource("{data:dddddddddddddddddddddddddddddddddddddddddd}".getBytes()));
+        request.setHttpRequestBody(body);
         try {
             HttpResponse response = getLoader.performRequest(request);
             HttpLog.d("TinyHttpClient", response.getResponseHeader().string());

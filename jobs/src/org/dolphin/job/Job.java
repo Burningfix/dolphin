@@ -1,0 +1,138 @@
+package org.dolphin.job;
+
+import org.dolphin.job.operator.UntilOperator;
+
+import java.util.LinkedList;
+import java.util.List;
+
+import static org.dolphin.lib.Preconditions.checkNotNull;
+import static org.dolphin.lib.Preconditions.checkNotNulls;
+/**
+ * Created by hanyanan on 2015/9/28.
+ */
+public class Job {
+    public static final String TAG = "Job";
+
+    /**
+     * 创建一个pending的Job，每次
+     * @return
+     */
+    public static Job pending(){
+
+        return null;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    protected final List<Operator> operatorList = new LinkedList<Operator>();
+    protected JobErrorHandler errorHandler = null;
+    public final Job insert(int position, Operator operator) {
+        checkNotNull(operator);
+        operatorList.add(position, operator);
+        return this;
+    }
+
+    public final Job remove(int position) {
+        operatorList.remove(position);
+        return this;
+    }
+
+    public final Job replace(int position, Operator operator) {
+        checkNotNull(operator);
+        operatorList.remove(position);
+        operatorList.add(position, operator);
+        return this;
+    }
+
+    /**
+     * 清除当前所有Operator
+     */
+    public final Job clear() {
+        operatorList.clear();
+        return this;
+    }
+
+    /**
+     * until命令：循环执行，知道中断
+     */
+    public final Job until(Operator operator) {
+        checkNotNull(operator);
+        operatorList.add(new UntilOperator(operator));
+        return this;
+    }
+
+    /**
+     * until命令：循环执行，知道中断
+     */
+    public final Job until(Operator operator, boolean notifyNextCallback) {
+        checkNotNull(operator);
+        operatorList.add(new UntilOperator(operator, notifyNextCallback));
+        return this;
+    }
+
+    public final Job append(Operator operator) {
+        operatorList.add(operator);
+        return this;
+    }
+
+    public final Job handleError(JobErrorHandler throwable) {
+        errorHandler = throwable;
+        return this;
+    }
+
+    public final Job workOn(Scheduler scheduler) {
+
+        return this;
+    }
+
+    public final Job observerOn(Scheduler scheduler) {
+
+        return this;
+    }
+
+    public final Job subscribe(Observer observer) {
+
+        return this;
+    }
+
+    public Job abort() {
+
+        return this;
+    }
+
+
+    /**
+     * 复制一个相同的job， 包括：
+     * 1. 输入参数
+     * 2. 所有的Operators
+     * 3. 所有的Scheduler
+     * 4. JobErrorHandler
+     * 5.
+     */
+    public Job copy() {
+
+        return null;
+    }
+}

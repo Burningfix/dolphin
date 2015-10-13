@@ -1,19 +1,13 @@
 package org.dolphin.http;
 
+import org.dolphin.lib.exception.AbortException;
+
 import java.io.IOException;
 
 /**
  * Created by hanyanan on 2015/9/15.
  */
 public interface HttpRequestInterceptor {
-    /**
-     * The callback before current request running.
-     * Current request load to one thread executor
-     * @param request the specify http request.
-     * @throws InterruptedException interrupt current request executing.
-     */
-    public void onLoading(HttpRequest request) throws InterruptedException;
-
     /**
      * Prepare package request params.
      * In <b>Get</b> method need to generate a complete url, and <b>Post</b> method need to package all params to
@@ -41,7 +35,7 @@ public interface HttpRequestInterceptor {
      * @throws InterruptedException interrupt current request executing.
      * @throws IOException io exception occured..
      */
-    public void onTransportUpProgress(HttpRequest request, long position, long count) throws InterruptedException, IOException;
+    public void onTransportUpProgress(HttpRequest request, long position, long count) throws AbortException;
 
     /**
      * After request body has been send complete.
@@ -91,7 +85,7 @@ public interface HttpRequestInterceptor {
      * @param count    the size of body need send to server.
      * @throws InterruptedException interrupt current request executing.
      */
-    public void onTransportDownProgress(HttpRequest request, long position, long count) throws IOException;
+    public void onTransportDownProgress(HttpRequest request, long position, long count) throws AbortException;
 
     /**
      * The callback after get request body from server.
@@ -114,21 +108,9 @@ public interface HttpRequestInterceptor {
     public HttpResponse onAfterRunning(HttpRequest request, HttpResponse response) throws InterruptedException;
 
     /**
-     * The terminal response from server
-     * @param request the specify http request on running.
-     * @param response the terminal http response
-     */
-    public void onExit(HttpRequest request, HttpResponse response);
-
-    /**
      * A base http loader, that has add log
      */
     public abstract class BaseHttpLoader implements HttpRequestInterceptor {
-        @Override
-        public void onLoading(HttpRequest request) throws InterruptedException {
-
-        }
-
         @Override
         public void onPrepareRunning(HttpRequest request) throws InterruptedException {
 
@@ -140,7 +122,7 @@ public interface HttpRequestInterceptor {
         }
 
         @Override
-        public void onTransportUpProgress(HttpRequest request, long position, long count) throws IOException {
+        public void onTransportUpProgress(HttpRequest request, long position, long count) throws AbortException {
 
         }
 
@@ -165,7 +147,7 @@ public interface HttpRequestInterceptor {
         }
 
         @Override
-        public void onTransportDownProgress(HttpRequest request, long position, long count) throws IOException {
+        public void onTransportDownProgress(HttpRequest request, long position, long count) throws AbortException {
 
         }
 
@@ -177,11 +159,6 @@ public interface HttpRequestInterceptor {
         @Override
         public HttpResponse onAfterRunning(HttpRequest request, HttpResponse response) throws InterruptedException {
             return response;
-        }
-
-        @Override
-        public void onExit(HttpRequest request, HttpResponse response) {
-
         }
     }
 }

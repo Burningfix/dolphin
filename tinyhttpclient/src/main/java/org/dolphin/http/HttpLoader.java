@@ -115,4 +115,11 @@ public interface HttpLoader<T extends HttpURLConnection> {
      * @throws Throwable
      */
     public HttpResponse getHttpResponse(HttpRequest httpRequest,  T connection)throws Throwable;
+
+    /**
+     *
+     * @param httpRequest
+     * @return
+     */
+    public HttpRequestInterceptor getRequestInterceptor(HttpRequest httpRequest);
 }

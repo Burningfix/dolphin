@@ -4,135 +4,211 @@ package org.dolphin.http;
  * Created by dolphin on 2015/5/11.
  * Record the traffic status of current http request.
  */
-public class TrafficRecorder {
-    public static final TrafficRecorder sGlobalTrafficStatus = new TrafficRecorder();
-    private static final TrafficListener sTrafficListener = new TrafficListener(){
+public interface TrafficRecorder {
+    public static final long PRINTLN_INDIVER = 1000; // 1S
+
+    public void onBodyIn(long cursor, long length);
+
+    public void onBodyOut(long cursor, long length);
+
+    public void onBodyIn(long newReadedCount);
+
+    public void onBodyOut(long newWrittenCount);
+
+    public long getInSize();
+
+    public long getOutSize();
+
+    public long getInCost();
+
+    public long getOutCost();
+
+    public void printInLog();
+
+    public void printOutLog();
+
+    public void printLog();
+
+    public static final TrafficRecorder GLOBAL_TRAFFIC_RECORDER = new TrafficRecorderImpl() {
         @Override
-        public void onHeadIn(long length, long cost) {
-            sGlobalTrafficStatus.headIn(length, cost);
+        public synchronized void onBodyIn(long cursor, long length) {
+            throw new UnsupportedOperationException("Global traffic recorder cannot invoke onBodyIn(long cursor, long length) method.");
         }
 
         @Override
-        public void onHeadOut(long length, long cost) {
-            sGlobalTrafficStatus.headOut(length, cost);
-        }
-
-        @Override
-        public void onBodyIn(long length, long cost) {
-            sGlobalTrafficStatus.bodyIn(length, cost);
-        }
-
-        @Override
-        public void onBodyOut(long length, long cost) {
-            sGlobalTrafficStatus.bodyOut(length, cost);
+        public void onBodyOut(long cursor, long length) {
+            throw new UnsupportedOperationException("Global traffic recorder cannot invoke onBodyOut(long cursor, long length) method.");
         }
     };
 
-    public synchronized static TrafficRecorder creator(){
-        TrafficRecorder trafficStatus = new TrafficRecorder();
-        trafficStatus.setListener(sTrafficListener);
-        return trafficStatus;
-    }
+//    public static TrafficRecorder getGlobaleTrafficeRecorder(){
+//        return GLOBALE_TRAFFICE_RECORDER;
+//    }
 
 
+    public static class TrafficRecorderImpl implements TrafficRecorder {
+        private long printLogDivider = PRINTLN_INDIVER;
+        /**
+         * 第一次接受得到输入的时间戳
+         */
+        private long startInTimestamp = 0;
+        /**
+         * 第一次接受得到输出的时间戳
+         */
+        private long startOutTimestamp = 0;
+        /**
+         * 最后一次收到读取记录的时间戳
+         */
+        private long lastUpdateInTimestamp = 0;
+        /**
+         * 最后一次收到发送记录的时间戳
+         */
+        private long lastUpdateOutTimestamp = 0;
+        /**
+         * 上一次记录的位置
+         */
+        private long lastInCursor = 0;
+        /**
+         * 上一次记录的位置
+         */
+        private long lastOutCursor = 0;
 
-    /** The head size of out bound.  */
-    private long outHeadBoundSize;
-    /** The body size of out bound. */
-    private long outBodyBoundSize;
-    /** The head size of in bound. */
-    private long inHeadBoundSize;
-    /** The body size of in bound. */
-    private long inBodyBoundSize;
-    /** The time cost during head information in. */
-    private long inHeadCost;
-    /** The time cost during send head information to server. */
-    private long outHeadCost;
-    /** The time cost during body was send. */
-    private long inBodyCost;
-    /** The time cost during head sending. */
-    private long outBodyCost;
+        // 日志相关
+        /**
+         * 上次打印日志时间
+         */
+        private long lastPrintInLogTime = -1;
+        /**
+         * 上次打印日志时间
+         */
+        private long lastPrintOutLogTime = -1;
+        /**
+         * 上次打印输出的位置点
+         */
+        private long lastPrintedOutCursor = -1;
+        /**
+         * 上次打印输入的位置点
+         */
+        private long lastPrintedInCursor = -1;
 
-    private TrafficListener listener;
-    private TrafficRecorder(){
-        outHeadBoundSize = 0;
-        outBodyBoundSize = 0;
-        inHeadBoundSize = 0;
-        inBodyBoundSize = 0;
-    }
 
-    private TrafficRecorder(TrafficRecorder other) {
-        outHeadBoundSize = other.outHeadBoundSize;
-        outBodyBoundSize = other.outBodyBoundSize;
-        inHeadBoundSize = other.inHeadBoundSize;
-        inBodyBoundSize = other.inBodyBoundSize;
-    }
-
-    private void setListener(TrafficListener listener) {
-        this.listener = listener;
-    }
-    /**
-     * Return all the cost of current request.
-     */
-    public long getTrafficCost(){
-        synchronized (this) {
-            return outHeadBoundSize + outBodyBoundSize + inHeadBoundSize + inBodyBoundSize;
+        @Override
+        public synchronized void onBodyIn(long cursor, long length) {
+            if (lastInCursor >= 0) {
+                onBodyIn(cursor - lastInCursor);
+            } else {
+                onBodyIn(cursor);
+            }
         }
-    }
 
-    public void headIn(long length, long timeCost){
-        synchronized (this) {
-            inHeadBoundSize += length;
+        @Override
+        public void onBodyIn(final long newReadedCount) {
+            long time = System.currentTimeMillis();
+            if (startInTimestamp <= 0) {
+                startInTimestamp = time;
+            }
+            if (lastUpdateInTimestamp <= 0) {
+                lastUpdateInTimestamp = time;
+            }
+            lastInCursor += newReadedCount;
+            printInLog();
+            if(this != GLOBAL_TRAFFIC_RECORDER) {
+                GLOBAL_TRAFFIC_RECORDER.onBodyIn(newReadedCount);
+            }
         }
-        if(null != listener) {
-            listener.onHeadIn(length,timeCost);
-        }
-    }
-
-    public void bodyIn(long length, long timeCost) {
-        synchronized (this) {
-            inBodyBoundSize += length;
-        }
-        if(null != listener) {
-            listener.onBodyIn(length, timeCost);
-        }
-    }
-
-    public void headOut(long length, long timeCost) {
-        synchronized (this) {
-            outHeadBoundSize += length;
-        }
-        if(null != listener) {
-            listener.onHeadOut(length, timeCost);
-        }
-    }
-
-    public void bodyOut(long length, long timeCost){
-        synchronized (this) {
-            outBodyBoundSize += length;
-        }
-        if(null != listener) {
-            listener.onBodyOut(length,timeCost);
-        }
-    }
-
-    public long getInBoundSize(){
-        synchronized (this) {
-            return inBodyBoundSize + inHeadBoundSize;
-        }
-    }
-
-    public long getOutBoundSize() {
-        synchronized (this) {
-            return outBodyBoundSize + outHeadBoundSize;
-        }
-    }
 
 
-    private interface TrafficListener {
-        public void onHeadIn(long length, long cost);
-        public void onHeadOut(long length, long cost);
-        public void onBodyIn(long length, long cost);
-        public void onBodyOut(long length, long cost);
+        @Override
+        public synchronized void onBodyOut(long cursor, long length) {
+            if (lastOutCursor >= 0) {
+                onBodyIn(cursor - lastInCursor);
+            } else {
+                onBodyIn(cursor);
+            }
+        }
+
+
+        @Override
+        public void onBodyOut(final long newWrittenCount) {
+            long time = System.currentTimeMillis();
+            if (startOutTimestamp <= 0) {
+                startOutTimestamp = time;
+            }
+            if (lastUpdateOutTimestamp <= 0) {
+                lastUpdateOutTimestamp = time;
+            }
+            lastOutCursor += newWrittenCount;
+            printOutLog();
+
+            if(this != GLOBAL_TRAFFIC_RECORDER) {
+                GLOBAL_TRAFFIC_RECORDER.onBodyOut(newWrittenCount);
+            }
+        }
+
+        @Override
+        public long getInSize() {
+            return lastInCursor;
+        }
+
+        @Override
+        public long getOutSize() {
+            return lastOutCursor;
+        }
+
+        @Override
+        public long getInCost() {
+            return lastUpdateInTimestamp - startInTimestamp;
+        }
+
+        @Override
+        public long getOutCost() {
+            return lastUpdateOutTimestamp - startOutTimestamp;
+        }
+
+        @Override
+        public void printInLog() {
+            if (lastPrintInLogTime <= 0) {
+                lastPrintInLogTime = System.currentTimeMillis();
+                lastPrintedInCursor = 0;
+                return;
+            }
+            long deltaTime = System.currentTimeMillis() - lastPrintInLogTime;
+            if (deltaTime >= printLogDivider) {
+                long delta = lastInCursor - lastPrintedInCursor;
+                HttpLog.d("TinyHttpClient", "平均下载速度: " + (delta / (float) deltaTime * 1000));
+                lastPrintInLogTime = System.currentTimeMillis();
+                lastPrintedInCursor = lastInCursor;
+            }
+        }
+
+        @Override
+        public void printOutLog() {
+            if (lastPrintOutLogTime <= 0) {
+                lastPrintOutLogTime = System.currentTimeMillis();
+                lastPrintedOutCursor = 0;
+                return;
+            }
+            long deltaTime = System.currentTimeMillis() - lastPrintOutLogTime;
+            if (deltaTime >= printLogDivider) {
+                long delta = lastOutCursor - lastPrintedOutCursor;
+                HttpLog.d("TinyHttpClient", "平均上传速度: " + (delta / (float) deltaTime * 1000));
+                lastPrintOutLogTime = System.currentTimeMillis();
+                lastPrintedOutCursor = lastOutCursor;
+            }
+        }
+
+        @Override
+        public void printLog() {
+            long cost = getInCost();
+            long size = getInSize();
+            if (cost > 0) {
+                HttpLog.d("TinyHttpClient", "平均下载速度: " + (size / (float) cost * 1000));
+            }
+            cost = getOutCost();
+            size = getOutSize();
+            if (cost > 0) {
+                HttpLog.d("TinyHttpClient", "平均上传速度: " + (size / (float) cost * 1000));
+            }
+        }
     }
 }
