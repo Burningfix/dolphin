@@ -1,8 +1,5 @@
 package org.dolphin.job;
 
-import org.dolphin.rv.RvObservable;
-import org.dolphin.rv.functions.Action;
-
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -12,20 +9,20 @@ public interface Scheduler {
     /**
      * Schedules an Action for execution.
      *
-     * @param action
-     *            Action to schedule
+     * @param runnable
+     *            the Runnable to schedule
      * @return a subscription to be able to unsubscribe the action (unschedule it if not executed)
      */
-    RvObservable schedule(final Action action);
+    Subscription schedule(final Runnable runnable);
 
     /**
      * Schedules an Action for execution at some point in the future.
      * <p>
      * Note to implementors: non-positive {@code delayTime} should be regarded as undelayed schedule, i.e.,
-     * as if the {@link #schedule(org.dolphin.rv.functions.Action)} was called.
+     * as if the {@link #schedule(Runnable)} was called.
      *
-     * @param action
-     *            the Action to schedule
+     * @param runnable
+     *            the Runnable to schedule
      * @param delayTime
      *            time to wait before executing the action; non-positive values indicate an undelayed
      *            schedule
@@ -33,7 +30,7 @@ public interface Scheduler {
      *            the time unit of {@code delayTime}
      * @return a subscription to be able to unsubscribe the action (unschedule it if not executed)
      */
-    RvObservable schedule(final Action action, final long delayTime, final TimeUnit unit);
+    Subscription schedule(final Runnable runnable, final long delayTime, final TimeUnit unit);
 
     /**
      * Schedules a cancelable action to be executed periodically. This default implementation schedules
@@ -43,8 +40,8 @@ public interface Scheduler {
      * Note to implementors: non-positive {@code initialTime} and {@code period} should be regarded as
      * undelayed scheduling of the first and any subsequent executions.
      *
-     * @param action
-     *            the Action to execute periodically
+     * @param runnable
+     *            the Runnable to execute periodically
      * @param initialDelay
      *            time to wait before executing the action for the first time; non-positive values indicate
      *            an undelayed schedule
@@ -55,5 +52,5 @@ public interface Scheduler {
      *            the time unit of {@code period}
      * @return a subscription to be able to unsubscribe the action (unschedule it if not executed)
      */
-    RvObservable schedulePeriodically(final Action action, long initialDelay, long period, TimeUnit unit);
+    Subscription schedulePeriodically(final Runnable runnable, long initialDelay, long period, TimeUnit unit);
 }

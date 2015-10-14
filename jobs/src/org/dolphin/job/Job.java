@@ -4,50 +4,27 @@ import org.dolphin.job.operator.UntilOperator;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import static org.dolphin.lib.Preconditions.checkNotNull;
 import static org.dolphin.lib.Preconditions.checkNotNulls;
+
 /**
  * Created by hanyanan on 2015/9/28.
  */
 public class Job {
     public static final String TAG = "Job";
 
-    /**
-     * 创建一个pending的Job，每次
-     * @return
-     */
-    public static Job pending(){
-
-        return null;
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    protected Object object = null;
     protected final List<Operator> operatorList = new LinkedList<Operator>();
     protected JobErrorHandler errorHandler = null;
+    protected Scheduler workScheduler = null;
+    protected Scheduler observerScheduler = null;
+
+    protected Job() {
+
+    }
+
     public final Job insert(int position, Operator operator) {
         checkNotNull(operator);
         operatorList.add(position, operator);
@@ -103,12 +80,12 @@ public class Job {
     }
 
     public final Job workOn(Scheduler scheduler) {
-
+        workScheduler = scheduler;
         return this;
     }
 
     public final Job observerOn(Scheduler scheduler) {
-
+        observerScheduler = scheduler;
         return this;
     }
 
@@ -117,11 +94,14 @@ public class Job {
         return this;
     }
 
-    public Job abort() {
-
+    public final Job setTag(Object object) {
+        this.object = object;
         return this;
     }
 
+    public final String description(){
+        return "";
+    }
 
     /**
      * 复制一个相同的job， 包括：
