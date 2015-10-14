@@ -3,10 +3,8 @@ package org.dolphin.job.schedulers;
 import org.dolphin.job.Scheduler;
 import org.dolphin.job.Subscription;
 
-import java.util.ArrayDeque;
 import java.util.Timer;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by hanyanan on 2015/10/14.

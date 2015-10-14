@@ -4,7 +4,6 @@ import org.dolphin.job.operator.UntilOperator;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import static org.dolphin.lib.Preconditions.checkNotNull;
 import static org.dolphin.lib.Preconditions.checkNotNulls;
