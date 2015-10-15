@@ -67,6 +67,11 @@ public class Schedulers {
                             if (next == null) { // 运行结束
                                 break;
                             }
+                            if (job.isAborted()) { // 当前任务是否取消
+                                Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
+                                notifyCancellation();
+                                return;
+                            }
                             if (notifyNextCallback) { // 通知当前进度
                                 notifyProgress(next);
                             }
@@ -87,20 +92,54 @@ public class Schedulers {
             Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
         }
 
-        private void notifyCancellation() {
-            // TODO: notify canceled callback
-        }
-
-        private void notifyComplete(Object res) {
-            // TODO: notify complete callback
+        private Scheduler getObserverScheduler() {
             Scheduler scheduler = job.getObserverScheduler();
-            if(null == scheduler) {
-                scheduler
+            if (null == scheduler) {
+                scheduler = ImmediateScheduler.INSTANCE;
             }
+            return scheduler;
         }
 
-        private void notifyProgress(Object next) {
-            // TODO: notify onNext callback
+        private void notifyCancellation() {
+            if(job.getObserver() == null) {
+                return ;
+            }
+            getObserverScheduler().schedule(new Runnable() {
+                @Override
+                public void run() {
+                    job.getObserver().onCancellation(job);
+                }
+            });
+        }
+
+        private void notifyComplete(final Object res) {
+            if(job.getObserver() == null) {
+                return ;
+            }
+            getObserverScheduler().schedule(new Runnable() {
+                @Override
+                public void run() {
+                    if(!job.isAborted()) {
+                        job.getObserver().onCompleted(job, res);
+                    }else{
+                        job.getObserver().onCancellation(job);
+                    }
+                }
+            });
+        }
+
+        private void notifyProgress(final Object next) {
+            if(job.getObserver() == null) {
+                return ;
+            }
+            getObserverScheduler().schedule(new Runnable() {
+                @Override
+                public void run() {
+                    if(!job.isAborted()) {
+                        job.getObserver().onNext(job, next);
+                    }
+                }
+            });
         }
     }
 }

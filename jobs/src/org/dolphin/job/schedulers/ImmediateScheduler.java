@@ -9,6 +9,14 @@ import java.util.concurrent.TimeUnit;
  * Created by hanyanan on 2015/10/15.
  */
 public class ImmediateScheduler implements Scheduler {
+    public final static ImmediateScheduler INSTANCE = new ImmediateScheduler();
+
+
+    private ImmediateScheduler(){
+        // just support instance in current class, just support once.
+    }
+
+
     @Override
     public Subscription schedule(Runnable runnable) {
         runnable.run();

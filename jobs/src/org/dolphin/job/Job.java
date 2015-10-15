@@ -127,6 +127,20 @@ public class Job {
         return new LinkedList<Operator>(operatorList);
     }
 
+    /**
+     * 每个Job最多只能有一个finalize Operator，无论是成功还是失败，都会调用此Operator。
+     * @param operator，接受任何的输入，不产生任何输出。当有异常发生时（或用户abort当前Job），
+     *                  输入是异常发生前的产生的中间变量；当执行成功时则
+     *
+     * @return
+     */
+    public final Job finalize(Operator<?, Void> operator){
+
+        return this;
+    }
+
+
+
     public final Job handleError(JobErrorHandler throwable) {
         errorHandler = throwable;
         return this;
@@ -152,8 +166,13 @@ public class Job {
     }
 
     public final Job subscribe(Observer observer) {
-
+        // TODO: set observer
         return this;
+    }
+
+    public final Observer getObserver(){
+        // TODO: get observer
+        return null;
     }
 
     public final Job setTag(Object object) {
@@ -166,12 +185,12 @@ public class Job {
     }
 
     public final Job abort(){
-        // TODO
+        // TODO: dispose current job
         return this;
     }
 
     public final boolean isAborted() {
-        // TODO
+        // TODO: check if current job has been disposed.
         return false;
     }
 
