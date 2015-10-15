@@ -14,5 +14,5 @@ public interface Operator<I, R> {
      * @param input 接受的输入参数
      * @return 计算后的输出
      */
-    public R operator(I input) throws Throwable;
+    public R operate(I input) throws Throwable;
 }

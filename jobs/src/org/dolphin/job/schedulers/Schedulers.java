@@ -1,10 +1,9 @@
 package org.dolphin.job.schedulers;
 
-import org.dolphin.job.Job;
-import org.dolphin.job.Log;
-import org.dolphin.job.Scheduler;
-import org.dolphin.job.Subscription;
+import org.dolphin.job.*;
+import org.dolphin.job.operator.UntilOperator;
 
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -19,14 +18,9 @@ public class Schedulers {
     public static final Scheduler OBSERVER = null;
 
 
-    public synchronized static void loadJob(Job job) {
+    public synchronized static void loadJob(final Job job) {
         Subscription subscription = new Subscription();
-        Runnable runnable = new Runnable() {
-            @Override
-            public void run() {
-
-            }
-        };
+        JobRunnable jobRunnable = new JobRunnable(job);
 
     }
 
@@ -41,13 +35,72 @@ public class Schedulers {
 
     private static class JobRunnable implements Runnable {
         private final Job job;
-        private  JobRunnable(Job job) {
+
+        private JobRunnable(Job job) {
             this.job = job;
         }
 
         @Override
         public void run() {
-            Log.i();
+            if (job.isAborted()) {
+                notifyCancellation();
+                return;
+            }
+
+            long loadTime = System.currentTimeMillis();
+            Log.i("Scheduler", "Load Job[" + job.description() + "]");
+            List<Operator> operatorList = job.getOperatorList();
+            Object tmp = job.getInput();
+            for (Operator operator : operatorList) {
+                if (job.isAborted()) { // 当前任务是否取消
+                    Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
+                    notifyCancellation();
+                    return;
+                }
+
+                try {
+                    if (UntilOperator.class.isInstance(operator)) {
+                        UntilOperator untilOperator = (UntilOperator) operator; // 可能会执行多次
+                        boolean notifyNextCallback = untilOperator.notifyNextCallback(); // 是否需压调用onNext回调
+                        while (true) {
+                            Object next = untilOperator.operate(tmp);
+                            if (next == null) { // 运行结束
+                                break;
+                            }
+                            if (notifyNextCallback) { // 通知当前进度
+                                notifyProgress(next);
+                            }
+                        }
+                    } else {
+                        tmp = operator.operate(tmp);
+                    }
+                } catch (Throwable throwable) {
+                    throwable.printStackTrace();
+                    Log.i("Scheduler", "Failed finish Job[" + job.description() + "]");
+                    long endTime = System.currentTimeMillis();
+                    Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
+                    return;
+                }
+            }
+            long endTime = System.currentTimeMillis();
+            Log.i("Scheduler", "Success finish Job[" + job.description() + "]");
+            Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
+        }
+
+        private void notifyCancellation() {
+            // TODO: notify canceled callback
+        }
+
+        private void notifyComplete(Object res) {
+            // TODO: notify complete callback
+            Scheduler scheduler = job.getObserverScheduler();
+            if(null == scheduler) {
+                scheduler
+            }
+        }
+
+        private void notifyProgress(Object next) {
+            // TODO: notify onNext callback
         }
     }
 }
