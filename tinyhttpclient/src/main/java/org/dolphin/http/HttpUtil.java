@@ -20,6 +20,33 @@ public class HttpUtil {
     public static final String CONNECTOR = ";";
     public static final String BREAK = ":";
 
+    /**
+     * 标准的参考时间，一般是从服务器获取的标准时间，当从服务器获取标准的时间时，计算出服务器时间和当前本地时间的时间差，
+     * 一般为(服务器时间-本地时间)
+     */
+    public static Long sStandardMillTimeDifference = null;
+
+    /**
+     * 设置当前服务器和本地的时间差，计算模式为服务器时间-本地时间
+     *
+     * @param serverTime 服务器时间
+     */
+    public static synchronized void setServerTime(long serverTime) {
+        sStandardMillTimeDifference = Long.valueOf(serverTime - getCurrentTime());
+    }
+
+    /**
+     * 获得服务器时间，如果与服务器时间同步过，则计算时间差即可，否则直接返回当前时间。
+     *
+     * @return 当前server时间
+     */
+    public static synchronized long getServerTime() {
+        if (null != sStandardMillTimeDifference) {
+            return sStandardMillTimeDifference.longValue() + System.currentTimeMillis();
+        }
+        return getCurrentTime();
+    }
+
     public static long getCurrentTime() {
         return System.currentTimeMillis();
     }

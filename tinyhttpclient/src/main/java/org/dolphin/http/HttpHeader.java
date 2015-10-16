@@ -1,7 +1,7 @@
 package org.dolphin.http;
 
 import com.google.common.collect.Maps;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.SecurityUtil;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -89,7 +89,7 @@ public class HttpHeader {
                     || entry.getValue().isEmpty()) continue;
             StringBuilder value = new StringBuilder();
             for (String val : entry.getValue()) {
-                if (!ValueUtil.isEmpty(value)) {
+                if (!SecurityUtil.isEmpty(value)) {
                     value.append(CONNECTOR).append(val);
                 } else {
                     value.append(val);
@@ -122,7 +122,7 @@ public class HttpHeader {
         }
 
         String prev = headers.get(name);
-        if (!ValueUtil.isEmpty(prev.toString())) {
+        if (!SecurityUtil.isEmpty(prev.toString())) {
             headers.put(name, prev.toString() + CONNECTOR + value.toString());
         } else {
             headers.put(name, value.toString());

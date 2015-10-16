@@ -1,6 +1,6 @@
 package org.dolphin.http;
 
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.SecurityUtil;
 import org.dolphin.lib.exception.AbortException;
 
 import java.io.IOException;
@@ -302,7 +302,7 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
      */
     protected String getUrl(HttpRequest request) {
         String url = request.getNextUrl();
-        if (ValueUtil.isEmpty(url)) {
+        if (SecurityUtil.isEmpty(url)) {
             url = request.getUrl();
         }
         return url;

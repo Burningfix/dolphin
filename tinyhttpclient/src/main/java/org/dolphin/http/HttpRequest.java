@@ -36,10 +36,14 @@ public class HttpRequest implements Cloneable {
     //The redirect url
     private String forwardUrl;
 
-    /** Method such as Get or Post, @see{Method} */
+    /**
+     * Method such as Get or Post, @see{Method}
+     */
     private final Method method;
 
-    /** Current requesr protocaol, such as Http 1.0 or 1.1 */
+    /**
+     * Current requesr protocaol, such as Http 1.0 or 1.1
+     */
     private final Protocol protocol;
 
     /**
@@ -262,5 +266,18 @@ public class HttpRequest implements Cloneable {
             connectorChar = "&";
         }
         return builder.toString();
+    }
+
+    public String uniqueIdentification() {
+        if(getMethod() == Method.POST){
+            StringBuilder stringBuilder = new StringBuilder();
+            stringBuilder.append('[')
+                    .append(getUrl())
+                    .append(']')
+                    .append(System.nanoTime());
+            return stringBuilder.toString();
+        }
+
+
     }
 }

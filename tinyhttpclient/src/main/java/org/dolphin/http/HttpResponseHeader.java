@@ -2,7 +2,7 @@ package org.dolphin.http;
 
 
 import org.dolphin.lib.DateUtils;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.SecurityUtil;
 
 import java.util.Date;
 import java.util.List;
@@ -26,7 +26,7 @@ public class HttpResponseHeader extends BaseHeader {
     public MimeType getMimeType() {
         if (null == mimeType) {
             String contentType = getContentType();
-            if (!ValueUtil.isEmpty(contentType)) {
+            if (!SecurityUtil.isEmpty(contentType)) {
                 mimeType = MimeType.crateFromContentType(contentType);
             } else {
                 mimeType = MimeType.defaultMimeType();
@@ -53,9 +53,9 @@ public class HttpResponseHeader extends BaseHeader {
             String start = m.group(1);
             String end = m.group(2);
             String full = m.group(3);
-            long s = ValueUtil.parseLong(start, 0);
-            long e = ValueUtil.parseLong(end, -1);
-            long f = ValueUtil.parseLong(full, -1);
+            long s = SecurityUtil.parseLong(start, 0);
+            long e = SecurityUtil.parseLong(end, -1);
+            long f = SecurityUtil.parseLong(full, -1);
             this.range = new Range(s, e, f);
         }
         return this.range;
@@ -167,13 +167,13 @@ public class HttpResponseHeader extends BaseHeader {
 //            }
 //        }
         String expire = value(Headers.EXPIRES);
-        if(ValueUtil.isEmpty(expire)) return -1;
+        if(SecurityUtil.isEmpty(expire)) return -1;
         return HttpUtil.parseDateAsEpoch(expire);
     }
 
     public long getServerDate() {
         String serverDate = value(Headers.DATE);
-        if (ValueUtil.isEmpty(serverDate)) return -1;
+        if (SecurityUtil.isEmpty(serverDate)) return -1;
         Date date = DateUtils.parseDate(serverDate);
         if (null == date) return -1;
         return date.getTime();
@@ -181,7 +181,7 @@ public class HttpResponseHeader extends BaseHeader {
 
     public long getLastModified() {
         String serverDate = value(Headers.LAST_MODIFIED);
-        if (ValueUtil.isEmpty(serverDate)) return -1;
+        if (SecurityUtil.isEmpty(serverDate)) return -1;
         Date date = DateUtils.parseDate(serverDate);
         if (null == date) return -1;
         return date.getTime();

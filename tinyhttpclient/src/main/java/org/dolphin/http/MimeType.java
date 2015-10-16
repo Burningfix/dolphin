@@ -1,7 +1,7 @@
 package org.dolphin.http;
 
 import org.dolphin.lib.Preconditions;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.SecurityUtil;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -1062,7 +1062,7 @@ public class MimeType {
     }
 
     public static String getFileExtension(String fileName) {
-        Preconditions.checkArgument(!ValueUtil.isEmpty(fileName));
+        Preconditions.checkArgument(!SecurityUtil.isEmpty(fileName));
         int dotPos = fileName.lastIndexOf('.');
         if (0 <= dotPos) {
             return fileName.substring(dotPos + 1);
@@ -1093,8 +1093,8 @@ public class MimeType {
 //    }
 
     public MimeType(String type, String charset) {
-        if(ValueUtil.isEmpty(type)) type = DEFAULT_MIME_TYPE;
-        if(ValueUtil.isEmpty(charset)) charset = DEFAULT_CHARSET;
+        if(SecurityUtil.isEmpty(type)) type = DEFAULT_MIME_TYPE;
+        if(SecurityUtil.isEmpty(charset)) charset = DEFAULT_CHARSET;
         this.mimeType = type;
         this.charset = charset;
     }
@@ -1117,14 +1117,14 @@ public class MimeType {
     }
 
     public static MimeType createFromFileName(String fileName){
-        Preconditions.checkArgument(!ValueUtil.isEmpty(fileName));
+        Preconditions.checkArgument(!SecurityUtil.isEmpty(fileName));
         String mimeType = DEFAULT_MIME_TYPE;
         String extension = getFileExtension(fileName);
-        if(ValueUtil.isEmpty(extension)) {
+        if(SecurityUtil.isEmpty(extension)) {
             return new MimeType(DEFAULT_MIME_TYPE, null);
         }
         mimeType = getMimeTypeFromExtension(extension);
-        if(ValueUtil.isEmpty(mimeType)) {
+        if(SecurityUtil.isEmpty(mimeType)) {
             return new MimeType(DEFAULT_MIME_TYPE, null);
         }
         return new MimeType(mimeType, DEFAULT_CHARSET);
@@ -1138,9 +1138,9 @@ public class MimeType {
      * @return
      */
     public static MimeType createFromExtension(String extension, String charset){
-        Preconditions.checkArgument(!ValueUtil.isEmpty(extension));
+        Preconditions.checkArgument(!SecurityUtil.isEmpty(extension));
         String mimeType = getMimeTypeFromExtension(extension);
-        if(ValueUtil.isEmpty(mimeType)) {
+        if(SecurityUtil.isEmpty(mimeType)) {
             return new MimeType(DEFAULT_MIME_TYPE, null);
         }
         return new MimeType(mimeType, charset);
@@ -1151,7 +1151,7 @@ public class MimeType {
     }
 
     public static MimeType createUrlEncode(String charset) {
-        if(ValueUtil.isEmpty(charset)) charset = DEFAULT_CHARSET;
+        if(SecurityUtil.isEmpty(charset)) charset = DEFAULT_CHARSET;
         return new MimeType(DEFAULT_URL_MIME_TYPE, charset);
     }
 
@@ -1165,7 +1165,7 @@ public class MimeType {
      * @return
      */
     public static MimeType crateFromContentType(String contentType){
-        if(ValueUtil.isEmpty(contentType)) {
+        if(SecurityUtil.isEmpty(contentType)) {
             return new MimeType(DEFAULT_MIME_TYPE, null);
         }
         String[] strings = contentType.split(HttpUtil.CONNECTOR);

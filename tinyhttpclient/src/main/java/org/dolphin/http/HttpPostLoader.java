@@ -1,7 +1,7 @@
 package org.dolphin.http;
 
 import org.dolphin.lib.IOUtil;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.SecurityUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -132,7 +132,7 @@ public class HttpPostLoader extends HttpUrlLoader {
                 data.append(boundaryLine)
                         .append(CRLF)
                         .append("Content-Disposition: form-data;name=\"").append(entityHolder.param).append("\"");
-                if(!ValueUtil.isEmpty(entityHolder.fileName)){
+                if(!SecurityUtil.isEmpty(entityHolder.fileName)){
                     data.append(COLONSPACE).append("filename=\"").append(entityHolder.fileName).append("\"");
                 }
                 data.append(CRLF)
