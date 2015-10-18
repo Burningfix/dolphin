@@ -7,6 +7,8 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by dolphin on 2015/5/11.
@@ -49,6 +51,18 @@ public class HttpUtil {
 
     public static long getCurrentTime() {
         return System.currentTimeMillis();
+    }
+
+    /**
+     * 返回输入url的host，例如https://www.aaa.com/sdf/sdfsdf/sdf.html，则返回sdf/sdfsdf/sdf.html
+     */
+    public static String getHost(String url){
+        Pattern p=Pattern.compile("^(http://)?(https://)?[^/]+/(.*)$");
+        Matcher m=p.matcher(url);
+        if(m.find()) {
+            return m.group(3);
+        }
+        return null;
     }
 
     /**
@@ -137,7 +151,7 @@ public class HttpUtil {
     }
 
 
-    public static String generateUrl(String url, Map<String, ?> parameters) {
+    public static String generateUrl(String url, Map<String, ?> parameters, boolean needEncode) {
         if (parameters == null || url == null || parameters.isEmpty()) {
             return url;
         }
@@ -153,14 +167,21 @@ public class HttpUtil {
             connectorChar = "?";
         }
         Set<String> keySet = parameters.keySet();
-        try {
+        if (needEncode) {
+            try {
+                for (String key : keySet) {
+                    builder.append(connectorChar).append(URLEncoder.encode(key, "UTF-8")).append("=")
+                            .append(URLEncoder.encode(String.valueOf(parameters.get(key)), "UTF-8"));
+                    connectorChar = "&";
+                }
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        } else {
             for (String key : keySet) {
-                builder.append(connectorChar).append(URLEncoder.encode(key, "UTF-8")).append("=")
-                        .append(URLEncoder.encode(String.valueOf(parameters.get(key)), "UTF-8"));
+                builder.append(connectorChar).append(key).append("=").append(String.valueOf(parameters.get(key)));
                 connectorChar = "&";
             }
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
         }
         return builder.toString();
     }

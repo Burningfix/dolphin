@@ -2,12 +2,15 @@ package org.dolphin.http;
 
 import com.google.common.collect.Maps;
 import org.dolphin.lib.SecurityUtil;
+import org.dolphin.lib.ValueUtil;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
+import sun.awt.SunHints;
 
 import static org.dolphin.http.HttpUtil.BREAK;
 import static org.dolphin.http.HttpUtil.CONNECTOR;
@@ -89,7 +92,7 @@ class BaseHeader {
                     || entry.getValue().isEmpty()) continue;
             StringBuilder value = new StringBuilder();
             for (String val : entry.getValue()) {
-                if (!SecurityUtil.isEmpty(value)) {
+                if (!ValueUtil.isEmpty(value)) {
                     value.append(CONNECTOR).append(val);
                 } else {
                     value.append(val);
@@ -120,7 +123,7 @@ class BaseHeader {
         }
 
         String prev = headers.get(name);
-        if (!SecurityUtil.isEmpty(prev)) {
+        if (!ValueUtil.isEmpty(prev)) {
             headers.put(name, prev + CONNECTOR + value);
         } else {
             headers.put(name, value);

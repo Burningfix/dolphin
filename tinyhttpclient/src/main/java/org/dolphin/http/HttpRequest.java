@@ -1,11 +1,20 @@
 package org.dolphin.http;
 
 
+import org.dolphin.lib.SecurityUtil;
+import org.dolphin.lib.ValueUtil;
 import org.dolphin.lib.binaryresource.BinaryResource;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -17,7 +26,7 @@ import static org.dolphin.lib.Preconditions.checkState;
  * Created by dolphin on 2015/5/13.
  * The main http request.
  */
-public class HttpRequest implements Cloneable {
+public class HttpRequest implements Cloneable, Closeable {
     /**
      * http request body, it's a
      */
@@ -55,8 +64,11 @@ public class HttpRequest implements Cloneable {
      * The tag user for caller identify the request.
      */
     private Object tag;
-    /**  */
-    private final Map<String, Object> params = new HashMap<String, Object>();
+
+    /**
+     * 存储的是经过编码后的参数。
+     */
+    private final Map<String, Object> params = new LinkedHashMap<String, Object>();
 
 
     public HttpRequest(String url, Method method, Protocol protocol) {
@@ -183,15 +195,63 @@ public class HttpRequest implements Cloneable {
         return this;
     }
 
+    /**
+     * 当用户输入时，需要对参数进行编码。
+     *
+     * @param params
+     * @return
+     */
     public HttpRequest params(Map<String, ?> params) {
         if (null != params) {
-            this.params.putAll(params);
+            try {
+                for (Map.Entry<String, ?> param : params.entrySet()) {
+                    this.params.put(URLEncoder.encode(param.getKey(), "UTF-8"),
+                            URLEncoder.encode(param.getValue().toString(), "UTF-8"));
+                }
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
         }
         return this;
     }
 
+    /**
+     * 这是一个对外公开的，其中每个参数都是encode过的, 会附带扩展的参数和签名，签名格式为sign=xxxxxxxxxxxx(sha1)
+     *
+     * @return
+     */
     public Map<String, Object> getParams() {
-        return Collections.unmodifiableMap(params);
+        // 得到只包含host的url
+        String url = HttpUtil.getHost(getUrl());
+        if(ValueUtil.isEmpty(url)) {
+            throw new IllegalArgumentException("url["+url+"] is Illegal!");
+        }
+
+        LinkedHashMap<String, Object> outParams = new LinkedHashMap<String, Object>();
+
+        // 拷贝用户传入参数
+        outParams.putAll(this.params);
+
+        // 增加可选的扩展参数
+        Map<String, String> extensionParams = HttpExtension.getExtensionParams();
+        if (null != extensionParams) {
+            try {
+                for (Map.Entry<String, String> param : extensionParams.entrySet()) {
+                    outParams.put(URLEncoder.encode(param.getKey(), "UTF-8"),
+                            URLEncoder.encode(param.getValue().toString(), "UTF-8"));
+                }
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // 按照添加顺序生成
+        url = HttpUtil.generateUrl(url, outParams, false);
+
+        // 对url进行签名
+        outParams.put("sign", SecurityUtil.sha1(url));
+
+        return outParams;
     }
 
 
@@ -261,23 +321,63 @@ public class HttpRequest implements Cloneable {
         }
         Set<String> keySet = parameters.keySet();
         for (String key : keySet) {
-            builder.append(connectorChar).append(key).append("=")
-                    .append(parameters.get(key));
+            try {
+                builder.append(connectorChar).append(URLDecoder.decode(key, "UTF-8")).append("=")
+                        .append(URLDecoder.decode(parameters.get(key).toString(), "UTF-8"));
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
             connectorChar = "&";
         }
         return builder.toString();
     }
 
+    /**
+     * 每个request的唯一标识，用于
+     * @return
+     */
     public String uniqueIdentification() {
-        if(getMethod() == Method.POST){
+        if (getMethod() == Method.POST) {
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append('[')
                     .append(getUrl())
                     .append(']')
                     .append(System.nanoTime());
-            return stringBuilder.toString();
+            return SecurityUtil.sha1(stringBuilder.toString());
         }
 
+        if (getMethod() == Method.GET) {
+            Map<String, ?> parameters = this.params;
+            String connectorChar = "&";
+            String url = this.url;
+            StringBuilder builder = new StringBuilder(url);
+            if (url.contains("?")) {
+                if (!url.endsWith("?")) {
+                    connectorChar = "&";
+                } else {
+                    connectorChar = "";
+                }
+            } else {
+                connectorChar = "?";
+            }
+            Set<String> keySet = parameters.keySet();
+            for (String key : keySet) {
+                try {
+                    builder.append(connectorChar).append(URLDecoder.decode(key, "UTF-8")).append("=")
+                            .append(URLDecoder.decode(parameters.get(key).toString(), "UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    e.printStackTrace();
+                }
+                connectorChar = "&";
+            }
+            return SecurityUtil.sha1(builder.toString());
+        }
 
+        return SecurityUtil.sha1(String.valueOf(System.nanoTime()));
+    }
+
+    @Override
+    public void close() throws IOException {
+        // TODO: release current request's resource
     }
 }

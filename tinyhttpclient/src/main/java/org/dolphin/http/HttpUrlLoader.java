@@ -1,6 +1,7 @@
 package org.dolphin.http;
 
 import org.dolphin.lib.SecurityUtil;
+import org.dolphin.lib.ValueUtil;
 import org.dolphin.lib.exception.AbortException;
 
 import java.io.IOException;
@@ -11,6 +12,8 @@ import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import sun.awt.SunHints;
 
 import static java.net.HttpURLConnection.HTTP_MOVED_PERM;
 import static java.net.HttpURLConnection.HTTP_MOVED_TEMP;
@@ -302,7 +305,7 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
      */
     protected String getUrl(HttpRequest request) {
         String url = request.getNextUrl();
-        if (SecurityUtil.isEmpty(url)) {
+        if (ValueUtil.isEmpty(url)) {
             url = request.getUrl();
         }
         return url;

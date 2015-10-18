@@ -4,6 +4,8 @@ import com.google.common.collect.Lists;
 import org.dolphin.job.Operator;
 import org.dolphin.job.tuple.Tuples;
 
+import java.util.Iterator;
+
 /**
  * Created by hanyanan on 2015/10/15.
  * <p/>
@@ -13,7 +15,7 @@ import org.dolphin.job.tuple.Tuples;
 public class OperatorPackager implements Operator {
     private final Operator[] operators;
 
-    public OperatorPackager(Operator... operators) {
+    public OperatorPackager(Iterator<Operator> operators) {
         this.operators = Lists.newArrayList(operators).toArray(new Operator[]{});
     }
 

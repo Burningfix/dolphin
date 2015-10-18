@@ -2,6 +2,7 @@ package org.dolphin.lib;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
@@ -101,7 +102,7 @@ public class SecurityUtil {
     /**
      * 根据appid、token、lol以及时间戳来生成签名
      */
-    public String generateSignature(Object... params) {
+    public String generateSignature(Object ... params) {
         if (null == params || params.length <= 0) {
             throw new IllegalArgumentException("");
         }
@@ -222,5 +223,18 @@ public class SecurityUtil {
             e.printStackTrace();
         }
         return null;
+    }
+
+
+    public static void main(String[] argv) {
+        String src = "Test";
+        String key = "123";
+        System.out.println("Raw data: " + src + "\tKey: " + key);
+        System.out.println("SHA1 data: " + sha1(src));
+        System.out.println("Md5 data: " + md5(src));
+        System.out.println("Md5_16 data: " + md5_16(src));
+        String aes = aesEncrypt(src, key);
+        System.out.println("Aes data: " + aes);
+        System.out.println("Aes Decode data: " + decrypt(aes, key));
     }
 }

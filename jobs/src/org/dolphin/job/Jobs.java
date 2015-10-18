@@ -13,4 +13,9 @@ public class Jobs {
     public static Job zip(Job... jobs) {
         return null;
     }
+
+    public static Job pipeline(Job ... jobs){
+
+        return null;
+    }
 }

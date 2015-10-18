@@ -11,8 +11,8 @@ public class HttpGetLoader extends HttpUrlLoader {
     @Override
     protected String getUrl(HttpRequest request) {
         String url = super.getUrl(request);
-        url = HttpUtil.generateUrl(url, request.getParams());
-        HttpLog.d("TinyHttpClient","getUrl "+url);
+        url = HttpUtil.generateUrl(url, request.getParams(), false);
+        HttpLog.d("TinyHttpClient", "getUrl " + url);
         return url;
     }
 }

@@ -8,8 +8,13 @@ import org.dolphin.job.Operator;
 public class UntilOperator<I, R> implements Operator<I, R> {
     /** 原始的操作符 */
     private final Operator<I, R> rawOperator;
-    /** 是否需要回调onext接口 {@link org.dolphin.job.Observer#onNext(Object)} */
+    /** 是否需要回调onNext接口 {@link org.dolphin.job.Observer#onNext(Object)} */
     private final boolean needNotifyNext;
+
+    /**
+     * 上一次返回是否是空值
+     */
+    private boolean isLastReturnedNull = false;
     public UntilOperator(Operator<I, R> operator){
         rawOperator = operator;
         needNotifyNext = false;
@@ -27,10 +32,16 @@ public class UntilOperator<I, R> implements Operator<I, R> {
      * @throws Throwable
      */
     public R operate(I input) throws Throwable {
-        return rawOperator.operate(input);
+        R res = rawOperator.operate(input);
+        isLastReturnedNull = null == res;
+        return res;
     }
 
     public boolean notifyNextCallback(){
         return needNotifyNext;
+    }
+
+    final boolean isLastReturnNull(){
+        return isLastReturnedNull;
     }
 }
