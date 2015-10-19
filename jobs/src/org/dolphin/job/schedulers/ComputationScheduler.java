@@ -1,7 +1,5 @@
 package org.dolphin.job.schedulers;
 
-import org.dolphin.job.Scheduler;
-
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,4 +29,5 @@ public class ComputationScheduler extends BaseScheduler implements Scheduler {
     public static final Executor THREAD_POOL_EXECUTOR
             = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
             TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
+    public static ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool()
 }

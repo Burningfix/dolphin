@@ -3,6 +3,7 @@ package org.dolphin.job;
 import org.dolphin.job.operator.JobOperatorIterator;
 import org.dolphin.job.operator.OperatorPackager;
 import org.dolphin.job.operator.UntilOperator;
+import org.dolphin.job.schedulers.Scheduler;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -62,6 +63,10 @@ public class Job {
 
     public final Object getInput() {
         return input;
+    }
+
+    public final Object getOutput(){
+        return output;
     }
 
     /**

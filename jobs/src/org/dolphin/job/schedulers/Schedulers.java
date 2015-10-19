@@ -13,10 +13,8 @@ import org.dolphin.lib.IOUtil;
 
 import java.io.Closeable;
 import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.WeakHashMap;
+import java.util.concurrent.*;
 
 /**
  * Created by hanyanan on 2015/10/13.
@@ -27,20 +25,42 @@ public class Schedulers {
     public static final Scheduler COMPUTATION_SCHEDULER = null;
     public static final Scheduler OBSERVER = null;
 
+    private static final WeakHashMap<Object, Subscription> sJobReference = new WeakHashMap<Object, Subscription>();
 
     public synchronized static void loadJob(final Job job) {
-        Subscription subscription = new Subscription();
         JobRunnable jobRunnable = new JobRunnable(job);
-
+        Subscription subscription = getWorkScheduler(job).schedule(jobRunnable);
+        sJobReference.put(job, subscription);
     }
 
-
     public synchronized static void loadJob(Job job, long delayTime, TimeUnit unit) {
-
+        JobRunnable jobRunnable = new JobRunnable(job);
+        Subscription subscription = getWorkScheduler(job).schedule(jobRunnable, delayTime, unit);
+        sJobReference.put(job, subscription);
     }
 
     public synchronized static void loadJob(Job job, long initialDelay, long period, TimeUnit unit) {
+        JobRunnable jobRunnable = new JobRunnable(job);
+        Subscription subscription = getWorkScheduler(job).schedulePeriodically(jobRunnable, initialDelay, period, unit);
+        sJobReference.put(job, subscription);
+    }
 
+    public synchronized static void abort(Job job) {
+        Subscription subscription = sJobReference.get(job);
+        if(!subscription.isUnsubscription()) {
+            subscription.unsubscription();
+        }
+    }
+
+    /**
+     * Get default work schedule for specify job.
+     */
+    private static Scheduler getWorkScheduler(final Job job) {
+        Scheduler scheduler = job.getWorkScheduler();
+        if(null == scheduler) {
+            return COMPUTATION_SCHEDULER;
+        }
+        return scheduler;
     }
 
     private static class JobRunnable implements Runnable {
@@ -48,60 +68,6 @@ public class Schedulers {
 
         private JobRunnable(Job job) {
             this.job = job;
-        }
-
-        @Override
-        public void run() {
-            if (job.isAborted()) {
-                notifyCancellation();
-                return;
-            }
-
-            long loadTime = System.currentTimeMillis();
-            Log.i("Scheduler", "Load Job[" + job.description() + "]");
-            Iterator<Operator> operatorList = job.getOperatorList();
-            Object tmp = job.getInput();
-            while (operatorList.hasNext()) {
-                Operator operator = operatorList.next();
-                if (job.isAborted()) { // 当前任务是否取消
-                    Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
-                    releaseResource(tmp);
-                    notifyCancellation();
-                    return;
-                }
-
-
-                try {
-                    if (UntilOperator.class.isInstance(operator)) {
-                        UntilOperator untilOperator = (UntilOperator) operator; // 可能会执行多次
-                        boolean notifyNextCallback = untilOperator.notifyNextCallback(); // 是否需压调用onNext回调
-                        while (true) {
-                            Object next = untilOperator.operate(tmp);
-                            if (job.isAborted()) { // 当前任务是否取消
-                                Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
-                                releaseResource(tmp);
-                                notifyCancellation();
-                                return;
-                            }
-                            if (notifyNextCallback) { // 通知当前进度
-                                notifyProgress(next);
-                            }
-                        }
-                    } else {
-                        tmp = operator.operate(tmp);
-                    }
-                } catch (Throwable throwable) {
-                    throwable.printStackTrace();
-                    Log.i("Scheduler", "Failed finish Job[" + job.description() + "]");
-                    releaseResource(tmp);
-                    long endTime = System.currentTimeMillis();
-                    Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
-                    return;
-                }
-            }
-            long endTime = System.currentTimeMillis();
-            Log.i("Scheduler", "Success finish Job[" + job.description() + "]");
-            Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
         }
 
         private Scheduler getObserverScheduler() {
@@ -168,6 +134,60 @@ public class Schedulers {
                     }
                 }
             });
+        }
+
+        @Override
+        public void run() {
+            if (job.isAborted()) {
+                notifyCancellation();
+                return ;
+            }
+
+            long loadTime = System.currentTimeMillis();
+            Log.i("Scheduler", "Load Job[" + job.description() + "]");
+            Iterator<Operator> operatorList = job.getOperatorList();
+            Object tmp = job.getInput();
+            while (operatorList.hasNext()) {
+                Operator operator = operatorList.next();
+                if (job.isAborted()) { // 当前任务是否取消
+                    Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
+                    releaseResource(tmp);
+                    notifyCancellation();
+                    return ;
+                }
+
+
+                try {
+                    if (UntilOperator.class.isInstance(operator)) {
+                        UntilOperator untilOperator = (UntilOperator) operator; // 可能会执行多次
+                        boolean notifyNextCallback = untilOperator.notifyNextCallback(); // 是否需压调用onNext回调
+                        while (true) {
+                            Object next = untilOperator.operate(tmp);
+                            if (job.isAborted()) { // 当前任务是否取消
+                                Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
+                                releaseResource(tmp);
+                                notifyCancellation();
+                                return ;
+                            }
+                            if (notifyNextCallback) { // 通知当前进度
+                                notifyProgress(next);
+                            }
+                        }
+                    } else {
+                        tmp = operator.operate(tmp);
+                    }
+                } catch (Throwable throwable) {
+                    throwable.printStackTrace();
+                    Log.i("Scheduler", "Failed finish Job[" + job.description() + "]");
+                    releaseResource(tmp);
+                    long endTime = System.currentTimeMillis();
+                    Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
+                    return ;
+                }
+            }
+            long endTime = System.currentTimeMillis();
+            Log.i("Scheduler", "Success finish Job[" + job.description() + "]");
+            Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
         }
     }
 

@@ -1,8 +1,5 @@
 package org.dolphin.job.schedulers;
 
-import org.dolphin.job.Scheduler;
-import org.dolphin.job.Subscription;
-
 import java.util.concurrent.TimeUnit;
 
 /**
