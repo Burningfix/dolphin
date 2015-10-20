@@ -13,15 +13,15 @@ public class ComputationScheduler extends BaseScheduler implements Scheduler {
     private static final int KEEP_ALIVE = 1;
 
     private static final ThreadFactory sThreadFactory = new ThreadFactory() {
-        private final AtomicInteger mCount = new AtomicInteger(1);
+        private final AtomicInteger count = new AtomicInteger(1);
 
         public Thread newThread(Runnable r) {
-            return new Thread(r, "BaseScheduler #" + mCount.getAndIncrement());
+            return new Thread(r, "ComputationScheduler #" + count.getAndIncrement());
         }
     };
 
     private static final BlockingQueue<Runnable> sPoolWorkQueue =
-            new LinkedBlockingQueue<Runnable>(128);
+            new PriorityBlockingQueue<Runnable>(128);
 
     /**
      * An {@link Executor} that can be used to execute tasks in parallel.
@@ -29,5 +29,9 @@ public class ComputationScheduler extends BaseScheduler implements Scheduler {
     public static final Executor THREAD_POOL_EXECUTOR
             = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
             TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
-    public static ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool()
+
+    RejectedExecutionHandler rejectedExecutionHandler = null;
+
+//    public static ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool()
+
 }

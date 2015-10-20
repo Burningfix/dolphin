@@ -18,4 +18,14 @@ public class Jobs {
 
         return null;
     }
+
+    public static Job front(Job job){
+
+        return job;
+    }
+
+    public static Job back(Job job) {
+
+        return job;
+    }
 }
