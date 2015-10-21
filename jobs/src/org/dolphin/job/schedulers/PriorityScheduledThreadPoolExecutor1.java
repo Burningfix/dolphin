@@ -6,24 +6,11 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Created by hanyanan on 2015/10/20.
+ * Created by hanyanan on 2015/10/21.
  */
-public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExecutor
+public class PriorityScheduledThreadPoolExecutor1 extends PausableThreadPoolExecutor
         implements ScheduledExecutorService {
-    /**
-     * False if should cancel/suppress periodic tasks on shutdown.
-     */
-    private volatile boolean continueExistingPeriodicTasksAfterShutdown;
-
-    /**
-     * False if should cancel non-periodic tasks on shutdown.
-     */
-    private volatile boolean executeExistingDelayedTasksAfterShutdown = true;
-
-    /**
-     * True if ScheduledFutureTask.cancel should remove from queue
-     */
-    private volatile boolean removeOnCancel = false;
+    private static final String TAG = "PriorityScheduledThreadPoolExecutor";
 
     /**
      * Sequence number to break scheduling ties, and in turn to
@@ -39,12 +26,16 @@ public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExec
     }
 
     private class ScheduledFutureTask<V>
-            extends FutureTask<V> implements RunnableScheduledFuture<V> {
+            extends FutureTask<V> implements RunnableScheduledFuture<V>, Comparable {
 
-        /** Sequence number to break ties FIFO */
+        /**
+         * Sequence number to break ties FIFO
+         */
         private final long sequenceNumber;
 
-        /** The time the task is enabled to execute in nanoTime units */
+        /**
+         * The time the task is enabled to execute in nanoTime units
+         */
         private long time;
 
         /**
@@ -55,13 +46,18 @@ public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExec
          */
         private final long period;
 
-        /** The actual task to be re-enqueued by reExecutePeriodic */
+        /**
+         * The actual task to be re-enqueued by reExecutePeriodic
+         */
         RunnableScheduledFuture<V> outerTask = this;
 
         /**
          * Index into delay queue, to support faster cancellation.
          */
         int heapIndex;
+
+
+        private Object input;
 
         /**
          * Creates a one-shot action with given nanoTime-based trigger time.
@@ -70,6 +66,7 @@ public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExec
             super(r, result);
             this.time = ns;
             this.period = 0;
+            this.input = r;
             this.sequenceNumber = sequencer.getAndIncrement();
         }
 
@@ -80,6 +77,7 @@ public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExec
             super(r, result);
             this.time = ns;
             this.period = period;
+            this.input = r;
             this.sequenceNumber = sequencer.getAndIncrement();
         }
 
@@ -90,6 +88,7 @@ public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExec
             super(callable);
             this.time = ns;
             this.period = 0;
+            this.input = callable;
             this.sequenceNumber = sequencer.getAndIncrement();
         }
 
@@ -97,24 +96,46 @@ public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExec
             return unit.convert(time - now(), TimeUnit.NANOSECONDS);
         }
 
+
+        /**
+         * 1. 先比对运行时间；
+         * 2. 在比较输入
+         * 3. 最后比较序列号
+         *
+         * @param other
+         * @return
+         */
         public int compareTo(Delayed other) {
             if (other == this) // compare zero ONLY if same object
                 return 0;
+            // 比较运行时间
+            long diff = getDelay(TimeUnit.NANOSECONDS) - other.getDelay(TimeUnit.NANOSECONDS);
+            if (diff < 0)
+                return -1;
+            else if (diff > 0)
+                return 1;
+
+
             if (other instanceof ScheduledFutureTask) {
-                ScheduledFutureTask<?> x = (ScheduledFutureTask<?>)other;
-                long diff = time - x.time;
-                if (diff < 0)
-                    return -1;
-                else if (diff > 0)
-                    return 1;
-                else if (sequenceNumber < x.sequenceNumber)
+                // 对输入进行比较
+                ScheduledFutureTask<?> x = (ScheduledFutureTask<?>) other;
+                Object in1 = input;
+                Object in2 = x.input;
+                if (Comparable.class.isInstance(in1) && Comparable.class.isInstance(in2)) {
+                    int res = ((Comparable) in1).compareTo(in2);
+                    if (res != 0) {
+                        return res;
+                    }
+                }
+
+                // 最后比较序列号
+                if (sequenceNumber < x.sequenceNumber)
                     return -1;
                 else
                     return 1;
             }
-            long d = (getDelay(TimeUnit.NANOSECONDS) -
-                    other.getDelay(TimeUnit.NANOSECONDS));
-            return (d == 0) ? 0 : ((d < 0) ? -1 : 1);
+
+            return 0;
         }
 
         /**
@@ -160,140 +181,27 @@ public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExec
         }
     }
 
-    /**
-     * Returns the trigger time of a delayed action.
-     */
-    private long triggerTime(long delay, TimeUnit unit) {
-        return triggerTime(unit.toNanos((delay < 0) ? 0 : delay));
-    }
 
-    /**
-     * Returns the trigger time of a delayed action.
-     */
-    long triggerTime(long delay) {
-        return now() +
-                ((delay < (Long.MAX_VALUE >> 1)) ? delay : overflowFree(delay));
-    }
-
-    /**
-     * Constrains the values of all delays in the queue to be within
-     * Long.MAX_VALUE of each other, to avoid overflow in compareTo.
-     * This may occur if a task is eligible to be dequeued, but has
-     * not yet been, while some other task is added with a delay of
-     * Long.MAX_VALUE.
-     */
-    private long overflowFree(long delay) {
-        Delayed head = (Delayed) super.getQueue().peek();
-        if (head != null) {
-            long headDelay = head.getDelay(TimeUnit.NANOSECONDS);
-            if (headDelay < 0 && (delay - headDelay < 0))
-                delay = Long.MAX_VALUE + headDelay;
-        }
-        return delay;
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    public MyPrioritySchduledThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
+    public PriorityScheduledThreadPoolExecutor1(int corePoolSize, int maximumPoolSize,
+                                                long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
     }
 
-    public MyPrioritySchduledThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
+    public PriorityScheduledThreadPoolExecutor1(int corePoolSize, int maximumPoolSize,
+                                                long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue,
+                                                ThreadFactory threadFactory) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
     }
 
-    public MyPrioritySchduledThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, RejectedExecutionHandler handler) {
+    public PriorityScheduledThreadPoolExecutor1(int corePoolSize, int maximumPoolSize,
+                                                long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue,
+                                                RejectedExecutionHandler handler) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, handler);
     }
 
-    public MyPrioritySchduledThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
+    public PriorityScheduledThreadPoolExecutor1(int corePoolSize, int maximumPoolSize,
+                                                long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue,
+                                                ThreadFactory threadFactory, RejectedExecutionHandler handler) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory, handler);
     }
 
@@ -320,16 +228,4 @@ public class MyPrioritySchduledThreadPoolExecutor extends PausableThreadPoolExec
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         return null;
     }
-
-
-
-
-
-
-
-
-
-
-
-
 }
