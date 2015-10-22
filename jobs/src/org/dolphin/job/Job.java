@@ -9,14 +9,16 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.dolphin.lib.Preconditions.checkNotNull;
 
 /**
  * Created by hanyanan on 2015/9/28.
  */
-public class Job {
+public class Job implements Comparable<Job> {
     public static final String TAG = "Job";
+    public long sequence = System.nanoTime();
 
     /**
      * 创建一个pending的Job，每次
@@ -74,6 +76,16 @@ public class Job {
      */
     public final Job clear() {
         operatorList.clear();
+        return this;
+    }
+
+    public Job delay(long millTimes) {
+
+        return this;
+    }
+
+    public Job delay(long delay, TimeUnit timeUnit) {
+
         return this;
     }
 
@@ -177,7 +189,12 @@ public class Job {
         return this;
     }
 
-    public final String description() {
+    public Job description(String description){
+        // TODO: storage current description
+        return this;
+    }
+
+    public String description() {
         return "";
     }
 
@@ -202,5 +219,11 @@ public class Job {
     public Job copy() {
 
         return null;
+    }
+
+    @Override
+    public int compareTo(Job o) {
+        long diff = sequence - o.sequence;
+        diff<0?-1:(diff==0?0:1);
     }
 }

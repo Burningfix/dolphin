@@ -20,8 +20,8 @@ public class ComputationScheduler extends BaseScheduler implements Scheduler {
         }
     };
 
-    private static final BlockingQueue<Runnable> sPoolWorkQueue =
-            new PriorityBlockingQueue<Runnable>(128);
+    private static final BlockingQueue<Delayed> sPoolWorkQueue =
+            new DelayedPriorityBlockingQueue<Delayed>();
 
     /**
      * An {@link Executor} that can be used to execute tasks in parallel.

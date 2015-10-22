@@ -104,7 +104,7 @@ public class PriorityScheduledExecutorServerTest {
         for(ComparableRunnable runnable : runnables) {
 //            int cmd = Math.abs(random.nextInt()) % 3;
             Future future;
-            int cmd = 0;
+            int cmd = 2;
             switch (cmd) {
                 case 0: // 直接运行
                     System.out.println("Runnable" + runnable.sequence + " Normal " + now());
