@@ -150,9 +150,9 @@ public class DelayedPriorityBlockingQueue<T extends Delayed> extends AbstractQue
         try {
             this.queue.add(t);
             T first = this.queue.get(0);
-            if (t == first) {
+//            if (t == first) {
                 available.signalAll();
-            }
+//            }
         } finally {
             lock.unlock();
         }
