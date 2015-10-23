@@ -8,14 +8,12 @@ import java.util.concurrent.*;
 /**
  * Created by hanyanan on 2015/10/14.
  */
-public class BaseScheduler implements Scheduler {
+public abstract class BaseScheduler implements Scheduler {
 
     /**
      * Return work executor of current scheduler.
      * */
-    public ScheduledExecutorService getWorkExecutor(){
-        return null;
-    }
+    public abstract ScheduledExecutorService getWorkExecutor();
 
     @Override
     public Subscription schedule(Runnable runnable) {
@@ -26,7 +24,6 @@ public class BaseScheduler implements Scheduler {
 
     @Override
     public Subscription schedule(Runnable runnable, long delayTime, TimeUnit unit) {
-        long delayMillTimes = unit.toMillis(delayTime);
         ScheduledExecutorService executor = getWorkExecutor();
         final Future future = executor.schedule(runnable, delayTime, unit);
         return new FutureSubscription(future);
@@ -34,7 +31,9 @@ public class BaseScheduler implements Scheduler {
 
     @Override
     public Subscription schedulePeriodically(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
-        return null;
+        ScheduledExecutorService executor = getWorkExecutor();
+        final Future future = executor.scheduleAtFixedRate(runnable, initialDelay, period, unit);
+        return new FutureSubscription(future);
     }
 
     private static class FutureSubscription implements Subscription {

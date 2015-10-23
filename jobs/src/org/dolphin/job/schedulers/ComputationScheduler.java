@@ -20,18 +20,36 @@ public class ComputationScheduler extends BaseScheduler implements Scheduler {
         }
     };
 
-    private static final BlockingQueue<Delayed> sPoolWorkQueue =
-            new DelayedPriorityBlockingQueue<Delayed>();
+    private static final BlockingQueue sPoolWorkQueue =
+            new DelayedPriorityBlockingQueue();
+
+    public static RejectedExecutionHandler sRejectedExecutionHandler = new RejectedExecutionHandler() {
+        @Override
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+
+        }
+    };
 
     /**
      * An {@link Executor} that can be used to execute tasks in parallel.
      */
-    public static final Executor THREAD_POOL_EXECUTOR
-            = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
-            TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory);
+    public static final PriorityScheduledThreadPoolExecutor THREAD_POOL_EXECUTOR
+            = new PriorityScheduledThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE,
+            TimeUnit.SECONDS, sPoolWorkQueue, sThreadFactory, sRejectedExecutionHandler);
 
-    RejectedExecutionHandler rejectedExecutionHandler = null;
 
-//    public static ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool()
+    @Override
+    public ScheduledExecutorService getWorkExecutor() {
+        return THREAD_POOL_EXECUTOR;
+    }
 
+    @Override
+    public void pause() {
+        THREAD_POOL_EXECUTOR.pause();
+    }
+
+    @Override
+    public void resume() {
+        THREAD_POOL_EXECUTOR.resume();
+    }
 }

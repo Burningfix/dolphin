@@ -9,11 +9,11 @@ import java.util.List;
  * Created by yananh on 2015/10/18.
  */
 public class JobOperatorIterator implements Iterator<Operator> {
-    private final List<Operator> operatorList = new LinkedList<Operator>();
+    private final List<Operator> operatorList;
     private int currCursor = 0;
 
     public JobOperatorIterator(List<Operator> operatorList) {
-        this.operatorList.addAll(operatorList);
+        this.operatorList = operatorList;
     }
 
     @Override
@@ -46,6 +46,8 @@ public class JobOperatorIterator implements Iterator<Operator> {
                     currCursor++;
                     return next();
                 }
+            }else{
+                currCursor++;
             }
 
             return operator;

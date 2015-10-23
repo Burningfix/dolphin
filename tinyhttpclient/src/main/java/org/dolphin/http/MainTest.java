@@ -31,13 +31,13 @@ public class MainTest {
                 System.out.println(response.toString());
                 return;
             }
-BinaryResource resource = response.body().getResource();
-InputStream stream = resource.openStream();
-byte[] data = IOUtil.getBytesFromStream(stream);
-System.out.println(new String(data));
-        IOUtil.closeQuietly(stream);
+            BinaryResource resource = response.body().getResource();
+            InputStream stream = resource.openStream();
+            byte[] data = IOUtil.getBytesFromStream(stream);
+            System.out.println(new String(data));
+            IOUtil.closeQuietly(stream);
         } catch (Throwable throwable) {
-        throwable.printStackTrace();
+            throwable.printStackTrace();
         }
-        }
-        }
+    }
+}

@@ -8,6 +8,12 @@ import java.util.concurrent.TimeUnit;
  * Created by hanyanan on 2015/9/25.
  */
 public interface Scheduler {
+
+    public void pause();
+
+
+    public void resume();
+
     /**
      * Schedules an Action for execution.
      *

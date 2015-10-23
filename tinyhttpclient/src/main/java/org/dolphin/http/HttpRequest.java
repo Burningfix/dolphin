@@ -173,9 +173,11 @@ public class HttpRequest implements Cloneable, Closeable {
         return tag;
     }
 
-    public HttpRequest addBodyEntity(String param, BinaryResource resource) {
-        //TODO
-
+    public HttpRequest addRequestBody(String param, BinaryResource resource) {
+        if(null == requestBody) {
+            requestBody = new HttpRequestBody();
+        }
+        requestBody.add(param, resource);
         return this;
     }
 

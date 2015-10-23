@@ -1,15 +1,17 @@
 package org.dolphin.job;
 
 import org.dolphin.job.operator.JobOperatorIterator;
-import org.dolphin.job.operator.OperatorPackager;
+import org.dolphin.job.operator.OperatorWrapper;
 import org.dolphin.job.operator.UntilOperator;
 import org.dolphin.job.schedulers.Scheduler;
+import org.dolphin.job.schedulers.Schedulers;
 
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.dolphin.lib.Preconditions.checkNotNull;
 
@@ -18,37 +20,10 @@ import static org.dolphin.lib.Preconditions.checkNotNull;
  */
 public class Job implements Comparable<Job> {
     public static final String TAG = "Job";
+
     public long sequence = System.nanoTime();
 
-    /**
-     * 创建一个pending的Job，每次
-     *
-     * @return
-     */
-    public static Job pending() {
-
-        return null;
-    }
-
-    public static <T> Job create(T input) {
-
-        return null;
-    }
-
-    public static Job httpGet(String url) {
-
-        return null;
-    }
-
-    public static Job httpGet(String url, Map<String, String> params) {
-
-        return null;
-    }
-
-    public static Job httpPost(String url) {
-
-        return null;
-    }
+    public AtomicBoolean aborted = new AtomicBoolean(false);
 
 
     protected Object tag = null;
@@ -67,7 +42,7 @@ public class Job implements Comparable<Job> {
         return input;
     }
 
-    public final Object getOutput(){
+    public final Object getOutput() {
         return output;
     }
 
@@ -79,15 +54,6 @@ public class Job implements Comparable<Job> {
         return this;
     }
 
-    public Job delay(long millTimes) {
-
-        return this;
-    }
-
-    public Job delay(long delay, TimeUnit timeUnit) {
-
-        return this;
-    }
 
     /**
      * until命令：循环执行，直到结束。
@@ -129,7 +95,7 @@ public class Job implements Comparable<Job> {
         if (null == operatorIterator) {
             throw new NullPointerException("");
         }
-        operatorList.add(new OperatorPackager(operatorIterator));
+        operatorList.add(new OperatorWrapper(operatorIterator));
         return this;
     }
 
@@ -140,15 +106,13 @@ public class Job implements Comparable<Job> {
     /**
      * 每个Job最多只能有一个finalize Operator，无论是成功还是失败，都会调用此Operator。
      *
-     * @param operator，接受任何的输入，不产生任何输出。当有异常发生时（或用户abort当前Job），
-     *                输入是异常发生前的产生的中间变量；当执行成功时则
+     * @param operator，接受任何的输入，不产生任何输出。当有异常发生时（或用户abort当前Job）， 输入是异常发生前的产生的中间变量；当执行成功时则
      * @return
      */
     public final Job finalize(Operator<?, Void> operator) {
 
         return this;
     }
-
 
     public final Job handleError(JobErrorHandler throwable) {
         errorHandler = throwable;
@@ -167,6 +131,7 @@ public class Job implements Comparable<Job> {
     public final Job observerOn(Scheduler scheduler) {
         // 可以使用一个运算符进行代替
         observerScheduler = scheduler;
+        Schedulers.loadJob(this);
         return this;
     }
 
@@ -184,12 +149,22 @@ public class Job implements Comparable<Job> {
         return null;
     }
 
+    public Job delay(long millTimes) {
+
+        return this;
+    }
+
+    public Job delay(long delay, TimeUnit timeUnit) {
+
+        return this;
+    }
+
     public final Job setTag(Object object) {
         this.tag = object;
         return this;
     }
 
-    public Job description(String description){
+    public Job description(String description) {
         // TODO: storage current description
         return this;
     }
@@ -199,13 +174,15 @@ public class Job implements Comparable<Job> {
     }
 
     public final Job abort() {
-        // TODO: dispose current job
+        aborted.set(true);
+        Schedulers.abort(this);
         return this;
     }
 
+
+
     public final boolean isAborted() {
-        // TODO: check if current job has been disposed.
-        return false;
+        return aborted.get();
     }
 
     /**
@@ -224,6 +201,6 @@ public class Job implements Comparable<Job> {
     @Override
     public int compareTo(Job o) {
         long diff = sequence - o.sequence;
-        diff<0?-1:(diff==0?0:1);
+        return diff < 0 ? -1 : (diff == 0 ? 0 : 1);
     }
 }

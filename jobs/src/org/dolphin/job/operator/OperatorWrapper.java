@@ -12,10 +12,10 @@ import java.util.Iterator;
  * <p/>
  * 封装多个Operator到一起，<b>所有的operator都接受一个参数，输出一个或多个结果，并以Tuple的形式返回</b>
  */
-public class OperatorPackager implements Operator {
+public class OperatorWrapper implements Operator {
     private final Operator[] operators;
 
-    public OperatorPackager(Iterator<Operator> operators) {
+    public OperatorWrapper(Iterator<Operator> operators) {
         this.operators = Lists.newArrayList(operators).toArray(new Operator[]{});
     }
 

@@ -1,11 +1,55 @@
 package org.dolphin.job;
 
+import org.dolphin.http.HttpRequest;
+import org.dolphin.job.http.HttpJobs;
+import org.dolphin.job.http.HttpOperators;
+import org.dolphin.job.operator.BytesToStringOperator;
+import org.dolphin.job.operator.HttpPerformOperator;
+import org.dolphin.job.operator.HttpResponseToBytes;
+import org.dolphin.job.operator.PrintLogOperator;
+
 import java.util.Map;
 
 /**
  * Created by hanyanan on 2015/10/14.
  */
 public class Jobs {
+    /**
+     * 创建一个pending的Job，每次
+     *
+     * @return
+     */
+    public static Job pending() {
+
+        return null;
+    }
+
+    public static <T> Job create(T input) {
+
+        return null;
+    }
+
+    public static Job httpGet(String url) {
+        HttpRequest request = HttpJobs.create(url);
+        Job job = new Job(request);
+        job.append(new HttpPerformOperator());
+        job.append(new HttpResponseToBytes());
+        job.append(new BytesToStringOperator());
+        job.append(new PrintLogOperator());
+        return job;
+    }
+
+    public static Job httpGet(String url, Map<String, String> params) {
+
+        return null;
+    }
+
+    public static Job httpPost(String url) {
+
+        return null;
+    }
+
+
     public static Job merge(Job... jobs) {
         return null;
     }

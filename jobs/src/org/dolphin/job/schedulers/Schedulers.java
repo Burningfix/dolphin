@@ -21,9 +21,10 @@ import java.util.concurrent.*;
  */
 public class Schedulers {
     public static ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
-    public static final Scheduler IO_SCHEDULER = null;
-    public static final Scheduler COMPUTATION_SCHEDULER = null;
+    public static final Scheduler IO_SCHEDULER = new IOScheduler();
+    public static final Scheduler COMPUTATION_SCHEDULER = new ComputationScheduler();
     public static final Scheduler OBSERVER = null;
+    public static final Scheduler ImmediateScheduler = new ImmediateScheduler();
 
     private static final WeakHashMap<Object, Subscription> sJobReference = new WeakHashMap<Object, Subscription>();
 
@@ -47,7 +48,7 @@ public class Schedulers {
 
     public synchronized static void abort(Job job) {
         Subscription subscription = sJobReference.get(job);
-        if(!subscription.isUnsubscription()) {
+        if (!subscription.isUnsubscription()) {
             subscription.unsubscription();
         }
     }
@@ -57,13 +58,19 @@ public class Schedulers {
      */
     private static Scheduler getWorkScheduler(final Job job) {
         Scheduler scheduler = job.getWorkScheduler();
-        if(null == scheduler) {
+        if (null == scheduler) {
             return COMPUTATION_SCHEDULER;
         }
         return scheduler;
     }
 
-    private static class JobRunnable implements Runnable {
+
+
+
+    /**
+     * 最终运行都是JobRunnable。
+     */
+    private static class JobRunnable implements Runnable, Comparable<JobRunnable> {
         private final Job job;
 
         private JobRunnable(Job job) {
@@ -73,7 +80,7 @@ public class Schedulers {
         private Scheduler getObserverScheduler() {
             Scheduler scheduler = job.getObserverScheduler();
             if (null == scheduler) {
-                scheduler = ImmediateScheduler.INSTANCE;
+                scheduler = Schedulers.ImmediateScheduler;
             }
             return scheduler;
         }
@@ -140,7 +147,7 @@ public class Schedulers {
         public void run() {
             if (job.isAborted()) {
                 notifyCancellation();
-                return ;
+                return;
             }
 
             long loadTime = System.currentTimeMillis();
@@ -153,7 +160,7 @@ public class Schedulers {
                     Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
                     releaseResource(tmp);
                     notifyCancellation();
-                    return ;
+                    return;
                 }
 
 
@@ -167,7 +174,7 @@ public class Schedulers {
                                 Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
                                 releaseResource(tmp);
                                 notifyCancellation();
-                                return ;
+                                return;
                             }
                             if (notifyNextCallback) { // 通知当前进度
                                 notifyProgress(next);
@@ -182,12 +189,17 @@ public class Schedulers {
                     releaseResource(tmp);
                     long endTime = System.currentTimeMillis();
                     Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
-                    return ;
+                    return;
                 }
             }
             long endTime = System.currentTimeMillis();
             Log.i("Scheduler", "Success finish Job[" + job.description() + "]");
             Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
+        }
+
+        @Override
+        public int compareTo(JobRunnable o) {
+            return job.compareTo(o.job);
         }
     }
 

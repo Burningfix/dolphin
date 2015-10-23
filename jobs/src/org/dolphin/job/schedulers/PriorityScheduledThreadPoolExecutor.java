@@ -328,6 +328,24 @@ public class PriorityScheduledThreadPoolExecutor extends PausableThreadPoolExecu
         return sft;
     }
 
+    @Override
+    public Future<?> submit(Runnable task) {
+        // TODO
+        return super.submit(task);
+    }
+
+    @Override
+    public <T> Future<T> submit(Runnable task, T result) {
+        // TODO
+        return super.submit(task, result);
+    }
+
+    @Override
+    public <T> Future<T> submit(Callable<T> task) {
+        // TODO
+        return super.submit(task);
+    }
+
     /**
      * Attempts to stop all actively executing tasks, halts the
      * processing of waiting tasks, and returns a list of the tasks

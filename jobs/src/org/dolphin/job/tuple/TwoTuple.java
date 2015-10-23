@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Created by hanyanan on 2015/2/13.
  */
-public class TwoTuple<T1, T2> extends Tuple {
+public class TwoTuple<T1, T2> extends Tuple<T1> {
     public final T2 value2;
 
     public TwoTuple(T1 value1, T2 value2) {
