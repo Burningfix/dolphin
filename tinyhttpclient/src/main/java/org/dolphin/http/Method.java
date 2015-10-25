@@ -22,4 +22,8 @@ public enum Method {
     @Override public String toString() {
         return method;
     }
+
+    public static boolean isGet(HttpRequest request) {
+        return request.getMethod() == GET;
+    }
 }

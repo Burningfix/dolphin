@@ -1,6 +1,7 @@
 package org.dolphin.http;
 
 
+import org.dolphin.lib.IOUtil;
 import org.dolphin.lib.ListUtil;
 import org.dolphin.lib.Preconditions;
 import org.dolphin.lib.binaryresource.BinaryResource;
@@ -10,17 +11,18 @@ import java.util.List;
 
 import static org.dolphin.lib.Preconditions.checkNotNull;
 import static org.dolphin.lib.Preconditions.checkArgument;
+
 import javax.annotation.Nullable;
 
 
 /**
  * Created by dolphin on 2015/5/11.
- *
- *  application/x-www-form-urlencoded
- *
+ * <p/>
+ * application/x-www-form-urlencoded
+ * <p/>
  * <ol>
- *     <li>application/x-www-form-urlencoded</li>
- *     <li>The multipart boundary format as follow:<br/><code>
+ * <li>application/x-www-form-urlencoded</li>
+ * <li>The multipart boundary format as follow:<br/><code>
  * Content-Type:multipart/form-data;boundary=ZnGpDtePMx0KrHh_G0X99Yef9r8JZsRJSXC\r\n<br/>
  * --ZnGpDtePMx0KrHh_G0X99Yef9r8JZsRJSXC\r\n<br/>
  * Content-Disposition: form-data;name="desc"\r\n<br/>
@@ -36,16 +38,16 @@ import javax.annotation.Nullable;
  * [......][......][......][......]..........................\r\n<br/>
  * --ZnGpDtePMx0KrHh_G0X99Yef9r8JZsRJSXC--\r\n</code></li>
  * </ol>
- *
  */
 public class HttpRequestBody {
     private final LinkedList<EntityHolder> resources = new LinkedList<EntityHolder>();
 
     /**
      * post a file to server like {Content-Disposition: form-data;name="image"}
-     * @see #add(String, String, BinaryResource)
-     * @param param param which indicate current param
+     *
+     * @param param    param which indicate current param
      * @param resource resource will send to server
+     * @see #add(String, String, BinaryResource)
      */
     public HttpRequestBody add(String param, BinaryResource resource) {
         checkNotNull(param);
@@ -57,10 +59,11 @@ public class HttpRequestBody {
 
     /**
      * post a file to server like {Content-Disposition: form-data;name="image";filename="file.jpg"}
-     * @see #add(String, BinaryResource)
-     * @param param param which indicate current param
+     *
+     * @param param    param which indicate current param
      * @param fileName supply local file name
      * @param resource resource will send to server
+     * @see #add(String, BinaryResource)
      */
     public HttpRequestBody add(String param, String fileName, BinaryResource resource) {
         checkNotNull(param);
@@ -79,19 +82,32 @@ public class HttpRequestBody {
         return !resources.isEmpty();
     }
 
-    public void releaseResource(){
-        // TODO
+    public void releaseResource() {
+        if(null == resources) {
+            return ;
+        }
+        for(EntityHolder holder : resources) {
+            if(null != holder.resource) {
+//                IOUtil.closeQuietly(holder.resource.openStream());
+            }
+        }
     }
 
     /**
      * The entry of one file will upload.
      */
     public static final class EntityHolder {
-        /** Current entity's param */
+        /**
+         * Current entity's param
+         */
         public String param;
-        /** local file name */
+        /**
+         * local file name
+         */
         public String fileName;
-        /** Body content */
+        /**
+         * Body content
+         */
         public BinaryResource resource;
 
         private EntityHolder(String param, String fileName, BinaryResource binaryResource) {

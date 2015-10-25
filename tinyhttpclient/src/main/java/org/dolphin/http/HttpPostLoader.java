@@ -23,6 +23,9 @@ import static org.dolphin.lib.Preconditions.checkNotNulls;
  * Created by hanyanan on 2015/5/27.
  */
 public class HttpPostLoader extends HttpUrlLoader {
+    public static final HttpPostLoader INSTANCE = new HttpPostLoader();
+
+
     public boolean isMultipart(HttpRequest httpRequest) {
         return true;
     }

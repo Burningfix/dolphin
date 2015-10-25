@@ -9,14 +9,14 @@ import org.dolphin.job.Operator;
 public class HttpPerformOperator implements Operator<HttpRequest, HttpResponse> {
     @Override
     public HttpResponse operate(HttpRequest input) throws Throwable {
-        if(input == null){
+        if (input == null) {
             return null;
         }
 
         try {
-            HttpLoader loader = Method.GET == input.getMethod() ? new HttpGetLoader() : new HttpPostLoader();
+            HttpLoader loader = Method.isGet(input) ? HttpGetLoader.INSTANCE : HttpPostLoader.INSTANCE;
             return loader.performRequest(input);
-        }finally {
+        } finally {
             input.close();
         }
     }

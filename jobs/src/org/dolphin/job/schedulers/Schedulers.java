@@ -193,6 +193,7 @@ public class Schedulers {
                 }
             }
             long endTime = System.currentTimeMillis();
+            notifyComplete(tmp);
             Log.i("Scheduler", "Success finish Job[" + job.description() + "]");
             Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
         }

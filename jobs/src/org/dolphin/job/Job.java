@@ -33,6 +33,8 @@ public class Job implements Comparable<Job> {
     protected Scheduler observerScheduler = null;
     protected Object input = null;
     protected Object output = null;
+    protected Observer observer;
+
 
     protected Job(Object input) {
         this.input = input;
@@ -140,13 +142,17 @@ public class Job implements Comparable<Job> {
     }
 
     public final Job observer(Observer observer) {
-        // TODO: set observer
+        this.observer = observer;
+        return this;
+    }
+
+    public final Job retry(){
+
         return this;
     }
 
     public final Observer getObserver() {
-        // TODO: get observer
-        return null;
+        return this.observer;
     }
 
     public Job delay(long millTimes) {

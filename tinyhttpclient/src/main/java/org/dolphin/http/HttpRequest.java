@@ -380,6 +380,8 @@ public class HttpRequest implements Cloneable, Closeable {
 
     @Override
     public void close() throws IOException {
-        // TODO: release current request's resource
+        if(null != requestBody) {
+            requestBody.releaseResource();
+        }
     }
 }

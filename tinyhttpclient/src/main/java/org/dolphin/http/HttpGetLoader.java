@@ -5,6 +5,7 @@ package org.dolphin.http;
  * Created by hanyanan on 2015/5/27.
  */
 public class HttpGetLoader extends HttpUrlLoader {
+    public static final HttpGetLoader INSTANCE = new HttpGetLoader();
     /**
      * Return the url will be request.
      */
