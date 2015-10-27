@@ -1,6 +1,6 @@
 package org.dolphin.job.operator;
 
-import org.dolphin.job.Log;
+import org.dolphin.job.util.Log;
 import org.dolphin.job.Operator;
 
 /**

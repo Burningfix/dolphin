@@ -20,8 +20,9 @@ import static org.dolphin.lib.Preconditions.checkNotNull;
  */
 public class Job implements Comparable<Job> {
     public static final String TAG = "Job";
+    private static long sSequence = 0;
 
-    public long sequence = System.nanoTime();
+    public long sequence = sSequence++;
 
     public AtomicBoolean aborted = new AtomicBoolean(false);
 
@@ -36,7 +37,7 @@ public class Job implements Comparable<Job> {
     protected Observer observer;
 
 
-    protected Job(Object input) {
+    public Job(Object input) {
         this.input = input;
     }
 
@@ -101,8 +102,13 @@ public class Job implements Comparable<Job> {
         return this;
     }
 
-    public final Iterator<Operator> getOperatorList() {
-        return new JobOperatorIterator(operatorList);
+    //    public final Iterator<Operator> getOperatorList() {
+//        return new JobOperatorIterator(operatorList);
+//    }
+
+
+    public final List<Operator> getOperatorList() {
+        return new LinkedList<Operator>(operatorList);
     }
 
     /**
@@ -133,7 +139,7 @@ public class Job implements Comparable<Job> {
     public final Job observerOn(Scheduler scheduler) {
         // 可以使用一个运算符进行代替
         observerScheduler = scheduler;
-        Schedulers.loadJob(this);
+
         return this;
     }
 
@@ -143,10 +149,6 @@ public class Job implements Comparable<Job> {
 
     public final Job observer(Observer observer) {
         this.observer = observer;
-        return this;
-    }
-
-    public final Job retry(){
 
         return this;
     }
@@ -155,18 +157,38 @@ public class Job implements Comparable<Job> {
         return this.observer;
     }
 
-    public Job delay(long millTimes) {
-
+    public Job workDelayed(long millTimes) {
+        Schedulers.loadJob(this, millTimes, TimeUnit.MILLISECONDS);
         return this;
     }
 
-    public Job delay(long delay, TimeUnit timeUnit) {
+    public Job workDelayed(long delay, TimeUnit timeUnit) {
+        Schedulers.loadJob(this, delay, timeUnit);
+        return this;
+    }
 
+    public Job work() {
+        Schedulers.loadJob(this);
+        return this;
+    }
+
+    public Job workPeriodic(long initDelay, long periodic, TimeUnit timeUnit) {
+        Schedulers.loadJob(this, initDelay, periodic, timeUnit);
         return this;
     }
 
     public final Job setTag(Object object) {
         this.tag = object;
+        return this;
+    }
+
+    public final Job front(){
+        this.sequence = -System.currentTimeMillis();
+        return this;
+    }
+
+    public final Job back(){
+        this.sequence = System.currentTimeMillis();
         return this;
     }
 
@@ -186,7 +208,6 @@ public class Job implements Comparable<Job> {
     }
 
 
-
     public final boolean isAborted() {
         return aborted.get();
     }
@@ -200,7 +221,7 @@ public class Job implements Comparable<Job> {
      * 5.
      */
     public Job copy() {
-
+        // TODO
         return null;
     }
 
@@ -208,5 +229,13 @@ public class Job implements Comparable<Job> {
     public int compareTo(Job o) {
         long diff = sequence - o.sequence;
         return diff < 0 ? -1 : (diff == 0 ? 0 : 1);
+    }
+
+    @Override
+    public String toString() {
+        if(null != input) {
+            return "Job {"+input.toString() + "} With Sequence \t" + sequence;
+        }
+        return super.toString();
     }
 }

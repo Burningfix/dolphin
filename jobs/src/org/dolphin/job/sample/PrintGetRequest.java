@@ -2,9 +2,8 @@ package org.dolphin.job.sample;
 
 import org.dolphin.job.Job;
 import org.dolphin.job.Jobs;
-import org.dolphin.job.Log;
+import org.dolphin.job.util.Log;
 import org.dolphin.job.Observer;
-import org.dolphin.job.http.BaseHttpObserver;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.TwoTuple;
 

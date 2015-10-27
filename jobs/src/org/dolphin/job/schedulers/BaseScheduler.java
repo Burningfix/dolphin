@@ -1,14 +1,13 @@
 package org.dolphin.job.schedulers;
 
-import org.dolphin.job.Log;
+import org.dolphin.job.util.Log;
 
-import java.util.Timer;
 import java.util.concurrent.*;
 
 /**
  * Created by hanyanan on 2015/10/14.
  */
-public abstract class BaseScheduler implements Scheduler {
+abstract class BaseScheduler implements Scheduler {
 
     /**
      * Return work executor of current scheduler.

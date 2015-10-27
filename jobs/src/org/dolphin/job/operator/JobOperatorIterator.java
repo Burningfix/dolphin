@@ -1,8 +1,8 @@
 package org.dolphin.job.operator;
 
+import org.dolphin.job.util.Log;
 import org.dolphin.job.Operator;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -19,9 +19,11 @@ public class JobOperatorIterator implements Iterator<Operator> {
     @Override
     public boolean hasNext() {
         synchronized (this) {
+            Log.d("DDD", "hasNext1");
             if (currCursor >= operatorList.size()) {
                 return false;
             }
+            Log.d("DDD", "hasNext2");
 
             Operator operator = operatorList.get(currCursor);
             if (UntilOperator.class.isInstance(operator)) {
@@ -39,6 +41,7 @@ public class JobOperatorIterator implements Iterator<Operator> {
     @Override
     public Operator next() {
         synchronized (this) {
+            Log.d("DDD", "next");
             Operator operator = operatorList.get(currCursor);
             if (UntilOperator.class.isInstance(operator)) {
                 UntilOperator untilOperator = (UntilOperator) operator;

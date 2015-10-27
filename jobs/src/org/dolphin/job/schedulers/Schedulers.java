@@ -1,18 +1,13 @@
 package org.dolphin.job.schedulers;
 
 import org.dolphin.job.*;
+import org.dolphin.job.util.Log;
 import org.dolphin.job.operator.UntilOperator;
-import org.dolphin.job.tuple.FiveTuple;
-import org.dolphin.job.tuple.FourTuple;
-import org.dolphin.job.tuple.SixTuple;
-import org.dolphin.job.tuple.ThreeTuple;
-import org.dolphin.job.tuple.Tuple;
-import org.dolphin.job.tuple.Tuples;
-import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.job.tuple.*;
 import org.dolphin.lib.IOUtil;
 
 import java.io.Closeable;
-import java.util.Iterator;
+import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.*;
 
@@ -21,239 +16,99 @@ import java.util.concurrent.*;
  */
 public class Schedulers {
     public static ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
-    public static final Scheduler IO_SCHEDULER = new IOScheduler();
-    public static final Scheduler COMPUTATION_SCHEDULER = new ComputationScheduler();
-    public static final Scheduler OBSERVER = null;
-    public static final Scheduler ImmediateScheduler = new ImmediateScheduler();
+    public final Scheduler IO_SCHEDULER;
+    public final Scheduler COMPUTATION_SCHEDULER;
+    public static Scheduler OBSERVER_SCHEDULER = null;
+    public final Scheduler newThreadScheduler;
+    public static Scheduler ImmediateScheduler = new ImmediateScheduler();
 
-    private static final WeakHashMap<Object, Subscription> sJobReference = new WeakHashMap<Object, Subscription>();
+    private static final Schedulers INSTANCE = new Schedulers();
 
-    public synchronized static void loadJob(final Job job) {
-        JobRunnable jobRunnable = new JobRunnable(job);
-        Subscription subscription = getWorkScheduler(job).schedule(jobRunnable);
-        sJobReference.put(job, subscription);
-    }
-
-    public synchronized static void loadJob(Job job, long delayTime, TimeUnit unit) {
-        JobRunnable jobRunnable = new JobRunnable(job);
-        Subscription subscription = getWorkScheduler(job).schedule(jobRunnable, delayTime, unit);
-        sJobReference.put(job, subscription);
-    }
-
-    public synchronized static void loadJob(Job job, long initialDelay, long period, TimeUnit unit) {
-        JobRunnable jobRunnable = new JobRunnable(job);
-        Subscription subscription = getWorkScheduler(job).schedulePeriodically(jobRunnable, initialDelay, period, unit);
-        sJobReference.put(job, subscription);
-    }
-
-    public synchronized static void abort(Job job) {
-        Subscription subscription = sJobReference.get(job);
-        if (!subscription.isUnsubscription()) {
-            subscription.unsubscription();
-        }
+    private Schedulers() {
+        COMPUTATION_SCHEDULER = new ComputationScheduler();
+        IO_SCHEDULER = new IOScheduler();
     }
 
     /**
-     * Get default work schedule for specify job.
+     * Creates and returns a {@link Scheduler} that executes work immediately on the current thread.
+     *
+     * @return an {@link ImmediateScheduler} instance
      */
-    private static Scheduler getWorkScheduler(final Job job) {
-        Scheduler scheduler = job.getWorkScheduler();
-        if (null == scheduler) {
-            return COMPUTATION_SCHEDULER;
-        }
-        return scheduler;
+    public static Scheduler immediate() {
+        return ImmediateScheduler.instance();
     }
-
-
-
 
     /**
-     * 最终运行都是JobRunnable。
+     * Creates and returns a {@link Scheduler} that queues work on the current thread to be executed after the
+     * current work completes.
+     *
+     * @return a {@link TrampolineScheduler} instance
      */
-    private static class JobRunnable implements Runnable, Comparable<JobRunnable> {
-        private final Job job;
-
-        private JobRunnable(Job job) {
-            this.job = job;
-        }
-
-        private Scheduler getObserverScheduler() {
-            Scheduler scheduler = job.getObserverScheduler();
-            if (null == scheduler) {
-                scheduler = Schedulers.ImmediateScheduler;
-            }
-            return scheduler;
-        }
-
-        private void notifyCancellation() {
-            if (job.getObserver() == null) {
-                return;
-            }
-            getObserverScheduler().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    job.getObserver().onCancellation(job);
-                }
-            });
-        }
-
-        private void notifyComplete(final Object res) {
-            if (job.getObserver() == null) {
-                return;
-            }
-            getObserverScheduler().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (!job.isAborted()) {
-                        job.getObserver().onCompleted(job, res);
-                    } else {
-                        job.getObserver().onCancellation(job);
-                    }
-                }
-            });
-        }
-
-        private void notifyFailed(final Job job, final Throwable error) {
-            if (job.getObserver() == null) {
-                return;
-            }
-            getObserverScheduler().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (!job.isAborted()) {
-                        job.getObserver().onFailed(job, error);
-                    } else {
-                        job.getObserver().onCancellation(job);
-                    }
-                }
-            });
-        }
-
-        private void notifyProgress(final Object next) {
-            if (job.getObserver() == null) {
-                return;
-            }
-            getObserverScheduler().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (!job.isAborted()) {
-                        job.getObserver().onNext(job, next);
-                    }
-                }
-            });
-        }
-
-        @Override
-        public void run() {
-            if (job.isAborted()) {
-                notifyCancellation();
-                return;
-            }
-
-            long loadTime = System.currentTimeMillis();
-            Log.i("Scheduler", "Load Job[" + job.description() + "]");
-            Iterator<Operator> operatorList = job.getOperatorList();
-            Object tmp = job.getInput();
-            while (operatorList.hasNext()) {
-                Operator operator = operatorList.next();
-                if (job.isAborted()) { // 当前任务是否取消
-                    Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
-                    releaseResource(tmp);
-                    notifyCancellation();
-                    return;
-                }
-
-
-                try {
-                    if (UntilOperator.class.isInstance(operator)) {
-                        UntilOperator untilOperator = (UntilOperator) operator; // 可能会执行多次
-                        boolean notifyNextCallback = untilOperator.notifyNextCallback(); // 是否需压调用onNext回调
-                        while (true) {
-                            Object next = untilOperator.operate(tmp);
-                            if (job.isAborted()) { // 当前任务是否取消
-                                Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
-                                releaseResource(tmp);
-                                notifyCancellation();
-                                return;
-                            }
-                            if (notifyNextCallback) { // 通知当前进度
-                                notifyProgress(next);
-                            }
-                        }
-                    } else {
-                        tmp = operator.operate(tmp);
-                    }
-                } catch (Throwable throwable) {
-                    throwable.printStackTrace();
-                    Log.i("Scheduler", "Failed finish Job[" + job.description() + "]");
-                    releaseResource(tmp);
-                    long endTime = System.currentTimeMillis();
-                    Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
-                    return;
-                }
-            }
-            long endTime = System.currentTimeMillis();
-            notifyComplete(tmp);
-            Log.i("Scheduler", "Success finish Job[" + job.description() + "]");
-            Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
-        }
-
-        @Override
-        public int compareTo(JobRunnable o) {
-            return job.compareTo(o.job);
-        }
+    public static Scheduler trampoline() {
+        return TrampolineScheduler.instance();
     }
 
-    private static void releaseResource(Object object) {
-        if (null == object) {
-            return;
-        }
+    /**
+     * Creates and returns a {@link Scheduler} that creates a new {@link Thread} for each unit of work.
+     * <p>
+     * Unhandled errors will be delivered to the scheduler Thread's {@link java.lang.Thread.UncaughtExceptionHandler}.
+     *
+     * @return a {@link NewThreadScheduler} instance
+     */
+    public static Scheduler newThread() {
+        return INSTANCE.newThreadScheduler;
+    }
 
-        if (Closeable.class.isInstance(object)) {
-            Closeable closeable = (Closeable) object;
-            IOUtil.closeQuietly(closeable);
-        } else if (SixTuple.class.isInstance(object)) {
-            SixTuple tuple = (SixTuple) object;
-            releaseResource(tuple.value1);
-            releaseResource(tuple.value2);
-            releaseResource(tuple.value3);
-            releaseResource(tuple.value4);
-            releaseResource(tuple.value5);
-            releaseResource(tuple.value6);
-        } else if (FiveTuple.class.isInstance(object)) {
-            FiveTuple tuple = (FiveTuple) object;
-            releaseResource(tuple.value1);
-            releaseResource(tuple.value2);
-            releaseResource(tuple.value3);
-            releaseResource(tuple.value4);
-            releaseResource(tuple.value5);
-        } else if (FourTuple.class.isInstance(object)) {
-            FourTuple tuple = (FourTuple) object;
-            releaseResource(tuple.value1);
-            releaseResource(tuple.value2);
-            releaseResource(tuple.value3);
-            releaseResource(tuple.value4);
-        } else if (ThreeTuple.class.isInstance(object)) {
-            ThreeTuple tuple = (ThreeTuple) object;
-            releaseResource(tuple.value1);
-            releaseResource(tuple.value2);
-            releaseResource(tuple.value3);
-        } else if (TwoTuple.class.isInstance(object)) {
-            TwoTuple tuple = (TwoTuple) object;
-            releaseResource(tuple.value1);
-            releaseResource(tuple.value2);
-        } else if (Tuple.class.isInstance(object)) {
-            Tuple tuple = (Tuple) object;
-            releaseResource(tuple.value1);
-        } else if (Tuples.class.isInstance(object)) {
-            Tuples tuple = (Tuples) object;
-            Object[] objects = tuple.values;
-            if (null == objects || objects.length <= 0) {
-                return;
-            }
-            for (Object obj : objects) {
-                releaseResource(obj);
-            }
-        }
+    /**
+     * Creates and returns a {@link Scheduler} intended for computational work.
+     * <p>
+     * This can be used for event-loops, processing callbacks and other computational work.
+     * <p>
+     * Do not perform IO-bound work on this scheduler. Use {@link #io()} instead.
+     * <p>
+     * Unhandled errors will be delivered to the scheduler Thread's {@link java.lang.Thread.UncaughtExceptionHandler}.
+     *
+     * @return a {@link Scheduler} meant for computation-bound work
+     */
+    public static Scheduler computation() {
+        return INSTANCE.computationScheduler;
+    }
+
+    /**
+     * Creates and returns a {@link Scheduler} intended for IO-bound work.
+     * <p>
+     * The implementation is backed by an {@link Executor} thread-pool that will grow as needed.
+     * <p>
+     * This can be used for asynchronously performing blocking IO.
+     * <p>
+     * Do not perform computational work on this scheduler. Use {@link #computation()} instead.
+     * <p>
+     * Unhandled errors will be delivered to the scheduler Thread's {@link java.lang.Thread.UncaughtExceptionHandler}.
+     *
+     * @return a {@link Scheduler} meant for IO-bound work
+     */
+    public static Scheduler io() {
+        return INSTANCE.ioScheduler;
+    }
+
+    /**
+     * Creates and returns a {@code TestScheduler}, which is useful for debugging. It allows you to test
+     * schedules of events by manually advancing the clock at whatever pace you choose.
+     *
+     * @return a {@code TestScheduler} meant for debugging
+     */
+    public static TestScheduler test() {
+        return new TestScheduler();
+    }
+
+    /**
+     * Converts an {@link Executor} into a new Scheduler instance.
+     *
+     * @param executor
+     *          the executor to wrap
+     * @return the new Scheduler wrapping the Executor
+     */
+    public static Scheduler from(Executor executor) {
+        return new ExecutorScheduler(executor);
     }
 }

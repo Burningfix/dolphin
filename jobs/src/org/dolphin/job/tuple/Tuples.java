@@ -3,7 +3,7 @@ package org.dolphin.job.tuple;
 /**
  * Created by hanyanan on 2015/9/17.
  */
-public class Tuples{
+public class Tuples implements Tupleable{
     public final Object[] values;
 
     public Tuples(Object... values) {
