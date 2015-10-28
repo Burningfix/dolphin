@@ -1,11 +1,10 @@
 package org.dolphin.job.schedulers;
 
 import org.dolphin.job.Job;
+import org.dolphin.job.JobErrorHandler;
 import org.dolphin.job.Observer;
 import org.dolphin.job.Operator;
 import org.dolphin.job.operator.UntilOperator;
-import org.dolphin.job.schedulers.Scheduler;
-import org.dolphin.job.schedulers.Subscription;
 import org.dolphin.job.tuple.*;
 import org.dolphin.job.util.Log;
 import org.dolphin.lib.IOUtil;
@@ -20,28 +19,43 @@ import java.util.concurrent.TimeUnit;
  */
 public class JobEngine {
 
-    private static final WeakHashMap<Object, Subscription> sJobReference = new WeakHashMap<Object, Subscription>();
 
-    public synchronized static void loadJob(final Job job) {
+    private static JobEngine instance = null;
+
+    public synchronized static JobEngine instance() {
+        if (null == instance) {
+            instance = new JobEngine();
+        }
+
+        return instance;
+    }
+
+    private JobEngine() {
+
+    }
+
+    private final WeakHashMap<Object, Subscription> jobReference = new WeakHashMap<Object, Subscription>();
+
+    public synchronized void loadJob(final Job job) {
         JobRunnable jobRunnable = new JobRunnable(job);
         Subscription subscription = getWorkScheduler(job).schedule(jobRunnable);
-        sJobReference.put(job, subscription);
+        jobReference.put(job, subscription);
     }
 
-    public synchronized static void loadJob(Job job, long delayTime, TimeUnit unit) {
+    public synchronized void loadJob(Job job, long delayTime, TimeUnit unit) {
         JobRunnable jobRunnable = new JobRunnable(job);
         Subscription subscription = getWorkScheduler(job).schedule(jobRunnable, delayTime, unit);
-        sJobReference.put(job, subscription);
+        jobReference.put(job, subscription);
     }
 
-    public synchronized static void loadJob(Job job, long initialDelay, long period, TimeUnit unit) {
+    public synchronized void loadJob(Job job, long initialDelay, long period, TimeUnit unit) {
         JobRunnable jobRunnable = new JobRunnable(job);
         Subscription subscription = getWorkScheduler(job).schedulePeriodically(jobRunnable, initialDelay, period, unit);
-        sJobReference.put(job, subscription);
+        jobReference.put(job, subscription);
     }
 
-    public synchronized static void abort(Job job) {
-        Subscription subscription = sJobReference.get(job);
+    public synchronized void abort(Job job) {
+        Subscription subscription = jobReference.get(job);
         if (!subscription.isUnsubscription()) {
             subscription.unsubscription();
         }
@@ -53,7 +67,7 @@ public class JobEngine {
     private static Scheduler getWorkScheduler(final Job job) {
         Scheduler scheduler = job.getWorkScheduler();
         if (null == scheduler) {
-            return COMPUTATION_SCHEDULER;
+            return Schedulers.computation();
         }
         return scheduler;
     }
@@ -72,7 +86,7 @@ public class JobEngine {
         private Scheduler getObserverScheduler() {
             Scheduler scheduler = job.getObserverScheduler();
             if (null == scheduler) {
-                scheduler = Schedulers.ImmediateScheduler;
+                scheduler = Schedulers.immediate();
             }
             return scheduler;
         }
@@ -204,7 +218,16 @@ public class JobEngine {
                     releaseResource(tmp);
                     long endTime = System.currentTimeMillis();
                     Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
-                    notifyFailed(job, throwable);
+                    JobErrorHandler handler = job.getErrorHandler();
+                    try {
+                        if(null != handler){
+                            handler.handleError(job, throwable);
+                        }
+                    } catch (Throwable throwable1) {
+                        throwable1.printStackTrace();
+                        notifyFailed(job, throwable);
+                    }
+
                     return;
                 }
             }
@@ -228,9 +251,9 @@ public class JobEngine {
         if (Closeable.class.isInstance(object)) {
             Closeable closeable = (Closeable) object;
             IOUtil.closeQuietly(closeable);
-        }else if(!Tupleable.class.isInstance(object)){
+        } else if (!Tupleable.class.isInstance(object)) {
             // 普通的数据，不需要释放
-            return ;
+            return;
         } else if (SixTuple.class.isInstance(object)) {
             SixTuple tuple = (SixTuple) object;
             releaseResource(tuple.value1);

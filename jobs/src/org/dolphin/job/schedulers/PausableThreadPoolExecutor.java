@@ -9,19 +9,25 @@ public class PausableThreadPoolExecutor extends ThreadPoolExecutor {
     private final ReentrantLock pauseLock = new ReentrantLock();
     private final Condition unpausedCondition = pauseLock.newCondition();
 
-    public PausableThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue) {
+    public PausableThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+                                      TimeUnit unit, BlockingQueue<Runnable> workQueue) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue);
     }
 
-    public PausableThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
+    public PausableThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+                                      TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
     }
 
-    public PausableThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, RejectedExecutionHandler handler) {
+    public PausableThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+                                      TimeUnit unit, BlockingQueue<Runnable> workQueue,
+                                      RejectedExecutionHandler handler) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, handler);
     }
 
-    public PausableThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory, RejectedExecutionHandler handler) {
+    public PausableThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+                                      TimeUnit unit, BlockingQueue<Runnable> workQueue,
+                                      ThreadFactory threadFactory, RejectedExecutionHandler handler) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory, handler);
     }
 

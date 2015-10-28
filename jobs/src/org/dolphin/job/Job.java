@@ -3,6 +3,7 @@ package org.dolphin.job;
 import org.dolphin.job.operator.JobOperatorIterator;
 import org.dolphin.job.operator.OperatorWrapper;
 import org.dolphin.job.operator.UntilOperator;
+import org.dolphin.job.schedulers.JobEngine;
 import org.dolphin.job.schedulers.Scheduler;
 import org.dolphin.job.schedulers.Schedulers;
 
@@ -127,6 +128,10 @@ public class Job implements Comparable<Job> {
         return this;
     }
 
+    public final JobErrorHandler getErrorHandler() {
+        return errorHandler;
+    }
+
     public final Job workOn(Scheduler scheduler) {
         workScheduler = scheduler;
         return this;
@@ -158,22 +163,22 @@ public class Job implements Comparable<Job> {
     }
 
     public Job workDelayed(long millTimes) {
-        Schedulers.loadJob(this, millTimes, TimeUnit.MILLISECONDS);
+        JobEngine.instance().loadJob(this, millTimes, TimeUnit.MILLISECONDS);
         return this;
     }
 
     public Job workDelayed(long delay, TimeUnit timeUnit) {
-        Schedulers.loadJob(this, delay, timeUnit);
+        JobEngine.instance().loadJob(this, delay, timeUnit);
         return this;
     }
 
     public Job work() {
-        Schedulers.loadJob(this);
+        JobEngine.instance().loadJob(this);
         return this;
     }
 
     public Job workPeriodic(long initDelay, long periodic, TimeUnit timeUnit) {
-        Schedulers.loadJob(this, initDelay, periodic, timeUnit);
+        JobEngine.instance().loadJob(this, initDelay, periodic, timeUnit);
         return this;
     }
 
@@ -182,12 +187,12 @@ public class Job implements Comparable<Job> {
         return this;
     }
 
-    public final Job front(){
+    public final Job front() {
         this.sequence = -System.currentTimeMillis();
         return this;
     }
 
-    public final Job back(){
+    public final Job back() {
         this.sequence = System.currentTimeMillis();
         return this;
     }
@@ -203,7 +208,7 @@ public class Job implements Comparable<Job> {
 
     public final Job abort() {
         aborted.set(true);
-        Schedulers.abort(this);
+        JobEngine.instance().abort(this);
         return this;
     }
 
@@ -233,8 +238,8 @@ public class Job implements Comparable<Job> {
 
     @Override
     public String toString() {
-        if(null != input) {
-            return "Job {"+input.toString() + "} With Sequence \t" + sequence;
+        if (null != input) {
+            return "Job {" + input.toString() + "} With Sequence \t" + sequence;
         }
         return super.toString();
     }

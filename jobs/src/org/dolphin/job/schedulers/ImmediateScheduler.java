@@ -9,12 +9,18 @@ import java.util.concurrent.locks.ReentrantLock;
  * Created by hanyanan on 2015/10/15.
  */
 public class ImmediateScheduler implements Scheduler {
-    public final static ImmediateScheduler INSTANCE = new ImmediateScheduler();
+    public static ImmediateScheduler sInstance = null;
 
-    ImmediateScheduler(){
+    private ImmediateScheduler() {
         // just support instance in current class, just support once.
     }
 
+    public synchronized static ImmediateScheduler instance() {
+        if (sInstance == null) {
+            sInstance = new ImmediateScheduler();
+        }
+        return sInstance;
+    }
 
     @Override
     public void pause() {

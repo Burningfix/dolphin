@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 public class PridiocTester {
     public static void main(String []argv) {
         Job job = new Job(0);
-        job.workOn(Schedulers.COMPUTATION_SCHEDULER)
+        job.workOn(Schedulers.computation())
                 .append(new PrintTimeOperator())
                 .observer(new Observer() {
                     @Override

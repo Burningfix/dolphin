@@ -1,14 +1,5 @@
 package org.dolphin.job.schedulers;
 
-import org.dolphin.job.*;
-import org.dolphin.job.util.Log;
-import org.dolphin.job.operator.UntilOperator;
-import org.dolphin.job.tuple.*;
-import org.dolphin.lib.IOUtil;
-
-import java.io.Closeable;
-import java.util.List;
-import java.util.WeakHashMap;
 import java.util.concurrent.*;
 
 /**
@@ -16,17 +7,17 @@ import java.util.concurrent.*;
  */
 public class Schedulers {
     public static ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
-    public final Scheduler IO_SCHEDULER;
-    public final Scheduler COMPUTATION_SCHEDULER;
+    public final Scheduler io;
+    public final Scheduler computationScheduler;
+    public final Scheduler immediateScheduler;
     public static Scheduler OBSERVER_SCHEDULER = null;
-    public final Scheduler newThreadScheduler;
-    public static Scheduler ImmediateScheduler = new ImmediateScheduler();
 
     private static final Schedulers INSTANCE = new Schedulers();
 
     private Schedulers() {
-        COMPUTATION_SCHEDULER = new ComputationScheduler();
-        IO_SCHEDULER = new IOScheduler();
+        computationScheduler = new ComputationScheduler();
+        io = new IOScheduler();
+        immediateScheduler = ImmediateScheduler.instance();
     }
 
     /**
@@ -38,15 +29,15 @@ public class Schedulers {
         return ImmediateScheduler.instance();
     }
 
-    /**
-     * Creates and returns a {@link Scheduler} that queues work on the current thread to be executed after the
-     * current work completes.
-     *
-     * @return a {@link TrampolineScheduler} instance
-     */
-    public static Scheduler trampoline() {
-        return TrampolineScheduler.instance();
-    }
+//    /**
+//     * Creates and returns a {@link Scheduler} that queues work on the current thread to be executed after the
+//     * current work completes.
+//     *
+//     * @return a {@link TrampolineScheduler} instance
+//     */
+//    public static Scheduler trampoline() {
+//        return TrampolineScheduler.instance();
+//    }
 
     /**
      * Creates and returns a {@link Scheduler} that creates a new {@link Thread} for each unit of work.
@@ -56,7 +47,7 @@ public class Schedulers {
      * @return a {@link NewThreadScheduler} instance
      */
     public static Scheduler newThread() {
-        return INSTANCE.newThreadScheduler;
+        return new NewThreadScheduler();
     }
 
     /**
@@ -88,18 +79,9 @@ public class Schedulers {
      * @return a {@link Scheduler} meant for IO-bound work
      */
     public static Scheduler io() {
-        return INSTANCE.ioScheduler;
+        return INSTANCE.io;
     }
 
-    /**
-     * Creates and returns a {@code TestScheduler}, which is useful for debugging. It allows you to test
-     * schedules of events by manually advancing the clock at whatever pace you choose.
-     *
-     * @return a {@code TestScheduler} meant for debugging
-     */
-    public static TestScheduler test() {
-        return new TestScheduler();
-    }
 
     /**
      * Converts an {@link Executor} into a new Scheduler instance.

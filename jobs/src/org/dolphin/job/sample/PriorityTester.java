@@ -22,7 +22,7 @@ public class PriorityTester {
         Job jobs[] = new Job[sDelayTime.length];
         for (int i = 0; i < jobs.length; ++i) {
             jobs[i] = new Job(i);
-            jobs[i].workOn(Schedulers.COMPUTATION_SCHEDULER)
+            jobs[i].workOn(Schedulers.computation())
                     .append(new PrintTimeOperator())
                     .observer(new Observer() {
                         @Override

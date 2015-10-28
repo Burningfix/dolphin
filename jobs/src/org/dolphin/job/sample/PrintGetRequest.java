@@ -14,7 +14,7 @@ public class PrintGetRequest {
     public static void main(String []argv) {
         Job printJob = Jobs.httpGet("http://httpbin.org/get");
         printJob.observerOn(null);
-        printJob.workOn(Schedulers.COMPUTATION_SCHEDULER);
+        printJob.workOn(Schedulers.computation());
         printJob.observer(new Observer<TwoTuple<Long, Long>, String>() {
             @Override
             public void onNext(Job job, TwoTuple<Long, Long> next) {
