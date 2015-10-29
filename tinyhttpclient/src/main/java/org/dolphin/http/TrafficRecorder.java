@@ -1,5 +1,10 @@
 package org.dolphin.http;
 
+import java.util.LinkedList;
+import java.util.List;
+
+import javafx.util.Pair;
+
 /**
  * Created by dolphin on 2015/5/11.
  * Record the traffic status of current http request.
@@ -27,9 +32,23 @@ public interface TrafficRecorder {
 
     public long spotDownSpeed();
 
+
+    public static class Builder {
+        public static TrafficRecorder build(TrafficRecorder parent) {
+
+
+            return null;
+        }
+
+        public static TrafficRecorder build() {
+
+            return null;
+        }
+    }
+
+
     public static class TrafficRecorder1 implements TrafficRecorder {
         public static final long DEFAULT_TIME_INTERVAL = 2000; // 2000 ms
-
         /**
          * 第一次接受得到输入的时间戳
          */
@@ -40,15 +59,14 @@ public interface TrafficRecorder {
          */
         private long firstOutTimestamp = 0;
 
-        /**
-         * 最后一次收到读取记录的时间戳
-         */
         private long lastInTimestamp = 0;
 
-        /**
-         * 最后一次收到发送记录的时间戳
-         */
         private long lastOutTimestamp = 0;
+
+        private long firstInCursor = 0;
+
+
+        private long firstOutCursor = 0;
 
         /**
          * 上一次输入记录的位置
@@ -61,6 +79,16 @@ public interface TrafficRecorder {
         private long lastOutCursor = 0;
 
         /**
+         * 保留的读取的历史纪录
+         */
+        private final List<Pair<Long, Long>> inHistory = new LinkedList<Pair<Long, Long>>();
+
+        /**
+         * 保留的写入的历史纪录
+         */
+        private final List<Pair<Long, Long>> outHistory = new LinkedList<Pair<Long, Long>>();
+
+        /**
          * 瞬时速度的统计时常，默认是两秒统计一次
          */
         public final long timeInterval;
@@ -69,50 +97,97 @@ public interface TrafficRecorder {
             timeInterval = DEFAULT_TIME_INTERVAL;
         }
 
-        public TrafficRecorder1(long timeInterval) {
+        public TrafficRecorder1(TrafficRecorder parent, long timeInterval) {
             this.timeInterval = timeInterval;
+        }
+
+        private static long now() {
+            return System.currentTimeMillis();
         }
 
         @Override
         public void onBodyIn(long cursor, long length) {
+            long curr = now();
+            if (firstInTimestamp <= 0) {
+                firstInTimestamp = curr;
+            }
+
+            lastInTimestamp = curr;
+
+            if (firstInCursor <= 0) {
+                firstInCursor = cursor;
+                return;
+            }
+
+            if (lastInCursor <= 0) {
+                lastInCursor = cursor;
+                onBodyIn(0);
+            } else {
+                onBodyIn(cursor - lastInCursor);
+                lastInCursor = cursor;
+            }
 
         }
 
         @Override
         public void onBodyOut(long cursor, long length) {
+            long curr = now();
+            if (firstOutTimestamp <= 0) {
+                firstOutTimestamp = curr;
+            }
+            lastOutTimestamp = curr;
+            if (firstOutCursor <= 0) {
+                firstOutCursor = cursor;
+                return;
+            }
 
+            if (lastOutCursor <= 0) {
+                lastOutCursor = cursor;
+                onBodyOut(0);
+            } else {
+                onBodyOut(cursor - lastOutCursor);
+                lastOutCursor = cursor;
+            }
         }
 
         @Override
         public void onBodyIn(long newReadedCount) {
-
+            long curr = now();
+            inHistory.add(new Pair<Long, Long>(curr, newReadedCount))
         }
 
         @Override
         public void onBodyOut(long newWrittenCount) {
-
+            long curr = now();
+            outHistory.add(new Pair<Long, Long>(curr, newWrittenCount));
         }
 
         @Override
         public long getInSize() {
-            return 0;
+            return lastInCursor > firstInCursor ? lastInCursor - firstInCursor : 0;
         }
 
         @Override
         public long getOutSize() {
-            return 0;
+            return lastOutCursor > firstOutCursor ? lastOutCursor - firstOutCursor : 0;
         }
 
         @Override
         public long getInCost() {
-            return 0;
+            return lastInTimestamp > firstInTimestamp ? lastInTimestamp - firstInTimestamp : 0;
         }
 
         @Override
         public long getOutCost() {
-            return 0;
+            return lastOutTimestamp > firstOutTimestamp ? lastOutTimestamp - firstOutTimestamp : 0;
         }
 
+
+        /**
+         * 返回最近一段时间内的瞬时速度, see {@link #timeInterval}
+         *
+         * @return
+         */
         @Override
         public long spotUpSpeed() {
             return 0;
@@ -123,7 +198,13 @@ public interface TrafficRecorder {
             return 0;
         }
 
+        private void limitInHistorySize() {
 
+        }
+
+        private void limitOutHistorySize() {
+            
+        }
     }
 
 
