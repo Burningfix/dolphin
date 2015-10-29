@@ -5,13 +5,13 @@ package org.dolphin.http;
  * Record the traffic status of current http request.
  */
 public interface TrafficRecorder {
-    public static final long PRINTLN_INDIVER = 1000; // 1S
+    public static final long PRINTLN_INDIVER = 2000; // 1S
 
     public void onBodyIn(long cursor, long length);
 
     public void onBodyOut(long cursor, long length);
 
-    public void onBodyIn(long newReadedCount);
+    public void onBodyIn(long newReadCount);
 
     public void onBodyOut(long newWrittenCount);
 
@@ -23,11 +23,109 @@ public interface TrafficRecorder {
 
     public long getOutCost();
 
-    public void printInLog();
+    public long spotUpSpeed();
 
-    public void printOutLog();
+    public long spotDownSpeed();
 
-    public void printLog();
+    public static class TrafficRecorder1 implements TrafficRecorder {
+        public static final long DEFAULT_TIME_INTERVAL = 2000; // 2000 ms
+
+        /**
+         * 第一次接受得到输入的时间戳
+         */
+        private long firstInTimestamp = 0;
+
+        /**
+         * 第一次接受得到输出的时间戳
+         */
+        private long firstOutTimestamp = 0;
+
+        /**
+         * 最后一次收到读取记录的时间戳
+         */
+        private long lastInTimestamp = 0;
+
+        /**
+         * 最后一次收到发送记录的时间戳
+         */
+        private long lastOutTimestamp = 0;
+
+        /**
+         * 上一次输入记录的位置
+         */
+        private long lastInCursor = 0;
+
+        /**
+         * 上一次输出记录的位置
+         */
+        private long lastOutCursor = 0;
+
+        /**
+         * 瞬时速度的统计时常，默认是两秒统计一次
+         */
+        public final long timeInterval;
+
+        public TrafficRecorder1() {
+            timeInterval = DEFAULT_TIME_INTERVAL;
+        }
+
+        public TrafficRecorder1(long timeInterval) {
+            this.timeInterval = timeInterval;
+        }
+
+        @Override
+        public void onBodyIn(long cursor, long length) {
+
+        }
+
+        @Override
+        public void onBodyOut(long cursor, long length) {
+
+        }
+
+        @Override
+        public void onBodyIn(long newReadedCount) {
+
+        }
+
+        @Override
+        public void onBodyOut(long newWrittenCount) {
+
+        }
+
+        @Override
+        public long getInSize() {
+            return 0;
+        }
+
+        @Override
+        public long getOutSize() {
+            return 0;
+        }
+
+        @Override
+        public long getInCost() {
+            return 0;
+        }
+
+        @Override
+        public long getOutCost() {
+            return 0;
+        }
+
+        @Override
+        public long spotUpSpeed() {
+            return 0;
+        }
+
+        @Override
+        public long spotDownSpeed() {
+            return 0;
+        }
+
+
+    }
+
 
     public static final TrafficRecorder GLOBAL_TRAFFIC_RECORDER = new TrafficRecorderImpl() {
         @Override
@@ -112,7 +210,7 @@ public interface TrafficRecorder {
             }
             lastInCursor += newReadedCount;
             printInLog();
-            if(this != GLOBAL_TRAFFIC_RECORDER) {
+            if (this != GLOBAL_TRAFFIC_RECORDER) {
                 GLOBAL_TRAFFIC_RECORDER.onBodyIn(newReadedCount);
             }
         }
@@ -140,7 +238,7 @@ public interface TrafficRecorder {
             lastOutCursor += newWrittenCount;
             printOutLog();
 
-            if(this != GLOBAL_TRAFFIC_RECORDER) {
+            if (this != GLOBAL_TRAFFIC_RECORDER) {
                 GLOBAL_TRAFFIC_RECORDER.onBodyOut(newWrittenCount);
             }
         }
@@ -191,7 +289,7 @@ public interface TrafficRecorder {
             long deltaTime = System.currentTimeMillis() - lastPrintOutLogTime;
             if (deltaTime >= printLogDivider) {
                 long delta = lastOutCursor - lastPrintedOutCursor;
-                HttpLog.d("TinyHttpClient", "平均上传速度: " + (delta / (float) deltaTime * 1000));
+//                HttpLog.d("TinyHttpClient", "平均上传速度: " + (delta / (float) deltaTime * 1000));
                 lastPrintOutLogTime = System.currentTimeMillis();
                 lastPrintedOutCursor = lastOutCursor;
             }
@@ -202,12 +300,12 @@ public interface TrafficRecorder {
             long cost = getInCost();
             long size = getInSize();
             if (cost > 0) {
-                HttpLog.d("TinyHttpClient", "平均下载速度: " + (size / (float) cost * 1000));
+//                HttpLog.d("TinyHttpClient", "平均下载速度: " + (size / (float) cost * 1000));
             }
             cost = getOutCost();
             size = getOutSize();
             if (cost > 0) {
-                HttpLog.d("TinyHttpClient", "平均上传速度: " + (size / (float) cost * 1000));
+//                HttpLog.d("TinyHttpClient", "平均上传速度: " + (size / (float) cost * 1000));
             }
         }
     }

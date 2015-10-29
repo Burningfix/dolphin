@@ -262,7 +262,10 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
     }
 
     protected final void releaseBodyResource(HttpRequest request) {
-        request.getRequestBody().releaseResource();
+        HttpRequestBody requestBody = request.getRequestBody();
+        if(null != requestBody) {
+            requestBody.releaseResource();
+        }
     }
 
 
