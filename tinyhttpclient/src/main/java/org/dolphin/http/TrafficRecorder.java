@@ -1,5 +1,6 @@
 package org.dolphin.http;
 
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -32,51 +33,204 @@ public interface TrafficRecorder {
 
     public long spotDownSpeed();
 
+    public static final TrafficRecorder GLOBAL_TRAFFIC_RECORDER = new TrafficRecorder() {
+        private long lastPrintInTime = 0;
+        private long lastPrintOutTime = 0;
+        private long printTimeInterval = 2000;
+        private long inSize = 0;
+        private long outSize = 0;
+        private long firstInTimestamp = 0;
+        private long firstOutTimeStamp = 0;
+        /**
+         * 保留的读取的历史纪录
+         */
+        private final List<Pair<Long, Long>> inHistory = new LinkedList<Pair<Long, Long>>();
+
+        /**
+         * 保留的写入的历史纪录
+         */
+        private final List<Pair<Long, Long>> outHistory = new LinkedList<Pair<Long, Long>>();
+
+        private long now() {
+            return System.currentTimeMillis();
+        }
+
+        @Override
+        public void onBodyIn(long cursor, long length) {
+            throw new UnsupportedOperationException("Global traffice recorder not support this fucntion");
+        }
+
+        @Override
+        public void onBodyOut(long cursor, long length) {
+            throw new UnsupportedOperationException("Global traffice recorder not support this fucntion");
+        }
+
+        @Override
+        public void onBodyIn(long newReadedCount) {
+            inSize += newReadedCount;
+            long now = System.currentTimeMillis();
+
+            if (firstInTimestamp <= 0) {
+                firstInTimestamp = now;
+            }
+            inHistory.add(new Pair<Long, Long>(now, newReadedCount));
+
+            if (lastPrintInTime <= 0) {
+                lastPrintInTime = now;
+                return;
+            }
+
+
+            if (now - lastPrintInTime > printTimeInterval) {
+                System.out.println("应用下载速度: " + spotDownSpeed());
+                lastPrintInTime = now;
+            }
+        }
+
+        @Override
+        public void onBodyOut(long newWrittenCount) {
+            outSize += newWrittenCount;
+            long now = System.currentTimeMillis();
+            if (firstOutTimeStamp <= 0) {
+                firstOutTimeStamp = now;
+            }
+            outHistory.add(new Pair<Long, Long>(now, newWrittenCount));
+
+            if (lastPrintOutTime <= 0) {
+                lastPrintOutTime = now;
+                return;
+            }
+
+            if (now - lastPrintOutTime > printTimeInterval) {
+                System.out.println("应用上传速度: " + spotDownSpeed());
+                lastPrintOutTime = now;
+            }
+        }
+
+        @Override
+        public long getInSize() {
+            return inSize;
+        }
+
+        @Override
+        public long getOutSize() {
+            return outSize;
+        }
+
+        @Override
+        public long getInCost() {
+            return firstInTimestamp > 0 ? now() - firstInTimestamp : 0;
+        }
+
+        @Override
+        public long getOutCost() {
+            return firstOutTimeStamp > 0 ? now() - firstOutTimeStamp : 0;
+        }
+
+        @Override
+        public long spotUpSpeed() {
+            return calculateCounts(outHistory, printTimeInterval);
+        }
+
+        @Override
+        public long spotDownSpeed() {
+            return calculateCounts(inHistory, printTimeInterval);
+        }
+
+        private synchronized long calculateCounts(List<Pair<Long, Long>> history, final long timeInterval) {
+            long now = now();
+            long count = 0;
+            Iterator<Pair<Long, Long>> iterator = history.iterator();
+            while (iterator.hasNext()) {
+                Pair<Long, Long> pair = iterator.next();
+                if (now - pair.getKey().longValue() > timeInterval) {
+                    iterator.remove();
+                } else {
+                    count += pair.getValue().longValue();
+                }
+            }
+            return count;
+        }
+    };
 
     public static class Builder {
-        public static TrafficRecorder build(TrafficRecorder parent) {
+        public static TrafficRecorder build(final TrafficRecorder parent) {
+            return new TrafficRecorderImpl() {
+                @Override
+                public void onBodyIn(long newReadedCount) {
+                    super.onBodyIn(newReadedCount);
+                    parent.onBodyIn(newReadedCount);
+                    GLOBAL_TRAFFIC_RECORDER.onBodyIn(newReadedCount);
+                }
 
-
-            return null;
+                @Override
+                public void onBodyOut(long newWrittenCount) {
+                    super.onBodyOut(newWrittenCount);
+                    parent.onBodyOut(newWrittenCount);
+                    GLOBAL_TRAFFIC_RECORDER.onBodyOut(newWrittenCount);
+                }
+            };
         }
 
         public static TrafficRecorder build() {
+            return new TrafficRecorderImpl() {
+                @Override
+                public void onBodyIn(long newReadedCount) {
+                    super.onBodyIn(newReadedCount);
+                    GLOBAL_TRAFFIC_RECORDER.onBodyIn(newReadedCount);
+                }
 
-            return null;
+                @Override
+                public void onBodyOut(long newWrittenCount) {
+                    super.onBodyOut(newWrittenCount);
+                    GLOBAL_TRAFFIC_RECORDER.onBodyOut(newWrittenCount);
+                }
+            };
         }
     }
 
 
-    public static class TrafficRecorder1 implements TrafficRecorder {
+    static class TrafficRecorderImpl implements TrafficRecorder {
         public static final long DEFAULT_TIME_INTERVAL = 2000; // 2000 ms
         /**
          * 第一次接受得到输入的时间戳
          */
-        private long firstInTimestamp = 0;
+        private long firstInTimestamp = -1;
 
         /**
          * 第一次接受得到输出的时间戳
          */
-        private long firstOutTimestamp = 0;
+        private long firstOutTimestamp = -1;
 
-        private long lastInTimestamp = 0;
+        /**
+         * 最后一次输入时间
+         */
+        private long lastInTimestamp = -1;
 
-        private long lastOutTimestamp = 0;
+        /**
+         * 最后一次输出时间
+         */
+        private long lastOutTimestamp = -1;
 
-        private long firstInCursor = 0;
+        /**
+         * 首次输入的cursor
+         */
+        private long firstInCursor = -1;
 
-
-        private long firstOutCursor = 0;
+        /**
+         * 首次输出的cursor
+         */
+        private long firstOutCursor = -1;
 
         /**
          * 上一次输入记录的位置
          */
-        private long lastInCursor = 0;
+        private long lastInCursor = -1;
 
         /**
          * 上一次输出记录的位置
          */
-        private long lastOutCursor = 0;
+        private long lastOutCursor = -1;
 
         /**
          * 保留的读取的历史纪录
@@ -93,11 +247,11 @@ public interface TrafficRecorder {
          */
         public final long timeInterval;
 
-        public TrafficRecorder1() {
+        private TrafficRecorderImpl() {
             timeInterval = DEFAULT_TIME_INTERVAL;
         }
 
-        public TrafficRecorder1(TrafficRecorder parent, long timeInterval) {
+        private TrafficRecorderImpl(TrafficRecorder parent, long timeInterval) {
             this.timeInterval = timeInterval;
         }
 
@@ -114,52 +268,45 @@ public interface TrafficRecorder {
 
             lastInTimestamp = curr;
 
-            if (firstInCursor <= 0) {
-                firstInCursor = cursor;
+            if (firstInCursor < 0) {
+                lastInCursor = firstInCursor = cursor;
                 return;
             }
 
-            if (lastInCursor <= 0) {
-                lastInCursor = cursor;
-                onBodyIn(0);
-            } else {
-                onBodyIn(cursor - lastInCursor);
-                lastInCursor = cursor;
-            }
-
+            onBodyIn(cursor - lastInCursor);
+            lastInCursor = cursor;
         }
 
         @Override
         public void onBodyOut(long cursor, long length) {
             long curr = now();
-            if (firstOutTimestamp <= 0) {
+            if (firstOutTimestamp < 0) {
                 firstOutTimestamp = curr;
             }
+
             lastOutTimestamp = curr;
-            if (firstOutCursor <= 0) {
-                firstOutCursor = cursor;
+
+            if (firstOutCursor < 0) {
+                lastOutCursor = firstOutCursor = cursor;
                 return;
             }
 
-            if (lastOutCursor <= 0) {
-                lastOutCursor = cursor;
-                onBodyOut(0);
-            } else {
-                onBodyOut(cursor - lastOutCursor);
-                lastOutCursor = cursor;
-            }
+            onBodyOut(cursor - lastOutCursor);
+            lastOutCursor = cursor;
         }
 
         @Override
         public void onBodyIn(long newReadedCount) {
             long curr = now();
-            inHistory.add(new Pair<Long, Long>(curr, newReadedCount))
+            inHistory.add(new Pair<Long, Long>(curr, newReadedCount));
+            spotDownSpeed();
         }
 
         @Override
         public void onBodyOut(long newWrittenCount) {
             long curr = now();
             outHistory.add(new Pair<Long, Long>(curr, newWrittenCount));
+            spotUpSpeed();
         }
 
         @Override
@@ -190,204 +337,27 @@ public interface TrafficRecorder {
          */
         @Override
         public long spotUpSpeed() {
-            return 0;
+            return calculateCounts(outHistory, timeInterval);
         }
 
         @Override
         public long spotDownSpeed() {
-            return 0;
+            return calculateCounts(inHistory, timeInterval);
         }
 
-        private void limitInHistorySize() {
-
-        }
-
-        private void limitOutHistorySize() {
-            
-        }
-    }
-
-
-    public static final TrafficRecorder GLOBAL_TRAFFIC_RECORDER = new TrafficRecorderImpl() {
-        @Override
-        public synchronized void onBodyIn(long cursor, long length) {
-            throw new UnsupportedOperationException("Global traffic recorder cannot invoke onBodyIn(long cursor, long length) method.");
-        }
-
-        @Override
-        public void onBodyOut(long cursor, long length) {
-            throw new UnsupportedOperationException("Global traffic recorder cannot invoke onBodyOut(long cursor, long length) method.");
-        }
-    };
-
-//    public static TrafficRecorder getGlobaleTrafficeRecorder(){
-//        return GLOBALE_TRAFFICE_RECORDER;
-//    }
-
-
-    public static class TrafficRecorderImpl implements TrafficRecorder {
-        private long printLogDivider = PRINTLN_INDIVER;
-        /**
-         * 第一次接受得到输入的时间戳
-         */
-        private long startInTimestamp = 0;
-        /**
-         * 第一次接受得到输出的时间戳
-         */
-        private long startOutTimestamp = 0;
-        /**
-         * 最后一次收到读取记录的时间戳
-         */
-        private long lastUpdateInTimestamp = 0;
-        /**
-         * 最后一次收到发送记录的时间戳
-         */
-        private long lastUpdateOutTimestamp = 0;
-        /**
-         * 上一次记录的位置
-         */
-        private long lastInCursor = 0;
-        /**
-         * 上一次记录的位置
-         */
-        private long lastOutCursor = 0;
-
-        // 日志相关
-        /**
-         * 上次打印日志时间
-         */
-        private long lastPrintInLogTime = -1;
-        /**
-         * 上次打印日志时间
-         */
-        private long lastPrintOutLogTime = -1;
-        /**
-         * 上次打印输出的位置点
-         */
-        private long lastPrintedOutCursor = -1;
-        /**
-         * 上次打印输入的位置点
-         */
-        private long lastPrintedInCursor = -1;
-
-
-        @Override
-        public synchronized void onBodyIn(long cursor, long length) {
-            if (lastInCursor >= 0) {
-                onBodyIn(cursor - lastInCursor);
-            } else {
-                onBodyIn(cursor);
+        private static long calculateCounts(List<Pair<Long, Long>> history, final long timeInterval) {
+            long now = now();
+            long count = 0;
+            Iterator<Pair<Long, Long>> iterator = history.iterator();
+            while (iterator.hasNext()) {
+                Pair<Long, Long> pair = iterator.next();
+                if (now - pair.getKey().longValue() > timeInterval) {
+                    iterator.remove();
+                } else {
+                    count += pair.getValue().longValue();
+                }
             }
-        }
-
-        @Override
-        public void onBodyIn(final long newReadedCount) {
-            long time = System.currentTimeMillis();
-            if (startInTimestamp <= 0) {
-                startInTimestamp = time;
-            }
-            if (lastUpdateInTimestamp <= 0) {
-                lastUpdateInTimestamp = time;
-            }
-            lastInCursor += newReadedCount;
-            printInLog();
-            if (this != GLOBAL_TRAFFIC_RECORDER) {
-                GLOBAL_TRAFFIC_RECORDER.onBodyIn(newReadedCount);
-            }
-        }
-
-
-        @Override
-        public synchronized void onBodyOut(long cursor, long length) {
-            if (lastOutCursor >= 0) {
-                onBodyIn(cursor - lastInCursor);
-            } else {
-                onBodyIn(cursor);
-            }
-        }
-
-
-        @Override
-        public void onBodyOut(final long newWrittenCount) {
-            long time = System.currentTimeMillis();
-            if (startOutTimestamp <= 0) {
-                startOutTimestamp = time;
-            }
-            if (lastUpdateOutTimestamp <= 0) {
-                lastUpdateOutTimestamp = time;
-            }
-            lastOutCursor += newWrittenCount;
-            printOutLog();
-
-            if (this != GLOBAL_TRAFFIC_RECORDER) {
-                GLOBAL_TRAFFIC_RECORDER.onBodyOut(newWrittenCount);
-            }
-        }
-
-        @Override
-        public long getInSize() {
-            return lastInCursor;
-        }
-
-        @Override
-        public long getOutSize() {
-            return lastOutCursor;
-        }
-
-        @Override
-        public long getInCost() {
-            return lastUpdateInTimestamp - startInTimestamp;
-        }
-
-        @Override
-        public long getOutCost() {
-            return lastUpdateOutTimestamp - startOutTimestamp;
-        }
-
-        @Override
-        public void printInLog() {
-            if (lastPrintInLogTime <= 0) {
-                lastPrintInLogTime = System.currentTimeMillis();
-                lastPrintedInCursor = 0;
-                return;
-            }
-            long deltaTime = System.currentTimeMillis() - lastPrintInLogTime;
-            if (deltaTime >= printLogDivider) {
-                long delta = lastInCursor - lastPrintedInCursor;
-                HttpLog.d("TinyHttpClient", "平均下载速度: " + (delta / (float) deltaTime * 1000));
-                lastPrintInLogTime = System.currentTimeMillis();
-                lastPrintedInCursor = lastInCursor;
-            }
-        }
-
-        @Override
-        public void printOutLog() {
-            if (lastPrintOutLogTime <= 0) {
-                lastPrintOutLogTime = System.currentTimeMillis();
-                lastPrintedOutCursor = 0;
-                return;
-            }
-            long deltaTime = System.currentTimeMillis() - lastPrintOutLogTime;
-            if (deltaTime >= printLogDivider) {
-                long delta = lastOutCursor - lastPrintedOutCursor;
-//                HttpLog.d("TinyHttpClient", "平均上传速度: " + (delta / (float) deltaTime * 1000));
-                lastPrintOutLogTime = System.currentTimeMillis();
-                lastPrintedOutCursor = lastOutCursor;
-            }
-        }
-
-        @Override
-        public void printLog() {
-            long cost = getInCost();
-            long size = getInSize();
-            if (cost > 0) {
-//                HttpLog.d("TinyHttpClient", "平均下载速度: " + (size / (float) cost * 1000));
-            }
-            cost = getOutCost();
-            size = getOutSize();
-            if (cost > 0) {
-//                HttpLog.d("TinyHttpClient", "平均上传速度: " + (size / (float) cost * 1000));
-            }
+            return count;
         }
     }
 }

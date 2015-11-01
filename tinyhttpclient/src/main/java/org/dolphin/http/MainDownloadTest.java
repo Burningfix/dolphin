@@ -1,12 +1,9 @@
 package org.dolphin.http;
 
 import org.dolphin.lib.IOUtil;
-import org.dolphin.lib.binaryresource.BinaryResource;
-import org.dolphin.lib.binaryresource.ByteArrayBinaryResource;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
+
 
 /**
  * Created by hanyanan on 2015/9/16.
@@ -18,8 +15,8 @@ public class MainDownloadTest {
         HttpRequest request = new HttpRequest(url, Method.GET);
         try {
             HttpResponse response = getLoader.performRequest(request);
-            BinaryResource resource = response.body().getResource();
-            InputStream stream = resource.openStream();
+//            BinaryResource resource = response.body().getResource();
+            InputStream stream = response.body();
             OutputStream fileOut = new FileOutputStream(new File("D:\\a.exe"));
             IOUtil.copy(stream, fileOut);
         } catch (Throwable throwable) {

@@ -2,6 +2,7 @@ package org.dolphin.job.sample;
 
 import org.dolphin.http.HttpRequest;
 import org.dolphin.http.HttpResponse;
+import org.dolphin.http.TrafficRecorder;
 import org.dolphin.job.*;
 import org.dolphin.job.http.HttpJobs;
 import org.dolphin.job.util.Log;
@@ -47,7 +48,7 @@ public class SingleThreadDownloadTest {
     }
 
     public static void runBlockDownload(){
-        String url = "http://mirror.cyanogenmod.org/jenkins/128821/cm-11-20151004-NIGHTLY-n7100-recovery.img";
+        String url = "http://dl_dir.qq.com/invc/qqplayer/QQPlayerMini_Setup_3.2.845.500.exe";
         HttpRequest request = HttpJobs.create(url);
         Job job = new Job(request);
         job.append(new HttpPerformOperator());
@@ -55,7 +56,7 @@ public class SingleThreadDownloadTest {
 
             @Override
             public InputStream operate(HttpResponse input) throws Throwable {
-                return input.body().getResource().openStream();
+                return input.body();
             }
         };
 
@@ -71,7 +72,7 @@ public class SingleThreadDownloadTest {
 
             @Override
             public Long operate(HttpResponse input) throws Throwable {
-                return input.body().getResource().size();
+                return input.getTransportLength();
             }
         };
 
@@ -79,24 +80,28 @@ public class SingleThreadDownloadTest {
         operatorList.add(read);
         operatorList.add(write);
         operatorList.add(size);
-        job.merge(operatorList.iterator());
+        job.merge(operatorList);
         job.until(new StreamCopyOperator(), true);
         job.observer(new Observer<TwoTuple<Long, Long>, Object>() {
             @Override
             public void onNext(Job job, TwoTuple<Long, Long> next) {
-                if(null != next) {
-                    Log.d("runBlockDownload", "next [" +next.value1 + " - " + next.value2+"]");
+                if (null != next) {
+                    Log.d("runBlockDownload", "next [" + next.value1 + " - " + next.value2 + "]");
                 }
             }
 
             @Override
             public void onCompleted(Job job, Object result) {
+                TrafficRecorder global = TrafficRecorder.GLOBAL_TRAFFIC_RECORDER;
                 Log.d("runBlockDownload", "onCompleted");
+                Log.d("runBlockDownload", "global TrafficRecorder size " + global.getInSize()+"\t cost " + global.getInCost());
             }
 
             @Override
             public void onFailed(Job job, Throwable error) {
+                TrafficRecorder global = TrafficRecorder.GLOBAL_TRAFFIC_RECORDER;
                 Log.d("runBlockDownload", "onFailed");
+                Log.d("runBlockDownload", "global TrafficRecorder size " + global.getInSize()+"\t cost " + global.getInCost());
             }
 
             @Override
@@ -105,12 +110,7 @@ public class SingleThreadDownloadTest {
             }
         });
 
-
-
-
-
-
-
+        job.work();
     }
 
     public static void main(String []argv) {

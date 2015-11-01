@@ -161,11 +161,12 @@ public final class DateUtils {
      * @return An RFC 1123 formatted date string.
      * @see #PATTERN_RFC1123
      */
-    public static String getCurrentTime(){
+    public static String getCurrentTime() {
         long time = System.currentTimeMillis();
         Date date = new Date(time);
         return formatDate(date);
     }
+
     /**
      * A factory for {@link SimpleDateFormat}s. The instances are stored in a
      * threadlocal way because SimpleDateFormat is not threadsafe as noted in

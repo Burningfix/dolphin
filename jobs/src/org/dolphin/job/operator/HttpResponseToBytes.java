@@ -1,7 +1,6 @@
 package org.dolphin.job.operator;
 
 import org.dolphin.http.HttpResponse;
-import org.dolphin.http.HttpResponseBody;
 import org.dolphin.job.Operator;
 import org.dolphin.lib.IOUtil;
 
@@ -15,8 +14,9 @@ public class HttpResponseToBytes implements Operator<HttpResponse, byte[]> {
     public byte[] operate(HttpResponse input) throws Throwable {
         InputStream binaryResource = null;
         try{
-            HttpResponseBody body = input.body();
-            binaryResource = body.getResource().openStream();
+//            HttpResponseBody body = input.body();
+//            binaryResource = body.getResource().openStream();
+            binaryResource = input.body();
             return IOUtil.getBytesFromStream(binaryResource);
         }finally {
             IOUtil.closeQuietly(binaryResource);

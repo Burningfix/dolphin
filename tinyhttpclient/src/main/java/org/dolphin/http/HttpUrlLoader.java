@@ -93,7 +93,7 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
 
     @Override
     public T openUrlConnection(HttpRequest httpRequest) throws Throwable {
-        if(null != getRequestInterceptor(httpRequest)) {
+        if (null != getRequestInterceptor(httpRequest)) {
             getRequestInterceptor(httpRequest).onPrepareRunning(httpRequest);
         }
         String url = getUrl(httpRequest);
@@ -106,8 +106,8 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
     public void setBaseInfo(HttpRequest httpRequest, T connection) throws Throwable {
         connection.setRequestMethod(httpRequest.methodString());
         connection.setInstanceFollowRedirects(true);
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(5000);
+        connection.setConnectTimeout(30000);
+        connection.setReadTimeout(30000);
     }
 
     @Override
@@ -120,7 +120,7 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
         for (Map.Entry<String, String> entry : entrySet) {
             connection.setRequestProperty(entry.getKey(), entry.getValue());
         }
-        if(null != getRequestInterceptor(request)) {
+        if (null != getRequestInterceptor(request)) {
             getRequestInterceptor(request).onWriteRequestHeaderFinish(request);
         }
     }
@@ -129,14 +129,14 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
     public void sendRequestBody(HttpRequest request, T connection) throws Throwable {
         // default method do nothing
 
-        if(null != getRequestInterceptor(request)) {
+        if (null != getRequestInterceptor(request)) {
             getRequestInterceptor(request).onAfterWriteRequestBody(request);
         }
     }
 
     @Override
     public void onTransportUpProgress(HttpRequest httpRequest, long cursor, long count) throws AbortException {
-        HttpLog.d("tinyHttpClient", httpRequest.toString() + " Up " + cursor + " - " + count);
+//        HttpLog.d("tinyHttpClient", httpRequest.toString() + " Up " + cursor + " - " + count);
         TrafficRecorder trafficRecorder = httpRequest.getTrafficStatus();
         if (null != trafficRecorder) {
             trafficRecorder.onBodyOut(cursor, count);
@@ -158,7 +158,7 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
     public HttpResponseHeader getResponseHeader(HttpRequest httpRequest, T connection) throws Throwable {
         connection.getResponseCode();
         HttpResponseHeader responseHeader = new HttpResponseHeader(connection.getHeaderFields());
-        if(null != getRequestInterceptor(httpRequest)) {
+        if (null != getRequestInterceptor(httpRequest)) {
             getRequestInterceptor(httpRequest).onReadResponseHeader(httpRequest, responseHeader);
         }
         return responseHeader;
@@ -173,7 +173,7 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
 
     @Override
     public HttpResponse redirectNext(HttpRequest httpRequest, RedirectedResponse redirectedResponse) throws Throwable {
-        if(null != getRequestInterceptor(httpRequest)) {
+        if (null != getRequestInterceptor(httpRequest)) {
             redirectedResponse = getRequestInterceptor(httpRequest).onPrepareRedirect(httpRequest, redirectedResponse, 0);
         }
         String forwardUrl = redirectedResponse.getForwardUrl();
@@ -183,7 +183,7 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
     }
 
     @Override
-    public HttpResponseBody getHttpResponseBody(final HttpRequest httpRequest, T connection) throws Throwable {
+    public InputStream getHttpResponseBody(final HttpRequest httpRequest, T connection) throws Throwable {
         final long contentLength = connection.getContentLengthLong();// TODO
         InputStream inputStream = connection.getInputStream();
         InputStreamWrapper inputStreamWrapper = new InputStreamWrapper(inputStream, connection) {
@@ -193,11 +193,11 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
             }
         };
 
-        HttpResponseBody responseBody = new HttpResponseBody(new StreamBinaryResource(inputStreamWrapper, contentLength));
-        if(null != getRequestInterceptor(httpRequest)) {
-            responseBody = getRequestInterceptor(httpRequest).onReadRequestBodyFinish(httpRequest, responseBody);
+//        HttpResponseBody responseBody = new HttpResponseBody(new StreamBinaryResource(inputStreamWrapper, contentLength));
+        if (null != getRequestInterceptor(httpRequest)) {
+            return getRequestInterceptor(httpRequest).onReadRequestBodyFinish(httpRequest, inputStreamWrapper);
         }
-        return responseBody;
+        return inputStreamWrapper;
     }
 
     @Override
@@ -217,11 +217,23 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
         HttpResponse.Builder builder = new HttpResponse.Builder(request);
         if (isSuccess(statusCode)) {
             HttpResponseHeader header = getResponseHeader(request, connection);
-            HttpResponseBody responseBody = getHttpResponseBody(request, connection);
+            InputStream responseBody = getHttpResponseBody(request, connection);
             builder.setMessage(msg);
             builder.setStatusCode(statusCode);
             builder.setBody(responseBody);
             builder.setHttpResponseHeader(header);
+
+            // 设置下载的启示位置
+            Range range = header.getRange();
+            if (null != range && range.getStart() > 0) {
+                request.getTrafficStatus().onBodyIn(range.getStart(), range.getFullLength());
+            } else {
+                if (null != range) {
+                    request.getTrafficStatus().onBodyIn(0, range.getFullLength());
+                } else {
+                    request.getTrafficStatus().onBodyIn(0, -1);
+                }
+            }
         } else {
             HttpResponseHeader header = getResponseHeader(request, connection);
             builder.setMessage(msg);
@@ -231,25 +243,24 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
             connection.disconnect();
         }
         HttpResponse httpResponse = builder.build();
-        if(null != getRequestInterceptor(request)) {
+        if (null != getRequestInterceptor(request)) {
             httpResponse = getRequestInterceptor(request).onAfterRunning(request, httpResponse);
         }
         return httpResponse;
     }
 
     /**
-     *
      * @param request
      * @param cursor
      * @param count
      * @param downloading
      */
     protected final void notifyTransportProgress(HttpRequest request, long cursor, long count, boolean downloading)
-            throws AbortException{
-        if(null != getRequestInterceptor(request)) {
-            if(!downloading) {
+            throws AbortException {
+        if (null != getRequestInterceptor(request)) {
+            if (!downloading) {
                 getRequestInterceptor(request).onTransportUpProgress(request, cursor, count);
-            }else{
+            } else {
                 getRequestInterceptor(request).onTransportDownProgress(request, cursor, count);
             }
         }
@@ -263,7 +274,7 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
 
     protected final void releaseBodyResource(HttpRequest request) {
         HttpRequestBody requestBody = request.getRequestBody();
-        if(null != requestBody) {
+        if (null != requestBody) {
             requestBody.releaseResource();
         }
     }

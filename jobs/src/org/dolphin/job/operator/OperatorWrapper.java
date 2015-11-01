@@ -15,7 +15,7 @@ import java.util.Iterator;
 public class OperatorWrapper implements Operator {
     private final Operator[] operators;
 
-    public OperatorWrapper(Iterator<Operator> operators) {
+    public OperatorWrapper(Iterable<Operator> operators) {
         this.operators = Lists.newArrayList(operators).toArray(new Operator[]{});
     }
 

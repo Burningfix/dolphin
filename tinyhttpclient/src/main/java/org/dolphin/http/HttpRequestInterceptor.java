@@ -3,6 +3,7 @@ package org.dolphin.http;
 import org.dolphin.lib.exception.AbortException;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Created by hanyanan on 2015/9/15.
@@ -95,7 +96,7 @@ public interface HttpRequestInterceptor {
      * @return the finally body received from server.
      * @throws InterruptedException interrupt current request exception.
      */
-    public HttpResponseBody onReadRequestBodyFinish(HttpRequest request, HttpResponseBody responseBody) throws InterruptedException;
+    public InputStream onReadRequestBodyFinish(HttpRequest request, InputStream responseBody) throws InterruptedException;
 
     /**
      * The callback after finish current request.
@@ -152,7 +153,7 @@ public interface HttpRequestInterceptor {
         }
 
         @Override
-        public HttpResponseBody onReadRequestBodyFinish(HttpRequest request, HttpResponseBody responseBody) throws InterruptedException {
+        public InputStream onReadRequestBodyFinish(HttpRequest request, InputStream responseBody) throws InterruptedException {
             return responseBody;
         }
 

@@ -27,7 +27,6 @@ public class Job implements Comparable<Job> {
 
     public AtomicBoolean aborted = new AtomicBoolean(false);
 
-
     protected Object tag = null;
     protected final List<Operator> operatorList = new LinkedList<Operator>();
     protected JobErrorHandler errorHandler = null;
@@ -95,11 +94,11 @@ public class Job implements Comparable<Job> {
      * @param operatorIterator
      * @return
      */
-    public final Job merge(Iterator<Operator> operatorIterator) {
-        if (null == operatorIterator) {
+    public final Job merge(Iterable<Operator> operators) {
+        if (null == operators) {
             throw new NullPointerException("");
         }
-        operatorList.add(new OperatorWrapper(operatorIterator));
+        operatorList.add(new OperatorWrapper(operators));
         return this;
     }
 

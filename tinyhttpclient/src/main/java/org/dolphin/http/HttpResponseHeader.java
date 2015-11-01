@@ -18,8 +18,9 @@ import static org.dolphin.http.HttpUtil.DEFAULT_CHARSET;
  */
 public class HttpResponseHeader extends BaseHeader {
     private MimeType mimeType;
-//    private CacheControl cacheControl;
+    //    private CacheControl cacheControl;
     private Range range = null;
+
     public HttpResponseHeader(Map<String, List<String>> headers) {
         super(headers);
     }
@@ -41,13 +42,22 @@ public class HttpResponseHeader extends BaseHeader {
         return value(Headers.SET_COOKIE.value());
     }
 
-    //Content-Range: bytes 21010-47021/47022
+    //优先读取Content-Range: bytes 21010-47021/47022，如果没有，则读取Content-Length属性
     public Range getRange() {
         if (null != this.range) {
             return this.range;
         }
         String range = value(Headers.CONTENT_RANGE.value());
-        if (null == range) return null;
+        if (null == range) {
+            String contentLengthHeader = value(Headers.CONTENT_LENGTH.value());
+            if (ValueUtil.isEmpty(contentLengthHeader)) {
+                return null;
+            }
+            long contentLength = ValueUtil.parseLong(contentLengthHeader, -1);
+            if (contentLength <= 0) return null;
+            this.range = new Range(0, contentLength - 1, contentLength);
+            return this.range;
+        }
         Pattern pattern = Pattern.compile("(\\d+)-(\\d+)/(\\d+)");
         Matcher m = pattern.matcher(range);
         if (m.find()) {
@@ -88,7 +98,7 @@ public class HttpResponseHeader extends BaseHeader {
      * Client send request
      * If-None-Match   "427fe7b6442f2096dff4f92339305444"
      * If-Modified-Since   Fri, 04 Sep 2009 05:55:43 GMT
-     *
+     * <p/>
      * It's recommand to send both
      */
     public String getETag() {
@@ -101,6 +111,7 @@ public class HttpResponseHeader extends BaseHeader {
 //        }
 //        return cacheControl;
 //    }
+
     /**
      * Cache-Control：
      * 请求：
@@ -129,7 +140,7 @@ public class HttpResponseHeader extends BaseHeader {
      * 因此，如果存在合适的验证令牌 (ETag)，no-cache 会发起往返通信来验证缓存的响应，如果资源未被更改，可以避免下载。（即no-cache不会有请求的实体）
      * 相比之下，no-store更加简单，直接禁止浏览器和所有中继缓存存储返回的任何版本的响应 - 例如：一个包含个人隐私数据或银行数据的响应。
      * 每次用户请求该资源时，都会向服务器发送一个请求，每次都会下载完整的响应。<p/>
-     *
+     * <p/>
      * | "max-age" "=" delta-seconds
      * | "max-stale" [ "=" delta-seconds ]
      * | "min-fresh" "=" delta-seconds
@@ -168,7 +179,7 @@ public class HttpResponseHeader extends BaseHeader {
 //            }
 //        }
         String expire = value(Headers.EXPIRES);
-        if(ValueUtil.isEmpty(expire)) return -1;
+        if (ValueUtil.isEmpty(expire)) return -1;
         return HttpUtil.parseDateAsEpoch(expire);
     }
 

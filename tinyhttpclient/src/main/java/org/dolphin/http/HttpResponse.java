@@ -4,6 +4,7 @@ import org.dolphin.lib.IOUtil;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -25,7 +26,7 @@ public class HttpResponse implements Closeable {
     /**
      * The real body which store the content response from server.
      */
-    private HttpResponseBody bodyResource;
+//    private HttpResponseBody bodyResource;
     /**
      * http resonse code
      */
@@ -37,13 +38,18 @@ public class HttpResponse implements Closeable {
 
     private final Protocol protocol;
 
+    /**
+     * 从服务器得到内容
+     */
+    private final InputStream responseBody;
+
     private HttpResponse(int code, String msg, HttpRequest httpRequest, Protocol protocol, HttpResponseHeader responseHeader,
-                         HttpResponseBody bodyResource) {
+                         InputStream body) {
         this.code = code;
         this.msg = msg;
         this.httpRequest = httpRequest;
         this.responseHeader = responseHeader;
-        this.bodyResource = bodyResource;
+        this.responseBody = body;
         this.protocol = protocol;
     }
 
@@ -106,8 +112,12 @@ public class HttpResponse implements Closeable {
         return msg;
     }
 
-    public HttpResponseBody body() {
-        return bodyResource;
+//    public HttpResponseBody body() {
+//        return bodyResource;
+//    }
+
+    public InputStream body() {
+        return responseBody;
     }
 
     public String getCookie() {
@@ -116,6 +126,21 @@ public class HttpResponse implements Closeable {
 
     public Range getRange() {
         return getResponseHeader().getRange();
+    }
+
+    /**
+     * Return the complete file size of the specify request.
+     */
+    public long getFileLength() {
+        Range range = getRange();
+        if (null == range) return -1;
+        return range.getFullLength();
+    }
+
+    public long getTransportLength() {
+        Range range = getRange();
+        if (null == range) return -1;
+        return range.getEnd() - range.getStart() + 1;
     }
 
     public boolean isSupportCache() {
@@ -189,17 +214,7 @@ public class HttpResponse implements Closeable {
     }
 
     public void dispose() {
-        // TODO
-        synchronized (this) {
-            if (null != bodyResource && bodyResource.getResource() != null) {
-                try {
-                    IOUtil.safeClose(bodyResource.getResource().openStream());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                bodyResource = null;
-            }
-        }
+        IOUtil.closeQuietly(responseBody);
     }
 
     @Override
@@ -223,7 +238,7 @@ public class HttpResponse implements Closeable {
         /**
          * The real body which store the content response from server.
          */
-        private HttpResponseBody responseBody;
+        private InputStream responseBody;
         /**
          * http resonse code
          */
@@ -266,7 +281,7 @@ public class HttpResponse implements Closeable {
             return this;
         }
 
-        public Builder setBody(HttpResponseBody responseBody) {
+        public Builder setBody(InputStream responseBody) {
             this.responseBody = responseBody;
             return this;
         }

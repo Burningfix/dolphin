@@ -77,7 +77,7 @@ public class HttpRequest implements Cloneable, Closeable {
         this.protocol = protocol;
         this.requestBody = new HttpRequestBody();
         this.requestHeader = new HttpRequestHeader();
-        this.trafficStatus = new TrafficRecorder.TrafficRecorderImpl();
+        this.trafficStatus = new TrafficRecorder.Builder().build();
     }
 
     /**
@@ -103,30 +103,10 @@ public class HttpRequest implements Cloneable, Closeable {
         this(url, Method.GET, Protocol.HTTP_1_1);
     }
 
-//    public HttpRequest setTransportProgress(TransportProgress transportProgress) {
-//        this.transportProgress = transportProgress;
-//        return this;
-//    }
-//
-//    public TransportProgress getTransportProgress() {
-//        return transportProgress;
-//    }
-
     public HttpRequest setForwardUrl(String url) {
         this.forwardUrl = url;
         return this;
     }
-
-//    public HttpFingerPrint getFingerPrint(){
-//        return fingerPrint;
-//    }
-
-//    public String getFingerPrint() {
-//        if (null == fingerPrint) {
-//            return ValueUtil.md5(getUrl());
-//        }
-//        return fingerPrint;
-//    }
 
     public String getNextUrl() {
         return forwardUrl;

@@ -16,8 +16,8 @@ abstract class BaseScheduler implements Scheduler {
 
     @Override
     public Subscription schedule(Runnable runnable) {
-        ExecutorService executor = getWorkExecutor();
-        final Future future = executor.submit(runnable);
+        ScheduledExecutorService executor = getWorkExecutor();
+        final Future future = executor.schedule(runnable, 0, TimeUnit.MILLISECONDS);
         return new FutureSubscription(future);
     }
 

@@ -31,8 +31,8 @@ public class MainTest {
                 System.out.println(response.toString());
                 return;
             }
-            BinaryResource resource = response.body().getResource();
-            InputStream stream = resource.openStream();
+//            BinaryResource resource = response.body().getResource();
+            InputStream stream = response.body();
             byte[] data = IOUtil.getBytesFromStream(stream);
             System.out.println(new String(data));
             IOUtil.closeQuietly(stream);
