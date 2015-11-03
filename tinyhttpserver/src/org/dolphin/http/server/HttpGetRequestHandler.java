@@ -18,10 +18,16 @@ import java.util.Map;
  */
 public class HttpGetRequestHandler implements HttpRequestHandler {
     private static final String TEST_FILE = "C:\\Users\\Public\\Music\\Sample Music\\Sleep Away.mp3";
+
+
+    protected BinaryResource getResource(String path, Map<String, String> params) {
+        return new FileBinaryResource(new File(TEST_FILE));
+    }
+
     @Override
     public BinaryResource handle(String path, Map<String, String> params, Map<String,String> headers,
                                  Map<String, String> responseHeaders) throws IOException {
-        BinaryResource binaryResource = new FileBinaryResource(new File(TEST_FILE));
+        BinaryResource binaryResource = getResource(path, params);
 
         responseHeaders.put(HttpGetServer.CODE_KEY, String.valueOf(200));
         String rangeString = headers.get("Range");

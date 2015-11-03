@@ -42,7 +42,6 @@ public class HttpGetServer {
     public static final String CODE_KEY = "Code"+System.nanoTime();
 
     private static final String TAG = "HttpGetServer";
-    private static final int DEFAULT_PORT = 80;
     private static final String LINE_DIVIDER = "\r\n";
     private boolean start = false;
     private int port;
@@ -52,7 +51,6 @@ public class HttpGetServer {
 
     public HttpGetServer(int port) {
         this.port = port;
-        requestHandlers.put("/a.mp3", new HttpGetRequestHandler());
     }
 
     /**
