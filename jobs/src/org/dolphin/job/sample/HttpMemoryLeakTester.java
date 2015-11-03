@@ -31,7 +31,7 @@ public class HttpMemoryLeakTester {
         job.append(new Operator() {
             @Override
             public Object operate(Object input) throws Throwable {
-                Runtime run = Runtime.getRuntime();
+                final Runtime run = Runtime.getRuntime();
                 long total = run.totalMemory() - run.freeMemory();
                 System.out.println("已分配内存 = " + FileInfo.sizeString(total));
                 return input;

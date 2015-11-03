@@ -1,1 +1,1 @@
-include ':tinyhttpclient', ':lib-java', ':rx'
+include ':tinyhttpclient', ':lib-java', ':rx', ':tinyhttpserver'

@@ -15,7 +15,7 @@ import java.io.InputStream;
 public class FileBinaryResource implements BinaryResource {
   private final File mFile;
 
-  private FileBinaryResource(File file) {
+  public  FileBinaryResource(File file) {
     mFile = Preconditions.checkNotNull(file);
   }
 

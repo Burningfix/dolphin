@@ -5,6 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javafx.util.Pair;
+import org.dolphin.lib.FileInfo;
 
 /**
  * Created by dolphin on 2015/5/11.
@@ -66,14 +67,14 @@ public interface TrafficRecorder {
         }
 
         @Override
-        public void onBodyIn(long newReadedCount) {
-            inSize += newReadedCount;
+        public synchronized void onBodyIn(long newReadCount) {
+            inSize += newReadCount;
             long now = System.currentTimeMillis();
 
             if (firstInTimestamp <= 0) {
                 firstInTimestamp = now;
             }
-            inHistory.add(new Pair<Long, Long>(now, newReadedCount));
+            inHistory.add(new Pair<Long, Long>(now, newReadCount));
 
             if (lastPrintInTime <= 0) {
                 lastPrintInTime = now;
@@ -82,13 +83,13 @@ public interface TrafficRecorder {
 
 
             if (now - lastPrintInTime > printTimeInterval) {
-                System.out.println("应用下载速度: " + spotDownSpeed());
+                System.out.println("应用下载速度: " + FileInfo.sizeString(spotDownSpeed()));
                 lastPrintInTime = now;
             }
         }
 
         @Override
-        public void onBodyOut(long newWrittenCount) {
+        public synchronized void onBodyOut(long newWrittenCount) {
             outSize += newWrittenCount;
             long now = System.currentTimeMillis();
             if (firstOutTimeStamp <= 0) {
@@ -129,27 +130,33 @@ public interface TrafficRecorder {
 
         @Override
         public long spotUpSpeed() {
-            return calculateCounts(outHistory, printTimeInterval);
+            synchronized(this) {
+                return calculateCounts(outHistory, printTimeInterval);
+            }
         }
 
         @Override
         public long spotDownSpeed() {
-            return calculateCounts(inHistory, printTimeInterval);
+            synchronized(this) {
+                return calculateCounts(inHistory, printTimeInterval);
+            }
         }
 
-        private synchronized long calculateCounts(List<Pair<Long, Long>> history, final long timeInterval) {
-            long now = now();
-            long count = 0;
-            Iterator<Pair<Long, Long>> iterator = history.iterator();
-            while (iterator.hasNext()) {
-                Pair<Long, Long> pair = iterator.next();
-                if (now - pair.getKey().longValue() > timeInterval) {
-                    iterator.remove();
-                } else {
-                    count += pair.getValue().longValue();
+        private long calculateCounts(List<Pair<Long, Long>> history, final long timeInterval) {
+            synchronized(this) {
+                long now = now();
+                long count = 0;
+                Iterator<Pair<Long, Long>> iterator = history.iterator();
+                while (iterator.hasNext()) {
+                    Pair<Long, Long> pair = iterator.next();
+                    if (pair == null || now - pair.getKey().longValue() > timeInterval) {
+                        iterator.remove();
+                    } else {
+                        count += pair.getValue().longValue();
+                    }
                 }
+                return count;
             }
-            return count;
         }
     };
 
@@ -351,7 +358,7 @@ public interface TrafficRecorder {
             Iterator<Pair<Long, Long>> iterator = history.iterator();
             while (iterator.hasNext()) {
                 Pair<Long, Long> pair = iterator.next();
-                if (now - pair.getKey().longValue() > timeInterval) {
+                if (null == pair || now - pair.getKey().longValue() > timeInterval) {
                     iterator.remove();
                 } else {
                     count += pair.getValue().longValue();

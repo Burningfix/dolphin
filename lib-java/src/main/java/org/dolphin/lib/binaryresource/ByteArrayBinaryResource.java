@@ -17,6 +17,11 @@ public class ByteArrayBinaryResource implements BinaryResource {
     mBytes = Preconditions.checkNotNull(bytes);
   }
 
+  public ByteArrayBinaryResource(String msg) {
+    mBytes = Preconditions.checkNotNull(msg).getBytes();
+  }
+
+
   @Override
   public long size() {
     return mBytes.length;
