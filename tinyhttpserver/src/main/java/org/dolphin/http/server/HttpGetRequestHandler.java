@@ -20,20 +20,25 @@ public class HttpGetRequestHandler implements HttpRequestHandler {
     private static final String TEST_FILE = "C:\\Users\\Public\\Music\\Sample Music\\Sleep Away.mp3";
 
 
-    protected BinaryResource getResource(String path, Map<String, String> params) {
+    protected BinaryResource getResource(String path, Map<String, String> params, Map<String, String> responseHeaders) {
         return new FileBinaryResource(new File(TEST_FILE));
     }
 
     @Override
     public BinaryResource handle(String path, Map<String, String> params, Map<String,String> headers,
                                  Map<String, String> responseHeaders) throws IOException {
-        BinaryResource binaryResource = getResource(path, params);
-
+        responseHeaders.put("Content-Type", "application/octet-stream");
+        responseHeaders.put("Server", "Tiny Http Server/0.1");
         responseHeaders.put(HttpGetServer.CODE_KEY, String.valueOf(200));
+
+        BinaryResource binaryResource = getResource(path, params, responseHeaders);
+
+
         String rangeString = headers.get("Range");
         if(null == rangeString) {
             rangeString = headers.get("RANGE");
         }
+
         if(!ValueUtil.isEmpty(rangeString)) {
             long[] range = TinyHttpHelper.getRange(rangeString);
             if(range != null && range.length == 2 && range[0] > 0){
@@ -48,9 +53,6 @@ public class HttpGetRequestHandler implements HttpRequestHandler {
                 responseHeaders.put("Content-Length", String.valueOf(range[1] - range[0] + 1));
             }
         }
-
-        responseHeaders.put("Content-Type", "application/octet-stream");
-        responseHeaders.put("Server", "Tiny Http Server/0.1");
 
 
         return binaryResource;

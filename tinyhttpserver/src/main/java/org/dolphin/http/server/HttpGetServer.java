@@ -39,7 +39,7 @@ public class HttpGetServer {
     /**
      * server返回的code
      */
-    public static final String CODE_KEY = "Code"+System.nanoTime();
+    public static final String CODE_KEY = "Code" + System.nanoTime();
 
     private static final String TAG = "HttpGetServer";
     private static final String LINE_DIVIDER = "\r\n";
@@ -125,7 +125,7 @@ public class HttpGetServer {
         int i = 0;
         Map<String, String> headMap = new HashMap<String, String>();
         while ((line = bufferedReader.readLine()) != null) {
-            HttpLog.d(TAG, "Read request line [ " + line + " ]");
+//            HttpLog.d(TAG, "Read request line [ " + line + " ]");
             if (line.length() <= 0) break;
             if (i == 0) {
                 // decode line: GET /n?m=rddata&v=index_data&rn1=17&callback=bdNewsJsonCallBack&ra=0.6327211381867528 HTTP/1.1\r\n
@@ -138,10 +138,10 @@ public class HttpGetServer {
                 headMap.put(METHOD_KEY, paths[0]); // GET
                 headMap.put(RAW_PATH_KEY, paths[1]); // /n?m=rddata&v=index_data&rn1=17&callback=bdNewsJsonCallBack&ra=0.6327211381867528
             } else {
-                String s[] = line.split(":");
-                if (s.length != 2) continue;
+                int index = line.indexOf(":");
+                if (index <= 0) continue;
 
-                headMap.put(s[0], s[1]); // http request header
+                headMap.put(line.substring(0, index), line.substring(index + 1)); // http request header
             }
             ++i;
         }
@@ -264,7 +264,7 @@ public class HttpGetServer {
                 Map<String, String> responseHeader = new HashMap<String, String>();
                 BinaryResource resource = handler.handle(path, paths, requestHeader, responseHeader);
                 int code = Integer.valueOf(responseHeader.remove(CODE_KEY));
-                sendResponse(resource, code,responseHeader, outStream);
+                sendResponse(resource, code, responseHeader, outStream);
             } catch (IOException exception) {
 
             } finally {
@@ -280,7 +280,7 @@ public class HttpGetServer {
     public static void printHeader(Map<String, String> headers) {
         if (null == headers) return;
         for (Map.Entry<String, String> entry : headers.entrySet()) {
-            HttpLog.d(TAG, "[" + entry.getKey() + " = " + entry.getValue() + "]");
+            HttpLog.d(TAG, "[" + entry.getKey() + ":" + entry.getValue() + "]");
         }
     }
 
