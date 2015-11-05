@@ -12,7 +12,9 @@ public class Main {
 
     public static void main(String []argv) {
         HttpGetServer getServer = new HttpGetServer(8877);
-        getServer.registerRequestHandler(QUERY_FILE_LIST_PATH, new QueryFilesRequestHandler("D:\\book"));
+        QueryFilesRequestHandler handler = new QueryFilesRequestHandler("D:\\book");
+        getServer.registerRequestHandler(QUERY_FILE_LIST_PATH, handler);
+        getServer.registerRequestHandler(REQUEST_FILE_PATH, handler);
         getServer.start();
     }
 }

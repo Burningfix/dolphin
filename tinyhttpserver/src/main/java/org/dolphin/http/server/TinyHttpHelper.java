@@ -1,5 +1,7 @@
 package org.dolphin.http.server;
 
+import org.dolphin.lib.ValueUtil;
+
 import java.util.HashMap;
 
 public class TinyHttpHelper {
@@ -147,12 +149,9 @@ public class TinyHttpHelper {
     public static long[] getRange(String range){
         long[] res = new long[]{-1,-1};
         if(null == range) return res;
-
-        if(null != range){
-            String[] s = range.split("=");
-            if(s.length != 2) return null;
-            range = s[1];
-            s = range.split("-");
+        range = range.trim();
+        if(!ValueUtil.isEmpty(range)){
+            String[] s = range.split("-");
             if(s == null || s.length <=0) return null;
             if(null == s[0]) return null;
             try{

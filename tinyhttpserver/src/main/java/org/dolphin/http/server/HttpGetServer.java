@@ -216,7 +216,10 @@ public class HttpGetServer {
         sb.append("Date: " + DateUtils.getCurrentTime()).append(LINE_DIVIDER);
         sb.append(LINE_DIVIDER);
         outputStream.write(sb.toString().getBytes());
-        IOUtil.copy(responseResource.openStream(), outputStream);
+        // 传输body，但是传输不超responseResource的size，
+        // 对于没有Range: bytes=5275648-15275648d的请求，{@code responseResource.size()}的大小为文件的大小
+        // 对于存在Range: bytes=5275648-15275648d的请求，{@code responseResource.size()}的大小为可以传输的大小
+        IOUtil.copy(responseResource.openStream(), outputStream, responseResource.size());
         outputStream.flush();
     }
 
@@ -266,7 +269,7 @@ public class HttpGetServer {
                 int code = Integer.valueOf(responseHeader.remove(CODE_KEY));
                 sendResponse(resource, code, responseHeader, outStream);
             } catch (IOException exception) {
-
+//                sendResponse(new ByteArrayBinaryResource("Server Internal Error"), 500, ERROR_HEADER, outStream);
             } finally {
                 IOUtil.closeQuietly(inStream);
                 IOUtil.closeQuietly(outStream);

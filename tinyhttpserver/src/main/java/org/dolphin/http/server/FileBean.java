@@ -15,7 +15,7 @@ public class FileBean implements KeepAttr {
     @Expose
     public String name;
     @Expose
-    public String id;
+    public String url;
     @Expose
     public String type;
 }
