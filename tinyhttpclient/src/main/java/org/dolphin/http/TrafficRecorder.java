@@ -3,8 +3,8 @@ package org.dolphin.http;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
-import javafx.util.Pair;
 import org.dolphin.lib.FileInfo;
 
 /**
@@ -34,6 +34,23 @@ public interface TrafficRecorder {
 
     public long spotDownSpeed();
 
+    static class Entry<T1, T2> {
+        private T1 key;
+        private T2 value;
+        private Entry(T1 key, T2 value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        private T1 getKey(){
+            return key;
+        }
+
+        private T2 getValue(){
+            return value;
+        }
+    }
+
     public static final TrafficRecorder GLOBAL_TRAFFIC_RECORDER = new TrafficRecorder() {
         private long lastPrintInTime = 0;
         private long lastPrintOutTime = 0;
@@ -45,12 +62,12 @@ public interface TrafficRecorder {
         /**
          * 保留的读取的历史纪录
          */
-        private final List<Pair<Long, Long>> inHistory = new LinkedList<Pair<Long, Long>>();
+        private final List<Entry<Long, Long>> inHistory = new LinkedList<Entry<Long, Long>>();
 
         /**
          * 保留的写入的历史纪录
          */
-        private final List<Pair<Long, Long>> outHistory = new LinkedList<Pair<Long, Long>>();
+        private final List<Entry<Long, Long>> outHistory = new LinkedList<Entry<Long, Long>>();
 
         private long now() {
             return System.currentTimeMillis();
@@ -74,7 +91,7 @@ public interface TrafficRecorder {
             if (firstInTimestamp <= 0) {
                 firstInTimestamp = now;
             }
-            inHistory.add(new Pair<Long, Long>(now, newReadCount));
+            inHistory.add(new Entry<Long, Long>(now, newReadCount));
 
             if (lastPrintInTime <= 0) {
                 lastPrintInTime = now;
@@ -95,7 +112,7 @@ public interface TrafficRecorder {
             if (firstOutTimeStamp <= 0) {
                 firstOutTimeStamp = now;
             }
-            outHistory.add(new Pair<Long, Long>(now, newWrittenCount));
+            outHistory.add(new Entry<Long, Long>(now, newWrittenCount));
 
             if (lastPrintOutTime <= 0) {
                 lastPrintOutTime = now;
@@ -142,13 +159,13 @@ public interface TrafficRecorder {
             }
         }
 
-        private long calculateCounts(List<Pair<Long, Long>> history, final long timeInterval) {
+        private long calculateCounts(List<Entry<Long, Long>> history, final long timeInterval) {
             synchronized(this) {
                 long now = now();
                 long count = 0;
-                Iterator<Pair<Long, Long>> iterator = history.iterator();
+                Iterator<Entry<Long, Long>> iterator = history.iterator();
                 while (iterator.hasNext()) {
-                    Pair<Long, Long> pair = iterator.next();
+                    Entry<Long, Long> pair = iterator.next();
                     if (pair == null || now - pair.getKey().longValue() > timeInterval) {
                         iterator.remove();
                     } else {
@@ -242,12 +259,12 @@ public interface TrafficRecorder {
         /**
          * 保留的读取的历史纪录
          */
-        private final List<Pair<Long, Long>> inHistory = new LinkedList<Pair<Long, Long>>();
+        private final List<Entry<Long, Long>> inHistory = new LinkedList<Entry<Long, Long>>();
 
         /**
          * 保留的写入的历史纪录
          */
-        private final List<Pair<Long, Long>> outHistory = new LinkedList<Pair<Long, Long>>();
+        private final List<Entry<Long, Long>> outHistory = new LinkedList<Entry<Long, Long>>();
 
         /**
          * 瞬时速度的统计时常，默认是两秒统计一次
@@ -305,14 +322,14 @@ public interface TrafficRecorder {
         @Override
         public void onBodyIn(long newReadedCount) {
             long curr = now();
-            inHistory.add(new Pair<Long, Long>(curr, newReadedCount));
+            inHistory.add(new Entry<Long, Long>(curr, newReadedCount));
             spotDownSpeed();
         }
 
         @Override
         public void onBodyOut(long newWrittenCount) {
             long curr = now();
-            outHistory.add(new Pair<Long, Long>(curr, newWrittenCount));
+            outHistory.add(new Entry<Long, Long>(curr, newWrittenCount));
             spotUpSpeed();
         }
 
@@ -352,12 +369,12 @@ public interface TrafficRecorder {
             return calculateCounts(inHistory, timeInterval);
         }
 
-        private static long calculateCounts(List<Pair<Long, Long>> history, final long timeInterval) {
+        private static long calculateCounts(List<Entry<Long, Long>> history, final long timeInterval) {
             long now = now();
             long count = 0;
-            Iterator<Pair<Long, Long>> iterator = history.iterator();
+            Iterator<Entry<Long, Long>> iterator = history.iterator();
             while (iterator.hasNext()) {
-                Pair<Long, Long> pair = iterator.next();
+                Entry<Long, Long> pair = iterator.next();
                 if (null == pair || now - pair.getKey().longValue() > timeInterval) {
                     iterator.remove();
                 } else {

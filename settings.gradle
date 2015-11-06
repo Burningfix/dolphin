@@ -1,1 +1,1 @@
-include ':tinyhttpclient', ':lib-java', ':tinyhttpserver', ':jobs'
+include ':tinyhttpclient', ':lib-java', ':tinyhttpserver', ':jobs', ':sharelink'
