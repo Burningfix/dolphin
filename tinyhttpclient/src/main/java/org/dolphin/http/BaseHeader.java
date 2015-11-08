@@ -10,8 +10,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import sun.awt.SunHints;
-
 import static org.dolphin.http.HttpUtil.BREAK;
 import static org.dolphin.http.HttpUtil.CONNECTOR;
 import static org.dolphin.http.HttpUtil.CRLF;

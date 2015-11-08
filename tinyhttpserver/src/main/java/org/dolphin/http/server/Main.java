@@ -9,6 +9,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Enumeration;
 
 /**
@@ -21,8 +26,46 @@ public class Main {
     public static final String REQUEST_FILE_PATH = "/get";
     public static final int PORT = 8592;
     public static void main(String[] argv) {
+//        try {
+//            Files.walkFileTree(Paths.get("E:", "a"), new FileVisitor() {
+//
+//                @Override
+//                public FileVisitResult preVisitDirectory(Object dir,
+//                                                         BasicFileAttributes attrs) throws IOException {
+//                    //访问文件夹之前调用
+//                    System.out.println("preVisitDirectory\t"+dir);
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//                @Override
+//                public FileVisitResult visitFile(Object file,
+//                                                 BasicFileAttributes attrs) throws IOException {
+//                    // 访问文件调用
+//                    System.out.println("visitFile\t"+file);
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//                @Override
+//                public FileVisitResult visitFileFailed(Object file, IOException exc)
+//                        throws IOException {
+//                    // 访问文件失败时调用
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//                @Override
+//                public FileVisitResult postVisitDirectory(Object dir,
+//                                                          IOException exc) throws IOException {
+//                    System.out.println("postVisitDirectory\t"+dir);
+//                    // 访问文件夹之后调用
+//                    return FileVisitResult.CONTINUE;
+//                }
+//
+//            });
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         HttpGetServer getServer = new HttpGetServer(PORT);
-        QueryFilesRequestHandler handler = new QueryFilesRequestHandler("D:\\book");
+        QueryFilesRequestHandler handler = new QueryFilesRequestHandler("E:\\a");
         getServer.registerRequestHandler(QUERY_FILE_LIST_PATH, handler);
         getServer.registerRequestHandler(REQUEST_FILE_PATH, handler);
         getServer.start();

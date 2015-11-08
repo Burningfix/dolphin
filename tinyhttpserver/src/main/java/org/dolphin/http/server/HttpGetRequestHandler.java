@@ -38,7 +38,7 @@ public class HttpGetRequestHandler implements HttpRequestHandler {
         if (null == rangeString) {
             rangeString = headers.get("RANGE");
         }
-
+        responseHeaders.put("Content-Range", String.valueOf(binaryResource.size()));
         if (!ValueUtil.isEmpty(rangeString)) {
             final long[] range = TinyHttpHelper.getRange(rangeString);
             if (range != null && range.length == 2 && range[0] >= 0) {

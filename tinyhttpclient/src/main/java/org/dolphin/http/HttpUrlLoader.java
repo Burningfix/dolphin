@@ -184,12 +184,18 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
 
     @Override
     public InputStream getHttpResponseBody(final HttpRequest httpRequest, T connection) throws Throwable {
-        final long contentLength = connection.getContentLengthLong();// TODO
+        long contentLength = -1;
+        try {
+            contentLength = connection.getContentLengthLong();// TODO
+        }catch (Throwable throwable){
+            contentLength = connection.getHeaderFieldLong("content-length", -1);
+        }
+        final long cl = contentLength;
         InputStream inputStream = connection.getInputStream();
         InputStreamWrapper inputStreamWrapper = new InputStreamWrapper(inputStream, connection) {
             @Override
             protected void onRead(long readCount) throws IOException, AbortException {
-                onTransportDownProgress(httpRequest, readCount, contentLength);
+                onTransportDownProgress(httpRequest, readCount, cl);
             }
         };
 
