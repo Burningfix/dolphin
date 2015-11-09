@@ -56,14 +56,21 @@ public class SnifferGuard {
     protected void listen() throws IOException {
         byte[] buffer = new byte[sMaxBuffSize];
         DatagramSocket server = new DatagramSocket(port);
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+
         for (; ; ) {
-            server.receive(packet);
-            String s = new String(packet.getData(), 0, packet.getLength());
-            System.out.println("Server " + packet.getAddress() + " at port " + packet.getPort() + " says " + s);
-            byte[] res = filter(packet.getData());
-            packet = new DatagramPacket(res, res.length, packet.getAddress(), packet.getPort());
+            server.setBroadcast(true); //有没有没啥不同
+//            server.receive(packet);
+//            String s = new String(packet.getData(), 0, packet.getLength());
+//            System.out.println("Server " + packet.getAddress() + " at port " + packet.getPort() + " says " + s);
+            byte[] res = filter("Hello".getBytes());
+//            packet = new DatagramPacket(res, res.length, packet.getAddress(), packet.getPort());
+            DatagramPacket packet = new DatagramPacket(res, res.length, InetAddress.getByName("255.255.255.255"), Main.PORT);
             server.send(packet);
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 

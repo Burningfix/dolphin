@@ -101,25 +101,10 @@ public class SharedDiskManager {
                 })
                 .workOn(Schedulers.computation())
                 .observerOn(AndroidMainThreadScheduler.INSTANCE)
-                .observer(new Observer<Void, Object>() {
-                    @Override
-                    public void onNext(Job job, Void next) {
-
-                    }
-
+                .observer(new Observer.SimpleObserver<Void, Object>() {
                     @Override
                     public void onCompleted(Job job, Object result) {
                         checkValid();
-                    }
-
-                    @Override
-                    public void onFailed(Job job, Throwable error) {
-
-                    }
-
-                    @Override
-                    public void onCancellation(Job job) {
-
                     }
                 })
                 .workPeriodic(0, 3000, TimeUnit.MILLISECONDS); // 没3秒发送请求一次
@@ -140,23 +125,25 @@ public class SharedDiskManager {
                         return input;
                     }
                 })
-                .until(new Operator<Object, SnifferBean>() {
+                .append(new Operator<Object, DatagramSocket>() {
                     @Override
-                    public SnifferBean operate(Object input) throws Throwable {
-                        DatagramSocket socket;
+                    public DatagramSocket operate(Object input) throws Throwable {
+                        DatagramSocket server = new DatagramSocket(Main.PORT);
+                        return server;
+                    }
+                })
+                .until(new Operator<DatagramSocket, SnifferBean>() {
+                    @Override
+                    public SnifferBean operate(DatagramSocket socket) throws Throwable {
                         DatagramPacket packet;
                         byte[] data = new byte[64 * 1024];
-
-                        socket = new DatagramSocket();
-                        socket.setBroadcast(true); //有没有没啥不同
                         packet = new DatagramPacket(data, data.length);
                         socket.receive(packet);
-
                         String s = new String(packet.getData(), 0, packet.getLength());
                         Log.d(TAG, "Client Receive " + packet.getAddress() + " at port " + packet.getPort() + " says " + s);
                         try {
                             SnifferBean res = gson.fromJson(s, SnifferBean.class);
-                            res.ip = packet.getAddress().toString();
+                            res.ip = packet.getAddress().toString().replace("/","");
                             return res;
                         } catch (Throwable throwable) {
                             SnifferBean bean = new SnifferBean();

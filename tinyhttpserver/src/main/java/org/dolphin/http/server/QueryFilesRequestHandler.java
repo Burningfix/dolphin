@@ -26,13 +26,11 @@ import java.util.Map;
  * Created by hanyanan on 2015/11/4.
  */
 public class QueryFilesRequestHandler extends HttpGetRequestHandler {
-    private final String rootPath;
     private final Map<String, FileBean> fileTreeMaps = new LinkedHashMap<String, FileBean>();
 
-    QueryFilesRequestHandler(String localPath) {
-        this.rootPath = localPath;
+    QueryFilesRequestHandler(String path, String ... localPath) {
         try {
-            Files.walkFileTree(Paths.get(localPath), new FileVisitor<Path>() {
+            Files.walkFileTree(Paths.get(path, localPath), new FileVisitor<Path>() {
                 @Override
                 public FileVisitResult preVisitDirectory(Path dir,
                                                          BasicFileAttributes attrs) throws IOException {

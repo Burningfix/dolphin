@@ -43,23 +43,23 @@ public class MainActivity extends AppCompatActivity {
         listView.setAdapter(fileAdapter);
         fileAdapter.notifyDataSetChanged();
 
-//        sharedDiskManager = SharedDiskManager.instance();
-//        sharedDiskManager.addObserver(sharedDiskChangedObserver);
-//        sharedDiskManager.start();
-        SharedDisk disk = new SharedDisk("172.18.16.45", "" + Main.PORT);
-        visite(disk);
+        sharedDiskManager = SharedDiskManager.instance();
+        sharedDiskManager.addObserver(sharedDiskChangedObserver);
+        sharedDiskManager.start();
+//        SharedDisk disk = new SharedDisk("192.168.1.105", "" + Main.PORT);
+//        visite(disk);
         listView.setOnItemClickListener(onItemClickListener);
     }
 
-//    private Observer<List<SharedDisk>, List<SharedDisk>> sharedDiskChangedObserver = new Observer.SimpleObserver<List<SharedDisk>, List<SharedDisk>>() {
-//        @Override
-//        public void onNext(Job job, List<SharedDisk> next) {
-//            if (null == currSharedDisk && next.size() > 0) {
-//                currSharedDisk = next.get(0);
-//                visite(currSharedDisk);
-//            }
-//        }
-//    };
+    private Observer<List<SharedDisk>, List<SharedDisk>> sharedDiskChangedObserver = new Observer.SimpleObserver<List<SharedDisk>, List<SharedDisk>>() {
+        @Override
+        public void onNext(Job job, List<SharedDisk> next) {
+            if (null == currSharedDisk && next.size() > 0) {
+                currSharedDisk = next.get(0);
+                visite(currSharedDisk);
+            }
+        }
+    };
 
     private void visite(SharedDisk sharedDisk) {
         Log.d(TAG, "Visit disk " + sharedDisk.toString());

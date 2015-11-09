@@ -27,7 +27,7 @@ public class Main {
     public static final int PORT = 18592;
     public static void main(String[] argv) {
         HttpGetServer getServer = new HttpGetServer(PORT);
-        QueryFilesRequestHandler handler = new QueryFilesRequestHandler("D:\\movie");
+        QueryFilesRequestHandler handler = new QueryFilesRequestHandler("E:", "a");
         getServer.registerRequestHandler(QUERY_FILE_LIST_PATH, handler);
         getServer.registerRequestHandler(REQUEST_FILE_PATH, handler);
         getServer.start();
