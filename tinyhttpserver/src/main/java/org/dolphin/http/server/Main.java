@@ -24,48 +24,10 @@ public class Main {
     public static final String QUERY_FILE_PARAM_KEY = "file";
     public static final String QUERY_FILE_PARAM_TYPE_KEY = "type"; // audio, video, photo, all
     public static final String REQUEST_FILE_PATH = "/get";
-    public static final int PORT = 8592;
+    public static final int PORT = 18592;
     public static void main(String[] argv) {
-//        try {
-//            Files.walkFileTree(Paths.get("E:", "a"), new FileVisitor() {
-//
-//                @Override
-//                public FileVisitResult preVisitDirectory(Object dir,
-//                                                         BasicFileAttributes attrs) throws IOException {
-//                    //访问文件夹之前调用
-//                    System.out.println("preVisitDirectory\t"+dir);
-//                    return FileVisitResult.CONTINUE;
-//                }
-//
-//                @Override
-//                public FileVisitResult visitFile(Object file,
-//                                                 BasicFileAttributes attrs) throws IOException {
-//                    // 访问文件调用
-//                    System.out.println("visitFile\t"+file);
-//                    return FileVisitResult.CONTINUE;
-//                }
-//
-//                @Override
-//                public FileVisitResult visitFileFailed(Object file, IOException exc)
-//                        throws IOException {
-//                    // 访问文件失败时调用
-//                    return FileVisitResult.CONTINUE;
-//                }
-//
-//                @Override
-//                public FileVisitResult postVisitDirectory(Object dir,
-//                                                          IOException exc) throws IOException {
-//                    System.out.println("postVisitDirectory\t"+dir);
-//                    // 访问文件夹之后调用
-//                    return FileVisitResult.CONTINUE;
-//                }
-//
-//            });
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
         HttpGetServer getServer = new HttpGetServer(PORT);
-        QueryFilesRequestHandler handler = new QueryFilesRequestHandler("E:\\a");
+        QueryFilesRequestHandler handler = new QueryFilesRequestHandler("D:\\movie");
         getServer.registerRequestHandler(QUERY_FILE_LIST_PATH, handler);
         getServer.registerRequestHandler(REQUEST_FILE_PATH, handler);
         getServer.start();

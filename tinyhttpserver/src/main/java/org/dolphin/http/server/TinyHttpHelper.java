@@ -1,8 +1,11 @@
 package org.dolphin.http.server;
 
+import org.dolphin.http.Range;
 import org.dolphin.lib.ValueUtil;
 
 import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TinyHttpHelper {
     private static final HashMap<String, String> sHttpStatusCodeMap = new HashMap<String, String>();
@@ -149,26 +152,15 @@ public class TinyHttpHelper {
      * @return
      */
     public static long[] getRange(String range) {
-        long[] res = new long[]{-1, -1};
-        if (null == range) return res;
-        range = range.trim();
-        if (!ValueUtil.isEmpty(range)) {
-            String[] s = range.split("-");
-            if (s == null || s.length <= 0) return null;
-            if (null == s[0]) return null;
-            try {
-                res[0] = Long.parseLong(s[0]);
-            } catch (Exception e) {
-                return null;
-            }
-
-            if (s.length >= 2) {
-                try {
-                    res[1] = Long.parseLong(s[1]);
-                } catch (Exception e) {
-                    res[1] = -1;
-                }
-            }
+        long[] res = new long[]{0, Long.MAX_VALUE};
+        if (ValueUtil.isEmpty(range)) return res;
+        Pattern pattern = Pattern.compile("(\\d+)-(\\d*)");
+        Matcher m = pattern.matcher(range);
+        if (m.find()) {
+            String start = m.group(1);
+            String end = m.group(2);
+            res[0] = ValueUtil.parseLong(start, 0);
+            res[1] = ValueUtil.parseLong(end, Long.MAX_VALUE);
         }
 
         return res;

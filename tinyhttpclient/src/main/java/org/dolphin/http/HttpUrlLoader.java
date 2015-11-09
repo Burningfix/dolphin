@@ -12,6 +12,8 @@ import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import sun.awt.SunHints;
 
@@ -185,11 +187,24 @@ public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T>
     @Override
     public InputStream getHttpResponseBody(final HttpRequest httpRequest, T connection) throws Throwable {
         long contentLength = -1;
-        try {
-            contentLength = connection.getContentLengthLong();// TODO
-        }catch (Throwable throwable){
-            contentLength = connection.getHeaderFieldLong("content-length", -1);
+        String length = connection.getHeaderField(Headers.CONTENT_LENGTH.value());
+        if (!ValueUtil.isEmpty(length)) {
+            contentLength = ValueUtil.parseLong(length, -1);
+        } else {
+            String range = connection.getHeaderField(Headers.CONTENT_RANGE.value()); // Content-Range: bytes 21010-47021/47022
+            Pattern pattern = Pattern.compile("(\\d+)-(\\d+)");
+            Matcher m = pattern.matcher(range);
+            if (m.find()) {
+                String start = m.group(1);
+                String end = m.group(2);
+                if (!ValueUtil.isEmpty(start) && !ValueUtil.isEmpty(end)) {
+                    long s = ValueUtil.parseLong(start, 0);
+                    long e = ValueUtil.parseLong(end, Long.MAX_VALUE);
+                    contentLength = e - s + 1;
+                }
+            }
         }
+
         final long cl = contentLength;
         InputStream inputStream = connection.getInputStream();
         InputStreamWrapper inputStreamWrapper = new InputStreamWrapper(inputStream, connection) {

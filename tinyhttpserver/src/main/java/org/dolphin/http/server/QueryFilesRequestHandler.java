@@ -31,20 +31,6 @@ public class QueryFilesRequestHandler extends HttpGetRequestHandler {
 
     QueryFilesRequestHandler(String localPath) {
         this.rootPath = localPath;
-//        File root = new File(localPath);
-//        if (root.isDirectory()) {
-//            for (File file : root.listFiles()) {
-//                FileBean fileBean = new FileBean();
-//                fileBean.path = file.getAbsolutePath();
-//                fileBean.modifyTime = file.lastModified();
-//                fileBean.size = file.length();
-//                fileBean.name = file.getName();
-//                String id = SecurityUtil.md5_16(fileBean.path);
-//                fileBean.url = "http://127.0.0.1:8877" + Main.REQUEST_FILE_PATH + "?" + Main.QUERY_FILE_PARAM_KEY + "=" + id;
-//                fileTreeMaps.put(id, fileBean);
-//            }
-//        }
-
         try {
             Files.walkFileTree(Paths.get(localPath), new FileVisitor<Path>() {
                 @Override
@@ -69,6 +55,7 @@ public class QueryFilesRequestHandler extends HttpGetRequestHandler {
                         fileBean.modifyTime = f.lastModified();
                         fileBean.size = f.length();
                         fileBean.name = name;
+                        fileBean.type = mime;
                         String id = SecurityUtil.md5_16(fileBean.path);
                         fileBean.url = Main.REQUEST_FILE_PATH + "?" + Main.QUERY_FILE_PARAM_KEY + "=" + id;
                         fileTreeMaps.put(id, fileBean);

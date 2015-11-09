@@ -14,7 +14,7 @@ public class ValueUtil {
         if (isEmpty(s)) return defaultValue;
 
         try {
-            return Long.parseLong(s);
+            return Long.valueOf(s);
         } catch (Exception ex) {
             return defaultValue;
         }

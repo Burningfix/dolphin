@@ -53,7 +53,9 @@ public class HttpGetRequestHandler implements HttpRequestHandler {
                     @Override
                     public InputStream openStream() throws IOException {
                         InputStream inputStream = binaryResource.openStream();
-                        IOUtil.skip(inputStream, range[0]);
+                        if(range[0] > 0) {
+                            IOUtil.skip(inputStream, range[0]);
+                        }
                         return inputStream;
                     }
 

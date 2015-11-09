@@ -17,7 +17,16 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    packagingOptions {
+        exclude 'AUTHORS'
+    }
 }
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}
+
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])

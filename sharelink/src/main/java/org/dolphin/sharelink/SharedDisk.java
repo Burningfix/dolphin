@@ -81,7 +81,13 @@ public class SharedDisk {
                         if (input.files == null || input.files.length == 0) {
                             return new LinkedList<FileBean>();
                         }
-                        return Arrays.asList(input.files);
+
+                        LinkedList<FileBean> res = new LinkedList<FileBean>();
+                        for (FileBean fileBean : input.files) {
+                            fileBean.url = "http://"+getServerIp()+":"+getServerPort()+fileBean.url;
+                            res.add(fileBean);
+                        }
+                        return res;
                     }
                 })
                 .observer(queryObserver)
