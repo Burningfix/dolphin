@@ -2,6 +2,7 @@ package org.dolphin.job.internal;
 
 import org.dolphin.job.Job;
 import org.dolphin.job.JobErrorHandler;
+import org.dolphin.job.JobRunningResult;
 
 import java.util.concurrent.TimeUnit;
 
@@ -22,10 +23,9 @@ public class HttpErrorHandler implements JobErrorHandler {
     }
 
     @Override
-    public Job handleError(Job job, Throwable throwable) throws Throwable {
-        if(currCount > maxCount) throw throwable;
-        job.workDelayed(currCount * 1000, TimeUnit.MILLISECONDS);
+    public JobRunningResult handleError(Job job, Throwable throwable) {
+        if(currCount > maxCount) return JobRunningResult.TERMINATE;
         currCount++;
-        return job;
+        return JobRunningResult.CONTINUE;
     }
 }

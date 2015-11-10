@@ -35,7 +35,8 @@ public class Job implements Comparable<Job> {
     protected Object input = null;
     protected Object output = null;
     protected Observer observer;
-
+    protected JobWorkPolicy workPolicy;
+    @Deprecated protected JobRunningState runningState;
 
     public Job(Object input) {
         this.input = input;
@@ -162,12 +163,12 @@ public class Job implements Comparable<Job> {
     }
 
     public Job workDelayed(long millTimes) {
-        JobEngine.instance().loadJob(this, millTimes, TimeUnit.MILLISECONDS);
+        JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(millTimes, TimeUnit.MILLISECONDS)));
         return this;
     }
 
     public Job workDelayed(long delay, TimeUnit timeUnit) {
-        JobEngine.instance().loadJob(this, delay, timeUnit);
+        JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(delay, timeUnit)));
         return this;
     }
 
@@ -177,7 +178,7 @@ public class Job implements Comparable<Job> {
     }
 
     public Job workPeriodic(long initDelay, long periodic, TimeUnit timeUnit) {
-        JobEngine.instance().loadJob(this, initDelay, periodic, timeUnit);
+        JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.workPolicy(initDelay, periodic, timeUnit)));
         return this;
     }
 
@@ -186,13 +187,23 @@ public class Job implements Comparable<Job> {
         return this;
     }
 
-    public final Job front() {
-        this.sequence = -System.currentTimeMillis();
+    public JobWorkPolicy getWorkPolicy() {
+        return workPolicy;
+    }
+
+    public Job setWorkPolicy(JobWorkPolicy workPolicy) {
+        this.workPolicy = workPolicy;
         return this;
     }
 
-    public final Job back() {
-        this.sequence = System.currentTimeMillis();
+    @Deprecated
+    public JobRunningState getRunningState() {
+        return runningState;
+    }
+
+    @Deprecated
+    public Job setRunningState(JobRunningState runningState) {
+        this.runningState = runningState;
         return this;
     }
 

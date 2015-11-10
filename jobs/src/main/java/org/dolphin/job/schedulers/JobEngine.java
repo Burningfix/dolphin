@@ -15,8 +15,6 @@ import java.util.concurrent.TimeUnit;
  * Created by hanyanan on 2015/10/27.
  */
 public class JobEngine {
-
-
     private static JobEngine instance = null;
 
     public synchronized static JobEngine instance() {
@@ -34,18 +32,29 @@ public class JobEngine {
     private final WeakHashMap<Object, Subscription> jobReference = new WeakHashMap<Object, Subscription>();
 
     public synchronized void loadJob(final Job job) {
-        JobRunnable jobRunnable = new JobRunnable(job);
-        Subscription subscription = getWorkScheduler(job).schedule(jobRunnable);
-        jobReference.put(job, subscription);
+        JobWorkPolicy workPolicy = job.getWorkPolicy();
+        if (null == workPolicy) {
+            JobRunnable jobRunnable = new JobRunnable(job);
+            Subscription subscription = getWorkScheduler(job).schedule(jobRunnable);
+            jobReference.put(job, subscription);
+        } else {
+            if (workPolicy.periodicNanoTime() > 0) {
+                // 周期性的
+                loadJob(job, workPolicy.delayNanoTime(), workPolicy.periodicNanoTime(), TimeUnit.NANOSECONDS);
+            } else {
+                // 非周期性的
+                loadJob(job, workPolicy.delayNanoTime(), TimeUnit.NANOSECONDS);
+            }
+        }
     }
 
-    public synchronized void loadJob(Job job, long delayTime, TimeUnit unit) {
+    private synchronized void loadJob(Job job, long delayTime, TimeUnit unit) {
         JobRunnable jobRunnable = new JobRunnable(job);
         Subscription subscription = getWorkScheduler(job).schedule(jobRunnable, delayTime, unit);
         jobReference.put(job, subscription);
     }
 
-    public synchronized void loadJob(Job job, long initialDelay, long period, TimeUnit unit) {
+    private synchronized void loadJob(Job job, long initialDelay, long period, TimeUnit unit) {
         JobRunnable jobRunnable = new JobRunnable(job);
         Subscription subscription = getWorkScheduler(job).schedulePeriodically(jobRunnable, initialDelay, period, unit);
         jobReference.put(job, subscription);
@@ -53,7 +62,7 @@ public class JobEngine {
 
     public synchronized void abort(Job job) {
         Subscription subscription = jobReference.get(job);
-        if (!subscription.isUnsubscription()) {
+        if (null != subscription && !subscription.isUnsubscription()) {
             subscription.unsubscription();
         }
     }
@@ -69,11 +78,10 @@ public class JobEngine {
         return scheduler;
     }
 
-
     /**
      * 最终运行都是JobRunnable。
      */
-    private static class JobRunnable implements Runnable, Comparable<JobRunnable> {
+    private class JobRunnable implements Runnable, Comparable<JobRunnable> {
         private final Job job;
 
         private JobRunnable(Job job) {
@@ -164,13 +172,38 @@ public class JobEngine {
             });
         }
 
+        @Deprecated
+        private void notifyPreJobRunning(final Job job) {
+            final JobRunningState runningState = job.getRunningState();
+            if (null == runningState) return;
+            Scheduler scheduler = getObserverScheduler();
+            scheduler.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    runningState.preRunningJob(job);
+                }
+            });
+        }
+
+        @Deprecated
+        private void notifyPostJobRunning(final Job job) {
+            final JobRunningState runningState = job.getRunningState();
+            if (null == runningState) return;
+            Scheduler scheduler = getObserverScheduler();
+            scheduler.schedule(new Runnable() {
+                @Override
+                public void run() {
+                    runningState.postRunningJob(job);
+                }
+            });
+        }
+
         @Override
         public void run() {
             if (job.isAborted()) {
                 notifyCancellation();
                 return;
             }
-
             long loadTime = System.currentTimeMillis();
             Log.i("Scheduler", "Load Job[" + job.description() + "]");
             List<Operator> operatorList = job.getOperatorList();
@@ -210,21 +243,26 @@ public class JobEngine {
                     }
 
                 } catch (Throwable throwable) {
+                    Log.d("Scheduler", throwable.getMessage());
                     throwable.printStackTrace();
-                    Log.i("Scheduler", "Failed finish Job[" + job.description() + "]");
-                    releaseResource(tmp);
+                    Log.i("Scheduler", "Failed running Job[" + job.description() + "]");
                     long endTime = System.currentTimeMillis();
                     Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
-                    JobErrorHandler handler = job.getErrorHandler();
-                    try {
-                        if(null != handler){
-                            handler.handleError(job, throwable);
-                        }
-                    } catch (Throwable throwable1) {
-                        throwable1.printStackTrace();
+                    JobErrorHandler handler = getErrorHandler(job);
+                    JobRunningResult runningResult = handler.handleError(job, throwable);
+                    if (runningResult == JobRunningResult.TERMINATE) {
                         notifyFailed(job, throwable);
+                        releaseResource(tmp);
+                        abort(job);
+                    } else {
+                        if (tmp != job.getInput()) {
+                            releaseResource(tmp);
+                        }
+                        abort(job);
+                        Log.i("Scheduler", "Prepare running Job again[" + job.description() + "]");
+                        JobWorkPolicy workPolicy = job.getWorkPolicy();
+                        loadJob(job.setWorkPolicy(JobWorkPolicy.workPolicy(workPolicy.periodicNanoTime(), workPolicy.periodicNanoTime(), TimeUnit.NANOSECONDS)));
                     }
-
                     return;
                 }
             }
@@ -232,6 +270,12 @@ public class JobEngine {
             notifyComplete(tmp);
             Log.i("Scheduler", "Success finish Job[" + job.description() + "]");
             Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
+        }
+
+        private JobErrorHandler getErrorHandler(final Job job) {
+            JobErrorHandler handler = job.getErrorHandler();
+            if (handler == null) return JobErrorHandler.TERMINATE_HANDLER;
+            return handler;
         }
 
         @Override

@@ -26,7 +26,7 @@ public class ComputationScheduler extends BaseScheduler implements Scheduler {
     public static RejectedExecutionHandler sRejectedExecutionHandler = new RejectedExecutionHandler() {
         @Override
         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-
+            // TODO: print log
         }
     };
 

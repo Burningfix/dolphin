@@ -111,7 +111,6 @@ public class PriorityScheduledThreadPoolExecutor extends PausableThreadPoolExecu
             return unit.convert(time - now(), TimeUnit.NANOSECONDS);
         }
 
-
         /**
          * 1. 先比对运行时间；
          * 2. 在比较输入
@@ -252,7 +251,6 @@ public class PriorityScheduledThreadPoolExecutor extends PausableThreadPoolExecu
     public long triggerTime(long delay, TimeUnit unit) {
         return now() + unit.toNanos(delay);
     }
-
 
     /**
      * @throws RejectedExecutionException {@inheritDoc}

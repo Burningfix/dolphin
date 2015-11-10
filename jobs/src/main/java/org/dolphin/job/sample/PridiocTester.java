@@ -1,11 +1,16 @@
 package org.dolphin.job.sample;
 
 import org.dolphin.job.Job;
+import org.dolphin.job.JobErrorHandler;
+import org.dolphin.job.JobRunningResult;
+import org.dolphin.job.Operator;
+import org.dolphin.job.internal.HttpErrorHandler;
 import org.dolphin.job.util.Log;
 import org.dolphin.job.Observer;
 import org.dolphin.job.operator.PrintTimeOperator;
 import org.dolphin.job.schedulers.Schedulers;
 
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -16,6 +21,14 @@ public class PridiocTester {
         Job job = new Job(0);
         job.workOn(Schedulers.computation())
                 .append(new PrintTimeOperator())
+                .append(new Operator() {
+                    @Override
+                    public Object operate(Object input) throws Throwable {
+                        Random random = new Random();
+                        if(random.nextBoolean()) throw new Throwable("HAHAHA");
+                        return input;
+                    }
+                })
                 .observer(new Observer() {
                     @Override
                     public void onNext(Job job, Object next) {
@@ -37,12 +50,12 @@ public class PridiocTester {
 
                     }
                 })
-                .workPeriodic(100, 300, TimeUnit.MILLISECONDS);
-        try {
-            Thread.sleep(3000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        job.abort();
+                .handleError(new JobErrorHandler() {
+                    @Override
+                    public JobRunningResult handleError(Job job, Throwable throwable) {
+                        return JobRunningResult.CONTINUE;
+                    }
+                })
+                .workPeriodic(100, 2000, TimeUnit.MILLISECONDS);
     }
 }
