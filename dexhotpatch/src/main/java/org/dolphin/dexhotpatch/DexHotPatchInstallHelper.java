@@ -14,8 +14,9 @@ import java.util.Arrays;
 /**
  * Created by hanyanan on 2015/11/11.
  */
-public class DexHotPatchHelper {
+public class DexHotPatchInstallHelper {
     private static final String TAG = "DexHotPatchHelper";
+
 
     public static class V19 {
         /**

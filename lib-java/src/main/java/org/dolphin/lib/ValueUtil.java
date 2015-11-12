@@ -20,6 +20,15 @@ public class ValueUtil {
         }
     }
 
+    public static int parseInt(String s, int defaultValue) {
+        if (isEmpty(s)) return defaultValue;
+        try {
+            return Integer.valueOf(s);
+        } catch (Exception ex) {
+            return defaultValue;
+        }
+    }
+
     public static boolean equalsIgnoreCase(String s1, String s2) {
         if (null == s1 && null == s2) {
             throw new IllegalArgumentException("The input at least has one value is not empty!");
