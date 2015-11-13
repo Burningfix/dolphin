@@ -45,13 +45,13 @@ public class DexHotPatchJobHelper {
     }
 
 
-    public static void loadAsync(DexHotPatchEngine engine, final List<DexNameStruct> dexNameStructList) {
-        if (null == dexNameStructList || dexNameStructList.isEmpty()) return;
+    public static void loadAsync(DexHotPatchEngine engine, final List<DexLocalStruct> dexLocalStructList) {
+        if (null == dexLocalStructList || dexLocalStructList.isEmpty()) return;
         final WeakReference<DexHotPatchEngine> engineWeakReference = new WeakReference<DexHotPatchEngine>(engine);
-        Job job = new Job(dexNameStructList);
-        job.append(new Operator<List<DexNameStruct>, Object>() {
+        Job job = new Job(dexLocalStructList);
+        job.append(new Operator<List<DexLocalStruct>, Object>() {
             @Override
-            public Object operate(List<DexNameStruct> input) throws Throwable {
+            public Object operate(List<DexLocalStruct> input) throws Throwable {
                 DexHotPatchEngine engine = engineWeakReference.get();
                 if (null != engine) {
                     engine.loadDex(input);
@@ -62,10 +62,9 @@ public class DexHotPatchJobHelper {
     }
 
 
-    public static void update(String url, Map<String, String> params) {
-
+    public static Job downloadDexJob(){
+        return null;
     }
-
 
 
 
