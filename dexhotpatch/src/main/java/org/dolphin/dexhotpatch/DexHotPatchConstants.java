@@ -11,4 +11,5 @@ public class DexHotPatchConstants {
     public static final String CONFIG_READ_ERROR = "读取config文件失败";
     public static final String SIGN_NO_MATCH_ERROR = "dex文件签名错误";
     public static final String USELESS_FILE = "没有被使用的文件";
+    public static final String ILLEGAL_DEX_FORMATE_FILE = "无效的dex";
 }

@@ -26,4 +26,9 @@ public class DexUpdateBean {
     public static DexUpdateBean readFromFile(File file) {
         return DexHotPatchJobHelper.readFromFile(file, DexUpdateBean.class);
     }
+
+
+    public static DexUpdateBean readFromBytes(byte[] data, int offset, int length) {
+        return DexHotPatchJobHelper.readFromBytes(data, offset, length, DexUpdateBean.class);
+    }
 }

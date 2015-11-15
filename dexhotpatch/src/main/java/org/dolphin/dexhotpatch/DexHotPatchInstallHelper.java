@@ -23,8 +23,8 @@ public class DexHotPatchInstallHelper {
          * 适用于4.4，5.0， 5.1，但是6.0未测
          */
         public synchronized static void install(ClassLoader loader, ArrayList<File> additionalClassPathEntries,
-                                                File optimizedDirectory)throws IllegalArgumentException, IllegalAccessException,
-                NoSuchFieldException, InvocationTargetException, NoSuchMethodException{
+                                                File optimizedDirectory) throws IllegalArgumentException, IllegalAccessException,
+                NoSuchFieldException, InvocationTargetException, NoSuchMethodException {
             Field pathListField = findField(loader, "pathList");
             Object dexPathList = pathListField.get(loader);
             ArrayList<IOException> suppressedExceptions = new ArrayList<IOException>();
@@ -80,7 +80,7 @@ public class DexHotPatchInstallHelper {
          * 从4.0-4.3
          */
         public synchronized static void install(ClassLoader loader, ArrayList<File> additionalClassPathEntries,
-                                                   File optimizedDirectory) throws IllegalArgumentException, IllegalAccessException,
+                                                File optimizedDirectory) throws IllegalArgumentException, IllegalAccessException,
                 NoSuchFieldException, InvocationTargetException, NoSuchMethodException {
             /* The patched class loader is expected to be a descendant of
              * dalvik.system.BaseDexClassLoader. We modify its

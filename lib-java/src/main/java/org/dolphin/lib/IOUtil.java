@@ -5,6 +5,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
@@ -336,5 +338,22 @@ public class IOUtil {
         }
 
         return bytesCount;
+    }
+
+
+    public static boolean write(File file, byte[] data, int offset, int length){
+        FileOutputStream fileOutputStream = null;
+        try {
+            fileOutputStream = new FileOutputStream(file);
+            fileOutputStream.write(data, offset, length);
+            return true;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            closeQuietly(fileOutputStream);
+        }
+        return false;
     }
 }

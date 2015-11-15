@@ -7,46 +7,21 @@ import org.dolphin.lib.ValueUtil;
 /**
  * Created by hanyanan on 2015/11/12.
  */
-class DexLocalStruct implements Comparable<DexLocalStruct> {
+class DexLocalStruct  {
     public static final Gson gson = new Gson();
     String fileName;
-    int type; //0,1,2
+    int type; //0冷部署，1热部署
     int priority; // 0-无穷大
-    String identify; // dex的标识
+    String url;
     long fetchTime; // 从服务器获取时间,时间为服务器时间
     String dexSign; // dex的sha1签名
-    String dexName; // dex的原始名称
+    String name; // dex的原始名称
     String desc; // 该dex的描述
     String config; // json格式的config
 
 
     public byte[] toBytes(){
         return gson.toJson(this).getBytes();
-    }
-
-    @Override
-    public int compareTo(DexLocalStruct dexLocalStruct) {
-        if (!dexLocalStruct.identify.equalsIgnoreCase(identify)) {
-            throw new IllegalArgumentException("Key not match, forbid");
-        }
-        return this.fetchTime > dexLocalStruct.fetchTime ? 1 : -1;
-    }
-
-
-    @Override
-    public int hashCode() {
-        return fileName.hashCode();
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if(null == o) return false;
-        if(this == o) return true;
-        if(DexLocalStruct.class.isInstance(o)) {
-            DexLocalStruct dex = (DexLocalStruct)o;
-            return identify.equals(dex.identify);
-        }
-        return false;
     }
 
 //    /**

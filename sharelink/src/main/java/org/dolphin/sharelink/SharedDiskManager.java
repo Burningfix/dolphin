@@ -174,11 +174,6 @@ public class SharedDiskManager {
                     public void onCancellation(Job job) {
 
                     }
-                }).handleError(new JobErrorHandler() {
-                    @Override
-                    public Job handleError(Job job, Throwable throwable) throws Throwable {
-                        return job;
-                    }
                 }).work();
     }
 

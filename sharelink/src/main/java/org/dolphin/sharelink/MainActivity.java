@@ -43,11 +43,11 @@ public class MainActivity extends AppCompatActivity {
         listView.setAdapter(fileAdapter);
         fileAdapter.notifyDataSetChanged();
 
-        sharedDiskManager = SharedDiskManager.instance();
-        sharedDiskManager.addObserver(sharedDiskChangedObserver);
-        sharedDiskManager.start();
-//        SharedDisk disk = new SharedDisk("192.168.1.105", "" + Main.PORT);
-//        visite(disk);
+//        sharedDiskManager = SharedDiskManager.instance();
+//        sharedDiskManager.addObserver(sharedDiskChangedObserver);
+//        sharedDiskManager.start();
+        SharedDisk disk = new SharedDisk("192.168.1.105", "" + Main.PORT);
+        visite(disk);
         listView.setOnItemClickListener(onItemClickListener);
     }
 

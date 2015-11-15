@@ -2,15 +2,22 @@ package org.dolphin.dexhotpatch;
 
 import com.google.gson.Gson;
 
+import org.dolphin.http.HttpGetLoader;
+import org.dolphin.http.HttpRequest;
+import org.dolphin.http.HttpResponse;
 import org.dolphin.job.Job;
 import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
+import org.dolphin.job.util.Log;
 import org.dolphin.lib.IOUtil;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -24,49 +31,39 @@ public class DexHotPatchJobHelper {
         throw new UnsupportedOperationException("Cannot instance DexHotPatchJobHelper");
     }
 
-    public static void deleteIllegalFileJob(final File directory, final List<String> fileList) {
-        if (null == fileList || fileList.isEmpty()) return;
-        Job job = new Job(fileList);
-        job.append(new Operator<List<String>, List<String>>() {
-            @Override
-            public List<String> operate(List<String> input) throws Throwable {
-                List<String> failed = new ArrayList<String>();
-                for (String fileName : input) {
-                    File file = new File(directory, fileName);
-                    if (!file.delete()) {
-                        failed.add(fileName);
-                    }
+    public static boolean isSignMatch(DexLocalStruct dexLocalStruct, File file) {
+        // TODO
+        return true;
+    }
+
+    public static void downLoadDexList(File dir, List<DexLocalStruct> structList, List<DexLocalStruct> failedList) {
+        if(null == structList || structList.isEmpty()) return ;
+        for(DexLocalStruct struct : structList){
+            String url = struct.url;
+            HttpRequest request = new HttpRequest(url);
+            HttpResponse response = null;
+            OutputStream outputStream = null;
+            try {
+                response = HttpGetLoader.INSTANCE.performRequest(request);
+                File outFile = new File(dir, struct.fileName);
+                outputStream = new FileOutputStream(outFile);
+                IOUtil.copy(response.body(), outputStream);
+                if(!isSignMatch(struct, outFile)){
+                    Log.e(DexHotPatchEngine.TAG, struct.toString() + " sign checked, is Failed!");
+                    failedList.add(struct);
+                }else{
+                    Log.d(DexHotPatchEngine.TAG, struct.toString() + " sign checked, is OK!");
                 }
-                return failed;
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+                failedList.add(struct);
+            }finally {
+                IOUtil.closeQuietly(request);
+                IOUtil.closeQuietly(outputStream);
+                IOUtil.closeQuietly(response);
             }
-        })
-                .workOn(Schedulers.computation())
-                .workDelayed(2, TimeUnit.SECONDS);
+        }
     }
-
-
-    public static void loadAsync(DexHotPatchEngine engine, final List<DexLocalStruct> dexLocalStructList) {
-        if (null == dexLocalStructList || dexLocalStructList.isEmpty()) return;
-        final WeakReference<DexHotPatchEngine> engineWeakReference = new WeakReference<DexHotPatchEngine>(engine);
-        Job job = new Job(dexLocalStructList);
-        job.append(new Operator<List<DexLocalStruct>, Object>() {
-            @Override
-            public Object operate(List<DexLocalStruct> input) throws Throwable {
-                DexHotPatchEngine engine = engineWeakReference.get();
-                if (null != engine) {
-                    engine.loadDex(input);
-                }
-                return null;
-            }
-        }).workOn(Schedulers.computation()).work();
-    }
-
-
-    public static Job downloadDexJob(){
-        return null;
-    }
-
-
 
 
     public static <T> T readFromFile(File file, Class<T> clz){
@@ -76,6 +73,16 @@ public class DexHotPatchJobHelper {
             String json = new String(data);
             return GSON.fromJson(json, clz);
         } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static <T> T readFromBytes(byte[]data, int offset, int length, Class<T> clz){
+        try {
+            String json = new String(data, offset, length);
+            return GSON.fromJson(json, clz);
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
