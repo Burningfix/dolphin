@@ -35,6 +35,22 @@ public class SecurityUtil {
         return sb.toString();
     }
 
+    public static String sha1(byte[] data) {
+        MessageDigest mDigest = null;
+        try {
+            mDigest = MessageDigest.getInstance("SHA1");
+        } catch (NoSuchAlgorithmException e) {
+            return "" + data.hashCode();
+        }
+        byte[] result = mDigest.digest(data);
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < result.length; i++) {
+            sb.append(Integer.toString((result[i] & 0xff) + 0x100, 16).substring(1));
+        }
+
+        return sb.toString();
+    }
+
     /**
      * 生成完整的32位md5签名
      */

@@ -12,6 +12,7 @@ import java.io.InputStream;
 public class HttpResponseToBytes implements Operator<HttpResponse, byte[]> {
     @Override
     public byte[] operate(HttpResponse input) throws Throwable {
+        if(null == input) return null;
         InputStream binaryResource = null;
         try{
 //            HttpResponseBody body = input.body();

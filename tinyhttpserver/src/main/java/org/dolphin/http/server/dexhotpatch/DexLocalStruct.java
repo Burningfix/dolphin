@@ -1,13 +1,11 @@
-package org.dolphin.dexhotpatch;
+package org.dolphin.http.server.dexhotpatch;
 
 import com.google.gson.Gson;
-
-import org.dolphin.lib.ValueUtil;
 
 /**
  * Created by hanyanan on 2015/11/12.
  */
-class DexLocalStruct  {
+class DexLocalStruct {
     public static final Gson gson = new Gson();
     String fileName;
     int type; //0冷部署，1热部署
@@ -19,10 +17,6 @@ class DexLocalStruct  {
     String desc; // 该dex的描述
     String config; // json格式的config
 
-    @Override
-    public String toString() {
-        return fileName;
-    }
 
     public byte[] toBytes(){
         return gson.toJson(this).getBytes();
