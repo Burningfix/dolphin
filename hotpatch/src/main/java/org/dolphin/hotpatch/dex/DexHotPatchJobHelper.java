@@ -1,13 +1,10 @@
-package org.dolphin.dexhotpatch;
+package org.dolphin.hotpatch.dex;
 
 import com.google.gson.Gson;
 
 import org.dolphin.http.HttpGetLoader;
 import org.dolphin.http.HttpRequest;
 import org.dolphin.http.HttpResponse;
-import org.dolphin.job.Job;
-import org.dolphin.job.Operator;
-import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.util.Log;
 import org.dolphin.lib.IOUtil;
 import org.dolphin.lib.SecurityUtil;
@@ -17,12 +14,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by hanyanan on 2015/11/11.

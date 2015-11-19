@@ -1,4 +1,4 @@
-package org.dolphin.dexhotpatch;
+package org.dolphin.hotpatch.dex;
 
 import com.google.gson.Gson;
 

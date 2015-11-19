@@ -1,4 +1,4 @@
-package org.dolphin.dexhotpatch;
+package org.dolphin.hotpatch.dex;
 
 import android.app.Application;
 import android.content.Context;

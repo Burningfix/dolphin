@@ -1,4 +1,4 @@
-package org.dolphin.dexhotpatch;
+package org.dolphin.hotpatch.dex;
 
 /**
  * Created by hanyanan on 2015/11/11.
