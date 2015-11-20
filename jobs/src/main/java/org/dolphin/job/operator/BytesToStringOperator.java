@@ -8,6 +8,7 @@ import org.dolphin.job.Operator;
 public class BytesToStringOperator implements Operator<byte[], String> {
     @Override
     public String operate(byte[] input) throws Throwable {
+        if(null == input || input.length <= 0) return null;
         return new String(input);
     }
 }

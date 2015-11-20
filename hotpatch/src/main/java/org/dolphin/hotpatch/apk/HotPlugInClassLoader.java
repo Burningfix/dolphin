@@ -1,5 +1,12 @@
 package org.dolphin.hotpatch.apk;
 
+import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+
 import dalvik.system.DexClassLoader;
 
 /**
@@ -8,10 +15,8 @@ import dalvik.system.DexClassLoader;
  * {@see DexClassLoader}可以加载dex/jar/apk
  */
 public class HotPlugInClassLoader extends DexClassLoader {
-    private final ClassLoader parent;
     public HotPlugInClassLoader(String dexPath, String optimizedDirectory, String libraryPath, ClassLoader parent) {
         super(dexPath, optimizedDirectory, libraryPath, parent);
-        this.parent = parent;
     }
 
 
@@ -32,7 +37,7 @@ public class HotPlugInClassLoader extends DexClassLoader {
         if (clazz == null) {
             ClassNotFoundException suppressed = null;
             try {
-                clazz = parent.loadClass(className, false);
+                clazz = getParent().loadClass(className);
             } catch (ClassNotFoundException e) {
                 suppressed = e;
             }
@@ -41,12 +46,66 @@ public class HotPlugInClassLoader extends DexClassLoader {
                 try {
                     clazz = findClass(className);
                 } catch (ClassNotFoundException e) {
-                    e.addSuppressed(suppressed);
+//                    e.addSuppressed(suppressed);
                     throw e;
                 }
             }
         }
 
         return clazz;
+    }
+
+
+
+
+
+
+    /**
+     * Locates a given field anywhere in the class inheritance hierarchy.
+     *
+     * @param instance an object to search the field into.
+     * @param name     field name
+     * @return a field object
+     * @throws NoSuchFieldException if the field cannot be located
+     */
+    private static Field findField(Object instance, String name) throws NoSuchFieldException {
+        for (Class<?> clazz = instance.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
+            try {
+                Field field = clazz.getDeclaredField(name);
+                if (!field.isAccessible()) {
+                    field.setAccessible(true);
+                }
+                return field;
+            } catch (NoSuchFieldException e) {
+                // ignore and search next
+            }
+        }
+        throw new NoSuchFieldException("Field " + name + " not found in " + instance.getClass());
+    }
+
+    /**
+     * Locates a given method anywhere in the class inheritance hierarchy.
+     *
+     * @param instance       an object to search the method into.
+     * @param name           method name
+     * @param parameterTypes method parameter types
+     * @return a method object
+     * @throws NoSuchMethodException if the method cannot be located
+     */
+    private static Method findMethod(Object instance, String name, Class<?>... parameterTypes)
+            throws NoSuchMethodException {
+        for (Class<?> clazz = instance.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
+            try {
+                Method method = clazz.getDeclaredMethod(name, parameterTypes);
+                if (!method.isAccessible()) {
+                    method.setAccessible(true);
+                }
+                return method;
+            } catch (NoSuchMethodException e) {
+                // ignore and search next
+            }
+        }
+        throw new NoSuchMethodException("Method " + name + " with parameters " +
+                Arrays.asList(parameterTypes) + " not found in " + instance.getClass());
     }
 }

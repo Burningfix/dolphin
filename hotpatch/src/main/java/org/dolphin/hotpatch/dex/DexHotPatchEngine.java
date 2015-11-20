@@ -3,6 +3,7 @@ package org.dolphin.hotpatch.dex;
 import android.app.Application;
 import android.os.Build;
 
+import org.dolphin.hotpatch.AndroidMainThreadScheduler;
 import org.dolphin.http.HttpRequest;
 import org.dolphin.job.Job;
 import org.dolphin.job.Observer;

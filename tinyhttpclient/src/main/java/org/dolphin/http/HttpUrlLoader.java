@@ -27,6 +27,10 @@ import static org.dolphin.lib.Preconditions.checkNotNull;
  * Created by dolphin on 2015/5/22.
  */
 public class HttpUrlLoader<T extends HttpURLConnection> implements HttpLoader<T> {
+    public static HttpResponse getHttpResponse(HttpRequest request) throws Throwable {
+        HttpLoader loader = Method.isGet(request) ? HttpGetLoader.INSTANCE : HttpPostLoader.INSTANCE;
+        return loader.performRequest(request);
+    }
 
     protected final HttpRequestInterceptor interceptor;
 

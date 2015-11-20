@@ -1,4 +1,4 @@
-package org.dolphin.hotpatch.dex;
+package org.dolphin.hotpatch;
 
 import android.os.Handler;
 import android.os.Looper;
