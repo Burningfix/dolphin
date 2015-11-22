@@ -37,14 +37,14 @@ public class HotPlugInClassLoader extends DexClassLoader {
         if (clazz == null) {
             ClassNotFoundException suppressed = null;
             try {
-                clazz = getParent().loadClass(className);
+                clazz = findClass(className);
             } catch (ClassNotFoundException e) {
                 suppressed = e;
             }
 
             if (clazz == null) {
                 try {
-                    clazz = findClass(className);
+                    clazz = getParent().loadClass(className);
                 } catch (ClassNotFoundException e) {
 //                    e.addSuppressed(suppressed);
                     throw e;

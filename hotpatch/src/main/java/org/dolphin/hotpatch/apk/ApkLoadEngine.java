@@ -2,20 +2,25 @@ package org.dolphin.hotpatch.apk;
 
 import android.content.Context;
 import android.os.SystemClock;
-import android.renderscript.ScriptGroup;
 import android.util.Log;
 
+import org.dolphin.hotpatch.AndroidMainThreadScheduler;
 import org.dolphin.http.HttpRequest;
 import org.dolphin.http.HttpResponse;
 import org.dolphin.http.HttpUrlLoader;
 import org.dolphin.job.Job;
 import org.dolphin.job.Observer;
+import org.dolphin.job.Operator;
+import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.ValueReference;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -128,7 +133,7 @@ public class ApkLoadEngine {
         // 1. 尝试从disk中读取
         if (null != apkFile && apkFile.canRead() && apkFile.isFile() && signMatch(apkFile, config.sign)) {
             Log.d(TAG, "[Loading|loadApk] " + id + ", Try loading from disk!");
-            ApkPlugin apkPlugin = loadApkFromDisk(apkFile, optimizedDir, context);
+            ApkPlugin apkPlugin = loadApkFromDisk(apkFile, optimizedDir, context, null);
             if (null != apkPlugin) {
                 Log.d(TAG, "[Exit|loadApk|Success] " + id + ", Loading Success!");
                 return apkPlugin;
@@ -164,15 +169,16 @@ public class ApkLoadEngine {
         }
         // 3. 从本地存储中尝试加载
         Log.d(TAG, "[Loading|loadApk] " + id + ", Loading from disk file which download from server just now!");
-        ApkPlugin apkPlugin = loadApkFromDisk(apkFile, optimizedDir, context);
+        ApkPlugin apkPlugin = loadApkFromDisk(apkFile, optimizedDir, context, null);
         Log.d(TAG, "[Exit|loadApk] " + id + ", Result is " + apkPlugin);
         return apkPlugin;
     }
 
-    public synchronized void asyncLoadApk(final String id, final ApkLoadObserver observer) {
+    public synchronized void asyncLoadApk(final String id, ApkLoadObserver observer) {
         final File apkFile = new File(privateStorageDirectory, id + APK_SUFFIX);
         final Context context = null;
-        GlobalConfigBean.ApkPluginConfig config = null;
+        final GlobalConfigBean.ApkPluginConfig config;
+        final ApkLoadObserver apkLoadObserver = new ApkLoadObserverWrapper(observer);
         readerLock.lock();
         try {
             config = configMap.get(id);
@@ -187,10 +193,31 @@ public class ApkLoadEngine {
         }
 
         Job job = new Job(id);
+        job.append(new Operator<String, ApkPlugin>() {
+            @Override
+            public ApkPlugin operate(String input) throws Throwable {
+                return loadApk(id, apkFile, optimizedDirectory.getPath(), config, context);
+            }
+        })
+                .workOn(Schedulers.computation())
+                .observerOn(AndroidMainThreadScheduler.INSTANCE)
+                .observer(new Observer.SimpleObserver<Object, ApkPlugin>() {
+                    @Override
+                    public void onCompleted(Job job, ApkPlugin result) {
+                        apkLoadObserver.onApkLoaded(result);
+                    }
 
+                    @Override
+                    public void onFailed(Job job, Throwable error) {
+                        super.onFailed(job, error);
+                        apkLoadObserver.onApkLoadFailed(id, error);
+                    }
+                })
+                .work();
 
         return;
     }
+
 
     /**
      * 尝试从现在的类中加载id为指定的apk，如果当前缓存存在指定的apk，则直接返回指定的文件，否则，会先从server
@@ -200,15 +227,23 @@ public class ApkLoadEngine {
      * @param observer
      * @return
      */
-    public synchronized ApkPlugin tryLoadApk(String id, ApkLoadObserver observer) {
+    public synchronized ApkPlugin tryLoadApk(String id, ApkLoadObserver observer, Context context) {
+        // 1. try get from cache
         readerLock.lock();
         try {
+            Log.d(TAG, "");
             ApkPlugin apkPlugin = loadedApk.get(id);
             if (null != apkPlugin) return apkPlugin;
         } finally {
             readerLock.unlock();
         }
 
+        // 2. try load from disk
+        File localApkFile = new File(privateStorageDirectory, id + APK_SUFFIX);
+        ApkPlugin apkPlugin = loadApkFromDisk(localApkFile, optimizedDirectory.getPath(), context, null);
+        if (null != apkPlugin) return apkPlugin;
+
+        // 3. load in backgroud thread
         asyncLoadApk(id, observer);
         return null;
     }
@@ -244,9 +279,12 @@ public class ApkLoadEngine {
         }
     }
 
-    private static ApkPlugin loadApkFromDisk(File localApkPath, String optimizedDirectory, Context context) {
-        if (!localApkPath.isFile() || !localApkPath.exists() || !localApkPath.canRead())
-            throw new RuntimeException("");
+    private static ApkPlugin loadApkFromDisk(File localApkPath, String optimizedDirectory, Context context, ValueReference<Throwable> exceptionRef) {
+        if (!localApkPath.isFile() || !localApkPath.exists() || !localApkPath.canRead()) {
+            if (null != exceptionRef)
+                exceptionRef.setValue(new RuntimeException("No such file or such file is illegal!"));
+            return null;
+        }
         long t1 = SystemClock.elapsedRealtime();
         HotPlugInClassLoader classLoader = new HotPlugInClassLoader(localApkPath.getPath(), optimizedDirectory, null, context.getClassLoader());
         try {
@@ -267,14 +305,15 @@ public class ApkLoadEngine {
             return builder.build();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
-            throw new RuntimeException(e);
+            if (null != exceptionRef) exceptionRef.setValue(e);
         } catch (InstantiationException e) {
             e.printStackTrace();
-            throw new RuntimeException(e);
+            if (null != exceptionRef) exceptionRef.setValue(e);
         } catch (IllegalAccessException e) {
             e.printStackTrace();
-            throw new RuntimeException(e);
+            if (null != exceptionRef) exceptionRef.setValue(e);
         }
+        return null;
     }
 
     public static HttpRequest parseApkRequest(String id, Map<String, String> params) {
