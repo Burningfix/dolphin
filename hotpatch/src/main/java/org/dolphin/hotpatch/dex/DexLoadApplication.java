@@ -15,7 +15,7 @@ public class DexLoadApplication extends Application {
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
-        dexHotPatchEngine = DexHotPatchEngine.instance(this);
-        dexHotPatchEngine.attachToApplication();
+//        dexHotPatchEngine = DexHotPatchEngine.instance(this);
+//        dexHotPatchEngine.attachToApplication();
     }
 }

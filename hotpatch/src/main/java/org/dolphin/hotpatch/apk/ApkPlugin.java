@@ -1,5 +1,8 @@
 package org.dolphin.hotpatch.apk;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by yananh on 2015/11/19.
  */
@@ -55,6 +58,8 @@ public interface ApkPlugin {
      */
     public long riseCost();
 
+    public List<ApkPluginInterface.PageSpec> getPageList();
+
     public static class Builder {
         private long riseCost;
         private long riseTime;
@@ -66,6 +71,7 @@ public interface ApkPlugin {
         private String name;
         private String path;
         private ClassLoader classLoader;
+        public List<ApkPluginInterface.PageSpec> pageSpecList = new ArrayList();
 
         public Builder setExtensionConfig(String extensionConfig) {
             this.extensionConfig = extensionConfig;
@@ -117,6 +123,12 @@ public interface ApkPlugin {
             return this;
         }
 
+        public Builder setPageSpecList(List<ApkPluginInterface.PageSpec> pageSpecList){
+            this.pageSpecList.addAll(pageSpecList);
+            return this;
+        }
+
+
         public ApkPlugin build() {
             return new ApkPlugin() {
                 @Override
@@ -167,6 +179,11 @@ public interface ApkPlugin {
                 @Override
                 public long riseCost() {
                     return riseCost;
+                }
+
+                @Override
+                public List<ApkPluginInterface.PageSpec> getPageList() {
+                    return pageSpecList;
                 }
             };
         }

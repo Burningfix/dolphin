@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -30,17 +32,18 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * <p/>
  * 所有的apk都必须存在org.dolphin.plugin.apk.ApkPluginConfig.java作为该apk的配置选项<br>
  */
-public class ApkLoadEngine {
-    public static final String UPDATE_CONFIG_URL = "http://172.18.16.37:23456/update";
-    public static final String URL = "http://172.18.16.37:23456/apk";
+public class ApkLoadEngine<T extends Context> {
+    public static final String UPDATE_CONFIG_URL = "http://172.18.16.53:23456/update";
+    public static final String URL = "http://172.18.16.53:23456/apk";
     public static final String TAG = "ApkLoadEngine";
     public static final String GLOBAL_CONFIG_NAME = "global_apk_config.json";
     public static final String APK_SUFFIX = ".apk";
     private static ApkLoadEngine sInstance = null;
 
-    public synchronized static ApkLoadEngine instance(File privateStorageDirectory, File optimizedDirectory) {
+
+    public synchronized static ApkLoadEngine instance(Context context, File privateStorageDirectory, File optimizedDirectory) {
         if (null == sInstance) {
-            sInstance = new ApkLoadEngine(privateStorageDirectory, optimizedDirectory);
+            sInstance = new ApkLoadEngine(context, privateStorageDirectory, optimizedDirectory);
         }
         return sInstance;
     }
@@ -54,12 +57,47 @@ public class ApkLoadEngine {
     private GlobalConfigBean globalConfigBean = null;
     private final Map<String, GlobalConfigBean.ApkPluginConfig> configMap = new LinkedHashMap<String, GlobalConfigBean.ApkPluginConfig>();
     private Job previousUpdateJob = null;
+    private final WeakReference<T> contextRef;
+    private boolean notSupport;
+    private ApkPluginDataChangeObserver apkPluginDataChangeObserver;
 
-    private ApkLoadEngine(File privateStorageDirectory, File optimizedDirectory) {
+    private ApkLoadEngine(T context, File privateStorageDirectory, File optimizedDirectory) {
         this.optimizedDirectory = optimizedDirectory;
         this.privateStorageDirectory = privateStorageDirectory;
-
+        this.contextRef = new WeakReference<T>(context);
+        init();
         update();
+    }
+
+    public synchronized void setApkPluginDataChangeObserver(ApkPluginDataChangeObserver observer) {
+        this.apkPluginDataChangeObserver = observer;
+    }
+
+    private void init() {
+        if (!privateStorageDirectory.isDirectory()) {
+            org.dolphin.job.util.Log.w(TAG, "File " + privateStorageDirectory.getAbsolutePath() + " is not directory, not support load extra dex!");
+            notSupport = true;
+        }
+
+        if (!privateStorageDirectory.exists()) {
+            notSupport = !privateStorageDirectory.mkdir();
+            if (notSupport) {
+                org.dolphin.job.util.Log.w(TAG, "File " + privateStorageDirectory.getAbsolutePath() + " create failed!");
+                return;
+            }
+        }
+
+        if (!optimizedDirectory.exists()) {
+            notSupport = !optimizedDirectory.mkdir();
+            if (notSupport) {
+                org.dolphin.job.util.Log.w(TAG, "File " + optimizedDirectory.getAbsolutePath() + " create failed!");
+                return;
+            }
+        }
+    }
+
+    public Context getContext() {
+        return contextRef.get();
     }
 
     public synchronized void update() {
@@ -176,7 +214,7 @@ public class ApkLoadEngine {
 
     public synchronized void asyncLoadApk(final String id, ApkLoadObserver observer) {
         final File apkFile = new File(privateStorageDirectory, id + APK_SUFFIX);
-        final Context context = null;
+        final Context context = getContext();
         final GlobalConfigBean.ApkPluginConfig config;
         final ApkLoadObserver apkLoadObserver = new ApkLoadObserverWrapper(observer);
         readerLock.lock();
@@ -227,7 +265,7 @@ public class ApkLoadEngine {
      * @param observer
      * @return
      */
-    public synchronized ApkPlugin tryLoadApk(String id, ApkLoadObserver observer, Context context) {
+    public synchronized ApkPlugin tryLoadApk(String id, ApkLoadObserver observer) {
         // 1. try get from cache
         readerLock.lock();
         try {
@@ -240,7 +278,7 @@ public class ApkLoadEngine {
 
         // 2. try load from disk
         File localApkFile = new File(privateStorageDirectory, id + APK_SUFFIX);
-        ApkPlugin apkPlugin = loadApkFromDisk(localApkFile, optimizedDirectory.getPath(), context, null);
+        ApkPlugin apkPlugin = loadApkFromDisk(localApkFile, optimizedDirectory.getPath(), getContext(), null);
         if (null != apkPlugin) return apkPlugin;
 
         // 3. load in backgroud thread
@@ -263,6 +301,10 @@ public class ApkLoadEngine {
                 loadedApk.put(apkPlugin.getId(), apkPlugin);
             } finally {
                 writerLock.unlock();
+            }
+
+            if(apkPluginDataChangeObserver!=null) {
+                apkPluginDataChangeObserver.onApkPluginDataChanged(new ArrayList<ApkPlugin>(loadedApk.values()));
             }
 
             if (null != delegateApkLoadObserver) {
@@ -302,6 +344,7 @@ public class ApkLoadEngine {
             builder.setRiseTime(t1);
             builder.setSize(localApkPath.length());
             builder.setSign("AAAAAAAA"); // TODO
+            builder.setPageSpecList(apkPluginInterface.pageSpecList);
             return builder.build();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
@@ -319,8 +362,9 @@ public class ApkLoadEngine {
     public static HttpRequest parseApkRequest(String id, Map<String, String> params) {
         HttpRequest request = new HttpRequest(URL);
         if (null == params) {
-            params.put("id", id);
+            params = new HashMap<String, String>();
         }
+        params.put("id", id);
         request.params(params);
         return request;
     }
