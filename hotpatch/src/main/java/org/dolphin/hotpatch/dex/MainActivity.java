@@ -2,6 +2,7 @@ package org.dolphin.hotpatch.dex;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
@@ -19,6 +20,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.dolphin.dexhotpatch.R;
+import org.dolphin.hotpatch.ContextProxy;
+import org.dolphin.hotpatch.HostContentWrapper;
 import org.dolphin.hotpatch.apk.ApkLoadEngine;
 import org.dolphin.hotpatch.apk.ApkPlugin;
 import org.dolphin.hotpatch.apk.ApkPluginDataChangeObserver;
@@ -44,6 +47,12 @@ public class MainActivity extends Activity implements ApkPluginDataChangeObserve
     Resources mResources;
     public MainActivity() {
         super();
+    }
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        HostContentWrapper hostContentWrapper = new HostContentWrapper(newBase);
+        super.attachBaseContext(hostContentWrapper);
     }
 
     @Override
