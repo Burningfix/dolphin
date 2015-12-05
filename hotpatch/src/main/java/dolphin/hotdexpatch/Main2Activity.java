@@ -3,8 +3,10 @@ package dolphin.hotdexpatch;
 import android.app.Activity;
 import android.app.Fragment;
 import android.os.Bundle;
+import android.util.Log;
 
 import org.dolphin.dexhotpatch.R;
+import org.dolphin.hotpatch.dex.MainActivity;
 
 public class Main2Activity extends Activity {
     @Override
@@ -23,6 +25,12 @@ public class Main2Activity extends Activity {
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public ClassLoader getClassLoader() {
+        Log.d(MainActivity.TAG, "MainActivity getClassLoader");
+        return new ClassLoaderWrapper(super.getClassLoader());
     }
 
 }

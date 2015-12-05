@@ -70,26 +70,26 @@ public class Jobs {
     }
 
 
-    public static Job merge(Job... jobs) {
-        return null;
-    }
-
+    /**
+     * 将一个或多个job
+     */
     public static Job zip(Job... jobs) {
         return null;
     }
 
+    /**
+     * 一个Job的输出作为下一个job的输入
+     */
     public static Job pipeline(Job ... jobs){
 
         return null;
     }
 
-    public static Job front(Job job){
+    /**
+     * 将一个或多个job<b>并起来</b>, 使Job能够并行
+     */
+    public static Job bunch(Iterable<Job> jobIterable){
 
-        return job;
-    }
-
-    public static Job back(Job job) {
-
-        return job;
+        return null;
     }
 }

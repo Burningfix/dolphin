@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,14 +28,19 @@ import org.dolphin.hotpatch.apk.ApkPlugin;
 import org.dolphin.hotpatch.apk.ApkPluginDataChangeObserver;
 import org.dolphin.hotpatch.apk.ApkPluginInterface;
 import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.lib.ReflectUtil;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
+import dolphin.hotdexpatch.ClassLoaderWrapper;
 import dolphin.hotdexpatch.Main2Activity;
 
 public class MainActivity extends Activity implements ApkPluginDataChangeObserver {
@@ -43,25 +49,74 @@ public class MainActivity extends Activity implements ApkPluginDataChangeObserve
     private File privateFile;
     private File optimizedFile;
     ListView listView;
-//    AssetManager mAssetManager = null;
+    //    AssetManager mAssetManager = null;
     Resources mResources;
+    String extraPath = null;
+
+
     public MainActivity() {
         super();
     }
 
-    @Override
-    protected void attachBaseContext(Context newBase) {
-        HostContentWrapper hostContentWrapper = new HostContentWrapper(newBase);
-        super.attachBaseContext(hostContentWrapper);
+//    @Override
+//    public ClassLoader getClassLoader() {
+//        Log.d(TAG, "MainActivity getClassLoader");
+//        if(null == pluginClassLoader) return super.getClassLoader();
+//        return pluginClassLoader;
+//    }
+
+
+
+//    @Override
+//    protected void attachBaseContext(Context newBase) {
+//        HostContentWrapper hostContentWrapper = new HostContentWrapper(newBase);
+//        super.attachBaseContext(hostContentWrapper);
+////        new Handler(getMainLooper()).post(new Runnable() {
+////            @Override
+////            public void run() {
+////                displayLoadedApk();
+////            }
+////        });
+//    }
+
+    private void displayLoadedApk(){
+        try {
+            Field activityThreadField = ReflectUtil.findField(this, "mMainThread");
+            Object activityThread = activityThreadField.get(this);
+            Field mPackages = ReflectUtil.findField(activityThread, "mPackages");
+            WeakReference<?> ref;
+            Map<String, ?> map = (Map<String, ?>) mPackages.get(activityThread);
+            ref = (WeakReference<? >) map.get(getPackageName()) ;
+            Object apk = ref.get();
+//            Class apkClass = apk.getClass();
+//            Field  mClassLoader = ReflectUtil.findField( apkClass , "mClassLoader");
+//            mClassLoader. set (apk , classLoader ) ;
+
+            Log.d("ClassLoader", "MainActivity loadedApk " + apk);
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
     public Resources getResources() {
-        if(null == mResources) return super.getResources();
+        if (null == mResources) return super.getResources();
         return mResources;
     }
 
-//    @Override
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if(null!= extraPath){
+            outState.putString("extraPath", extraPath);
+        }
+    }
+
+
+
+    //    @Override
 //    public AssetManager getAssets() {
 //        if(null == mAssetManager) return super.getAssets();
 //        return mAssetManager;
@@ -71,16 +126,45 @@ public class MainActivity extends Activity implements ApkPluginDataChangeObserve
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        if(null != savedInstanceState) {
+            extraPath = savedInstanceState.getString("extraPath");
+        }
+        if(null != extraPath) {
+            try {
+                AssetManager assetManager = AssetManager.class.newInstance();
+                Method addAssetPath = assetManager.getClass().getMethod("addAssetPath", String.class);
+                addAssetPath.invoke(assetManager, extraPath);
+                String localApkDir = getApplicationInfo().publicSourceDir;
+                addAssetPath.invoke(assetManager, localApkDir);
+                Resources superRes = getResources();
+                mResources = new Resources(assetManager, superRes.getDisplayMetrics(), superRes.getConfiguration());
+//                        mTheme = mResources.newTheme();
+//                        mTheme.setTo(super.getTheme());
+                Toast.makeText(this, R.string.test, 3000).show();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+
         listView = (ListView) findViewById(R.id.list);
         privateFile = new File(this.getFilesDir(), "_private");
         optimizedFile = new File(privateFile, "_opt");
         apkLoadEngine = ApkLoadEngine.instance(this, privateFile, optimizedFile);
         apkLoadEngine.setApkPluginDataChangeObserver(this);
+        String a = "ssss";
+        ClassLoader normalClassLoader = a.getClass().getClassLoader();
+        Log.d("Plugin","normalClassLoader " + normalClassLoader);
+        Log.d("Plugin","SystemClassLoader " + ClassLoader.getSystemClassLoader());
     }
 
     public void next(View view) {
         Intent intent = new Intent(this, Main2Activity.class);
         startActivity(intent);
+    }
+
+    public void onResume(){
+        super.onResume();
     }
 
     @Override
@@ -94,14 +178,19 @@ public class MainActivity extends Activity implements ApkPluginDataChangeObserve
 
                 try {
                     PackageInfo plocalObject = getPackageManager().getPackageArchiveInfo(item.value1.getPath(), 1);
-                    Activity activity = MainActivity.this;
+                    MainActivity activity = MainActivity.this;
 
                     Log.d(TAG, "plugin " + plocalObject.packageName);
 
                     try {
-                        AssetManager assetManager = activity.getAssets();
+                        AssetManager assetManager = AssetManager.class.newInstance();
                         Method addAssetPath = assetManager.getClass().getMethod("addAssetPath", String.class);
                         addAssetPath.invoke(assetManager, item.value1.getPath());
+                        String localApkDir = activity.getApplicationInfo().publicSourceDir;
+                        addAssetPath.invoke(assetManager, localApkDir);
+
+//                        Method localMethod = ((AssetManager)AssetManager.class.newInstance()).getClass().getMethod("addAssetPath", new Class[] { String.class });
+//                        localMethod.invoke(assetManager, new String[]{localApkDir, item.value1.getPath()});
 //                        mAssetManager = assetManager;
                         Resources superRes = activity.getResources();
                         mResources = new Resources(assetManager, superRes.getDisplayMetrics(), superRes.getConfiguration());
@@ -112,10 +201,21 @@ public class MainActivity extends Activity implements ApkPluginDataChangeObserve
                         e.printStackTrace();
                     }
 
-                    ClassLoader classLoader = item.value1.getClassLoader();
-                    Class<Fragment> fragmentClass = (Class<Fragment>) classLoader.loadClass(item.value2.path());
+                    ClassLoader pluginClassLoader = null;
+                    pluginClassLoader = item.value1.getClassLoader();
+                    Class<Fragment> fragmentClass = (Class<Fragment>) pluginClassLoader.loadClass(item.value2.path());
                     Fragment fragment = fragmentClass.newInstance();
                     getFragmentManager().beginTransaction().replace(R.id.container, fragment).commit();
+                    activity.extraPath = item.value1.getPath();
+
+
+
+                    ClassLoader classLoader = activity.getClassLoader();
+                    if(ClassLoaderWrapper.class.isInstance(classLoader)) {
+                        ClassLoaderWrapper classLoaderWrapper = (ClassLoaderWrapper)classLoader;
+                        classLoaderWrapper.pushExtraClassLoader(pluginClassLoader);
+                    }
+
 
 //                    if(plocalObject.activities!=null &&plocalObject.activities.length>0){
 //                        String activityname = plocalObject.activities[0].name;

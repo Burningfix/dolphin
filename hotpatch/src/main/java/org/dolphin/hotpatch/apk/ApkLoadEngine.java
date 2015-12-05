@@ -33,8 +33,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * 所有的apk都必须存在org.dolphin.plugin.apk.ApkPluginConfig.java作为该apk的配置选项<br>
  */
 public class ApkLoadEngine<T extends Context> {
-    public static final String UPDATE_CONFIG_URL = "http://172.18.16.46:23456/update";
-    public static final String URL = "http://172.18.16.46:23456/apk";
+    public static final String UPDATE_CONFIG_URL = "http://172.18.16.30:23456/update";
+    public static final String URL = "http://172.18.16.30:23456/apk";
     public static final String TAG = "ApkLoadEngine";
     public static final String GLOBAL_CONFIG_NAME = "global_apk_config.json";
     public static final String APK_SUFFIX = ".apk";
