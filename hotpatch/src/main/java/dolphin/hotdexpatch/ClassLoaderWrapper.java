@@ -2,8 +2,6 @@ package dolphin.hotdexpatch;
 
 import android.util.Log;
 
-import org.dolphin.hotpatch.dex.MainActivity;
-
 import java.util.Stack;
 
 /**

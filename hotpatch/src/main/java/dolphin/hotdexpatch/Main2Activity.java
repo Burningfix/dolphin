@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.util.Log;
 
 import org.dolphin.dexhotpatch.R;
-import org.dolphin.hotpatch.dex.MainActivity;
 
 public class Main2Activity extends Activity {
     @Override
