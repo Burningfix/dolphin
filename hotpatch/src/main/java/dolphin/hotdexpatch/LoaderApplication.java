@@ -8,7 +8,7 @@ import org.dolphin.hotpatch.dex.DexHotPatchEngine;
 /**
  * Created by yananh on 2015/12/6.
  */
-public class DelegateApplication extends Application {
+public class LoaderApplication extends Application {
     private DexHotPatchEngine dexHotPatchEngine;
     private static Application dexLoadApplication;
 
@@ -20,7 +20,7 @@ public class DelegateApplication extends Application {
         return dexLoadApplication;
     }
 
-    public DelegateApplication() {
+    public LoaderApplication() {
         super();
         dexLoadApplication = this;
         MyPathClassLoader.printCurrClassLoader("DelegateApplication.DelegateApplication");

@@ -73,14 +73,14 @@ public class Jobs {
     /**
      * 将一个或多个job
      */
-    public static Job zip(Job... jobs) {
+    public static Job zip(Iterable<Job> jobIterable) {
         return null;
     }
 
     /**
      * 一个Job的输出作为下一个job的输入
      */
-    public static Job pipeline(Job ... jobs){
+    public static Job pipeline(Iterable<Job> jobIterable){
 
         return null;
     }

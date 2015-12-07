@@ -2,6 +2,7 @@ package dolphin.hotdexpatch;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.os.Handler;
 import android.util.Log;
 
@@ -12,16 +13,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import dalvik.system.PathClassLoader;
-import dolphin.hotdexpatch.ClassLoaderWrapper;
-import dolphin.hotdexpatch.DelegateApplication;
-import dolphin.hotdexpatch.MyPathClassLoader;
 
 /**
  * Created by hanyanan on 2015/11/16.
  */
-public class DexLoadApplication extends Application {
+public class ProxyApplication extends Application {
 
-    public DexLoadApplication() {
+    public ProxyApplication() {
         super();
         MyPathClassLoader.printCurrClassLoader("DexLoadApplication.DexLoadApplication");
     }
@@ -30,7 +28,7 @@ public class DexLoadApplication extends Application {
     @Override
     protected void attachBaseContext(Context base) {
         ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
-        Application dexLoadApplication;
+        Application dexLoadApplication = null;
         try {
             Field loadedApkField = ReflectUtil.findField(base, "mPackageInfo");
             Object loadedApk = loadedApkField.get(base);
@@ -74,7 +72,22 @@ public class DexLoadApplication extends Application {
         }
 
         super.attachBaseContext(base);
-
+        try {
+            Field loadedApkField = ReflectUtil.findField(dexLoadApplication, "mLoadedApk");
+            Context nextContext;
+            Context context = base;
+            while ((context instanceof ContextWrapper) &&
+                    (nextContext=((ContextWrapper)context).getBaseContext()) != null) {
+                context = nextContext;
+            }
+            Field realLoadedApkField = ReflectUtil.findField(context, "mPackageInfo");
+            Object loadedApk = realLoadedApkField.get(context);
+            loadedApkField.set(dexLoadApplication, loadedApk);
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
 
 
         MyPathClassLoader.printCurrClassLoader("DexLoadApplication.attachBaseContext");

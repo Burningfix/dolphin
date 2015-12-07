@@ -162,7 +162,7 @@ public class MainActivity extends Activity implements ApkPluginDataChangeObserve
         Log.d("Context", "Activity's ClassLoader =  " + getClassLoader());
 
 
-        DelegateApplication.instance();
+        LoaderApplication.instance();
     }
 
     public void next(View view) {
