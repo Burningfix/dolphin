@@ -108,7 +108,7 @@ public class QueryFilesRequestHandler extends HttpGetRequestHandler {
                                                 Map<String, String> responseHeaders){
         String id = params.get(Main.QUERY_FILE_PARAM_KEY);
         FileBean fileBean = fileTreeMaps.get(id);
-        responseHeaders.put(Headers.CONTENT_DISPOSITION.value(), "attachment; filename=\""+fileBean.name+"\"");
+//        responseHeaders.put(Headers.CONTENT_DISPOSITION.value(), "attachment; filename=\""+fileBean.name+"\"");
         return new FileBinaryResource(new File(fileBean.path));
     }
 

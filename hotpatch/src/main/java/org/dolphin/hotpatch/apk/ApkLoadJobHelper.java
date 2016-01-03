@@ -5,14 +5,10 @@ import com.google.gson.Gson;
 import org.dolphin.hotpatch.AndroidMainThreadScheduler;
 import org.dolphin.http.HttpRequest;
 import org.dolphin.job.Job;
-import org.dolphin.job.Jobs;
 import org.dolphin.job.Operator;
-import org.dolphin.job.operator.BytesToStringOperator;
 import org.dolphin.job.operator.HttpPerformOperator;
 import org.dolphin.job.operator.HttpResponseToBytes;
-import org.dolphin.job.operator.PrintLogOperator;
 import org.dolphin.job.operator.SwallowExceptionOperator;
-import org.dolphin.job.schedulers.Scheduler;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.lib.IOUtil;
 
@@ -32,9 +28,9 @@ public class ApkLoadJobHelper {
     public static <T> Job createUpdateJob(String url, final File defaultFile, final Class<T> clazz) {
         HttpRequest request = new HttpRequest(url);
         Job updateJob = new Job(request);
-        updateJob.append(new SwallowExceptionOperator(new HttpPerformOperator(), null));
-        updateJob.append(new SwallowExceptionOperator(new HttpResponseToBytes(), null));
-        updateJob.append(new Operator<byte[], T>() {
+        updateJob.then(new SwallowExceptionOperator(new HttpPerformOperator(), null));
+        updateJob.then(new SwallowExceptionOperator(new HttpResponseToBytes(), null));
+        updateJob.then(new Operator<byte[], T>() {
             @Override
             public T operate(byte[] input) throws Throwable {
                 if (null == input || input.length <= 0) return null;

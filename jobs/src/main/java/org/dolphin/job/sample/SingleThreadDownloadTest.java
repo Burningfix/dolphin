@@ -51,7 +51,7 @@ public class SingleThreadDownloadTest {
         String url = "http://dl_dir.qq.com/invc/qqplayer/QQPlayerMini_Setup_3.2.845.500.exe";
         HttpRequest request = HttpJobs.create(url);
         Job job = new Job(request);
-        job.append(new HttpPerformOperator());
+        job.then(new HttpPerformOperator());
         Operator read = new Operator<HttpResponse, InputStream>(){
 
             @Override

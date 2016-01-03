@@ -4,7 +4,6 @@ import org.dolphin.http.HttpRequest;
 import org.dolphin.http.HttpResponse;
 import org.dolphin.http.HttpResponseHeader;
 import org.dolphin.job.Job;
-import org.dolphin.job.Jobs;
 import org.dolphin.job.Observer;
 import org.dolphin.job.Operator;
 import org.dolphin.job.http.HttpJobs;
@@ -28,7 +27,7 @@ public class HttpMemoryLeakTester {
 
     public static Job printMemoryUsed() {
         Job job = new Job(null);
-        job.append(new Operator() {
+        job.then(new Operator() {
             @Override
             public Object operate(Object input) throws Throwable {
                 final Runtime run = Runtime.getRuntime();
@@ -62,7 +61,7 @@ public class HttpMemoryLeakTester {
             final int defaultName = index;
             HttpRequest request = HttpJobs.create(url);
             Job job = new Job(request);
-            job.append(new HttpPerformOperator());
+            job.then(new HttpPerformOperator());
             Operator read = new Operator<HttpResponse, InputStream>() {
 
                 @Override

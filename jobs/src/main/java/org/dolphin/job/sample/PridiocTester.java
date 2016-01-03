@@ -4,7 +4,6 @@ import org.dolphin.job.Job;
 import org.dolphin.job.JobErrorHandler;
 import org.dolphin.job.JobRunningResult;
 import org.dolphin.job.Operator;
-import org.dolphin.job.internal.HttpErrorHandler;
 import org.dolphin.job.util.Log;
 import org.dolphin.job.Observer;
 import org.dolphin.job.operator.PrintTimeOperator;
@@ -20,12 +19,12 @@ public class PridiocTester {
     public static void main(String []argv) {
         Job job = new Job(0);
         job.workOn(Schedulers.computation())
-                .append(new PrintTimeOperator())
-                .append(new Operator() {
+                .then(new PrintTimeOperator())
+                .then(new Operator() {
                     @Override
                     public Object operate(Object input) throws Throwable {
                         Random random = new Random();
-                        if(random.nextBoolean()) throw new Throwable("HAHAHA");
+                        if (random.nextBoolean()) throw new Throwable("HAHAHA");
                         return input;
                     }
                 })

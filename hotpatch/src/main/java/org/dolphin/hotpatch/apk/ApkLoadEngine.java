@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -231,7 +230,7 @@ public class ApkLoadEngine<T extends Context> {
         }
 
         Job job = new Job(id);
-        job.append(new Operator<String, ApkPlugin>() {
+        job.then(new Operator<String, ApkPlugin>() {
             @Override
             public ApkPlugin operate(String input) throws Throwable {
                 return loadApk(id, apkFile, optimizedDirectory.getPath(), config, context);

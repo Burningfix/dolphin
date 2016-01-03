@@ -2,7 +2,6 @@ package org.dolphin.job.sample;
 
 import org.dolphin.http.HttpRequest;
 import org.dolphin.job.Job;
-import org.dolphin.job.Jobs;
 import org.dolphin.job.Observer;
 import org.dolphin.job.Operator;
 import org.dolphin.job.http.HttpJobs;
@@ -22,7 +21,7 @@ public class HttpErrorHandlerTester {
     public static void main(String[] argv) {
         HttpRequest request = HttpJobs.create("http://httpbin.org/get");
         Job job = new Job(request);
-        job.append(new Operator() { // 手动产生异常
+        job.then(new Operator() { // 手动产生异常
             int count = 0;
 
             @Override
@@ -34,10 +33,10 @@ public class HttpErrorHandlerTester {
                 return input;
             }
         })
-                .append(new HttpPerformOperator())
-                .append(new HttpResponseToBytes())
-                .append(new BytesToStringOperator())
-                .append(new PrintLogOperator())
+                .then(new HttpPerformOperator())
+                .then(new HttpResponseToBytes())
+                .then(new BytesToStringOperator())
+                .then(new PrintLogOperator())
                 .observerOn(null)
                 .handleError(new HttpErrorHandler())
                 .workOn(Schedulers.computation())

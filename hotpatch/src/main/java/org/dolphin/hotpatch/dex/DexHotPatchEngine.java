@@ -232,9 +232,9 @@ public class DexHotPatchEngine<T extends Application> {
         HttpRequest request = HttpJobs.createGetRequest(UPDATE_URL, params); // fetch global.config.json文件
         Job updateJob = new Job(request);
         updateJob
-                .append(new SwallowExceptionOperator(new HttpPerformOperator(), null))
-                .append(new SwallowExceptionOperator(new HttpResponseToBytes(), null))
-                .append(new Operator<byte[], List<DexLocalStruct>>() { // 返回需要继续加载的dex list
+                .then(new SwallowExceptionOperator(new HttpPerformOperator(), null))
+                .then(new SwallowExceptionOperator(new HttpResponseToBytes(), null))
+                .then(new Operator<byte[], List<DexLocalStruct>>() { // 返回需要继续加载的dex list
                     @Override
                     public List<DexLocalStruct> operate(byte[] input) throws Throwable {
                         final List<DexLocalStruct> nextLoadingDex = new ArrayList<DexLocalStruct>(nextWaitingLoadDex); // 需要后继加载的dex
@@ -273,7 +273,7 @@ public class DexHotPatchEngine<T extends Application> {
                         return nextLoadingDex;
                     }
                 })
-                .append(new Operator<List<DexLocalStruct>, List<DexLocalStruct>>() { // 现在需要的dex，并且返回有效的dex, TODO:是否可以返回所有的dex list？
+                .then(new Operator<List<DexLocalStruct>, List<DexLocalStruct>>() { // 现在需要的dex，并且返回有效的dex, TODO:是否可以返回所有的dex list？
                     @Override
                     public List<DexLocalStruct> operate(List<DexLocalStruct> waitingLoadDexList) throws Throwable {
                         if (waitingLoadDexList == null || waitingLoadDexList.isEmpty())
@@ -297,7 +297,7 @@ public class DexHotPatchEngine<T extends Application> {
                         }
                         load(nextLoadingDex, nextLoadingDex, false, false); // 加载所有需要的dex，包括新的和旧的，不需要验证签名
                         Job clearJob = new Job(null); // 删除
-                        clearJob.append(new Operator() { // 删除没有用的文件
+                        clearJob.then(new Operator() { // 删除没有用的文件
                             @Override
                             public Object operate(Object input) throws Throwable {
                                 List<String> files = scanDirector(privateDexDirectory, GLOBAL_CONFIG_NAME);

@@ -17,7 +17,6 @@ import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.util.Log;
 import org.dolphin.lib.ValueUtil;
 
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -57,17 +56,17 @@ public class SharedDisk {
         Log.d(TAG, "Load Url " + url);
         final HttpRequest request = HttpJobs.create(url);
         Job job = new Job(request)
-                .append(new HttpPerformOperator())
-                .append(new HttpResponseToBytes())
-                .append(new BytesToStringOperator())
-                .append(new Operator<String, QueryFilesRequestHandler.FileTreeBean>() {
+                .then(new HttpPerformOperator())
+                .then(new HttpResponseToBytes())
+                .then(new BytesToStringOperator())
+                .then(new Operator<String, QueryFilesRequestHandler.FileTreeBean>() {
                     @Override
                     public QueryFilesRequestHandler.FileTreeBean operate(String input) throws Throwable {
                         Log.d(TAG, "Get Response " + input);
                         Gson gson = new Gson();
                         return gson.fromJson(input, QueryFilesRequestHandler.FileTreeBean.class);
                     }
-                }).append(new Operator<QueryFilesRequestHandler.FileTreeBean, List<FileBean>>() {
+                }).then(new Operator<QueryFilesRequestHandler.FileTreeBean, List<FileBean>>() {
                     @Override
                     public List<FileBean> operate(QueryFilesRequestHandler.FileTreeBean input) throws Throwable {
                         if (null == input) throw new Throwable("网络错误");
@@ -84,7 +83,7 @@ public class SharedDisk {
 
                         LinkedList<FileBean> res = new LinkedList<FileBean>();
                         for (FileBean fileBean : input.files) {
-                            fileBean.url = "http://"+getServerIp()+":"+getServerPort()+fileBean.url;
+                            fileBean.url = "http://" + getServerIp() + ":" + getServerPort() + fileBean.url;
                             res.add(fileBean);
                         }
                         return res;

@@ -23,7 +23,7 @@ public class PriorityTester {
         for (int i = 0; i < jobs.length; ++i) {
             jobs[i] = new Job(i);
             jobs[i].workOn(Schedulers.computation())
-                    .append(new PrintTimeOperator())
+                    .then(new PrintTimeOperator())
                     .observer(new Observer() {
                         @Override
                         public void onNext(Job job, Object next) {

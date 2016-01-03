@@ -6,6 +6,7 @@ import org.dolphin.job.operator.UntilOperator;
 import org.dolphin.job.schedulers.JobEngine;
 import org.dolphin.job.schedulers.Scheduler;
 import org.dolphin.job.schedulers.Schedulers;
+import org.dolphin.lib.ValueUtil;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -14,7 +15,9 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.dolphin.lib.Preconditions.checkArgument;
 import static org.dolphin.lib.Preconditions.checkNotNull;
+import static org.dolphin.lib.Preconditions.checkState;
 
 /**
  * Created by hanyanan on 2015/9/28.
@@ -25,39 +28,24 @@ public class Job implements Comparable<Job> {
 
     public long sequence = sSequence++;
 
-    public AtomicBoolean aborted = new AtomicBoolean(false);
-
+    public final AtomicBoolean aborted = new AtomicBoolean(false);
+    /**
+     *  是否还能够修改属性，比如添加监听，修改描述属性......
+     */
+    public final AtomicBoolean freezing  = new AtomicBoolean(false);
     protected Object tag = null;
     protected final List<Operator> operatorList = new LinkedList<Operator>();
-    protected JobErrorHandler errorHandler = null;
     protected Scheduler workScheduler = null;
     protected Scheduler observerScheduler = null;
     protected Object input = null;
-    protected Object output = null;
-    protected Observer observer;
-    protected JobWorkPolicy workPolicy;
-    @Deprecated protected JobRunningState runningState;
+    protected JobWorkPolicy workPolicy = null;
+    protected Action1 resultAction;
+    protected Action2 errorAction;
+    protected String traceNode;
 
     public Job(Object input) {
         this.input = input;
     }
-
-    public final Object getInput() {
-        return input;
-    }
-
-    public final Object getOutput() {
-        return output;
-    }
-
-    /**
-     * 清除当前所有Operator
-     */
-    public final Job clear() {
-        operatorList.clear();
-        return this;
-    }
-
 
     /**
      * until命令：循环执行，直到结束。
@@ -71,6 +59,7 @@ public class Job implements Comparable<Job> {
      */
     public final Job until(Operator operator) {
         checkNotNull(operator);
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
         operatorList.add(new UntilOperator(operator));
         return this;
     }
@@ -80,11 +69,14 @@ public class Job implements Comparable<Job> {
      */
     public final Job until(Operator operator, boolean notifyNextCallback) {
         checkNotNull(operator);
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
         operatorList.add(new UntilOperator(operator, notifyNextCallback));
         return this;
     }
 
-    public final Job append(Operator operator) {
+    public final Job then(Operator operator) {
+        checkNotNull(operator);
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
         operatorList.add(operator);
         return this;
     }
@@ -92,21 +84,14 @@ public class Job implements Comparable<Job> {
     /**
      * 一个输入，多个输出，每一个Operator都是同一个输入参数和不同的输出，将多个输出打包成一个Tuple传递到下一次输出。
      *
-     * @param operatorIterator
      * @return
      */
     public final Job merge(Iterable<Operator> operators) {
-        if (null == operators) {
-            throw new NullPointerException("");
-        }
+        checkNotNull(operators);
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
         operatorList.add(new OperatorWrapper(operators));
         return this;
     }
-
-    //    public final Iterator<Operator> getOperatorList() {
-//        return new JobOperatorIterator(operatorList);
-//    }
-
 
     public final List<Operator> getOperatorList() {
         return new LinkedList<Operator>(operatorList);
@@ -123,16 +108,8 @@ public class Job implements Comparable<Job> {
         return this;
     }
 
-    public final Job handleError(JobErrorHandler throwable) {
-        errorHandler = throwable;
-        return this;
-    }
-
-    public final JobErrorHandler getErrorHandler() {
-        return errorHandler;
-    }
-
     public final Job workOn(Scheduler scheduler) {
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
         workScheduler = scheduler;
         return this;
     }
@@ -142,9 +119,9 @@ public class Job implements Comparable<Job> {
     }
 
     public final Job observerOn(Scheduler scheduler) {
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
         // 可以使用一个运算符进行代替
         observerScheduler = scheduler;
-
         return this;
     }
 
@@ -152,37 +129,32 @@ public class Job implements Comparable<Job> {
         return observerScheduler;
     }
 
-    public final Job observer(Observer observer) {
-        this.observer = observer;
-
-        return this;
-    }
-
-    public final Observer getObserver() {
-        return this.observer;
-    }
-
     public Job workDelayed(long millTimes) {
+        freezing.set(true);
         JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(millTimes, TimeUnit.MILLISECONDS)));
         return this;
     }
 
     public Job workDelayed(long delay, TimeUnit timeUnit) {
+        freezing.set(true);
         JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(delay, timeUnit)));
         return this;
     }
 
     public Job work() {
+        freezing.set(true);
         JobEngine.instance().loadJob(this);
         return this;
     }
 
     public Job workPeriodic(long initDelay, long periodic, TimeUnit timeUnit) {
+        freezing.set(true);
         JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.workPolicy(initDelay, periodic, timeUnit)));
         return this;
     }
 
     public final Job setTag(Object object) {
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
         this.tag = object;
         return this;
     }
@@ -192,53 +164,34 @@ public class Job implements Comparable<Job> {
     }
 
     public Job setWorkPolicy(JobWorkPolicy workPolicy) {
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
         this.workPolicy = workPolicy;
         return this;
     }
 
-    @Deprecated
-    public JobRunningState getRunningState() {
-        return runningState;
-    }
-
-    @Deprecated
-    public Job setRunningState(JobRunningState runningState) {
-        this.runningState = runningState;
+    public final Job result(Action1 action){
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
+        this.resultAction = action;
         return this;
     }
 
-    public Job description(String description) {
-        // TODO: storage current description
+    public final Job error(Action2 action){
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
+        this.errorAction = action;
         return this;
-    }
-
-    public String description() {
-        return "";
     }
 
     public final Job abort() {
+        freezing.set(false);
         aborted.set(true);
         JobEngine.instance().abort(this);
         return this;
     }
 
-
     public final boolean isAborted() {
         return aborted.get();
     }
 
-    /**
-     * 复制一个相同的job， 包括：
-     * 1. 输入参数
-     * 2. 所有的Operators
-     * 3. 所有的Scheduler
-     * 4. JobErrorHandler
-     * 5.
-     */
-    public Job copy() {
-        // TODO
-        return null;
-    }
 
     @Override
     public int compareTo(Job o) {
@@ -246,11 +199,39 @@ public class Job implements Comparable<Job> {
         return diff < 0 ? -1 : (diff == 0 ? 0 : 1);
     }
 
+    public Job setTraceNode(String node) {
+        checkNotNull(node);
+        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
+        this.traceNode = node;
+        return this;
+    }
+
     @Override
     public String toString() {
-        if (null != input) {
-            return "Job {" + input.toString() + "} With Sequence \t" + sequence;
+        StringBuilder sb = new StringBuilder();
+        sb.append("Job");
+        if(!ValueUtil.isEmpty(traceNode)){
+            sb.append('[').append(traceNode).append(']');
         }
-        return super.toString();
+        if (null != input) {
+            sb.append("{" + input.toString() + "} With Sequence \t" + sequence);
+        }
+        return sb.toString();
+    }
+
+    public final Object getTag(){
+        return this.tag;
+    }
+
+    public abstract class Action1 <T>{
+        public void call(T result){
+            // Default implement
+        }
+    }
+
+    public abstract class Action2 <T>{
+        public void call(Throwable throwable, T ... unexpectedResult){
+            // Default implement
+        }
     }
 }

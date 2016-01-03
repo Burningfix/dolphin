@@ -7,7 +7,6 @@ import com.google.gson.Gson;
 import org.dolphin.http.server.Main;
 import org.dolphin.http.server.sniffer.SnifferBean;
 import org.dolphin.job.Job;
-import org.dolphin.job.JobErrorHandler;
 import org.dolphin.job.Observer;
 import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
@@ -81,7 +80,7 @@ public class SharedDiskManager {
         }
         String desc = "sendQueryRequest";
         sendQueryJob = new Job(desc)
-                .append(new Operator() { // 广播发送客户端上线请求
+                .then(new Operator() { // 广播发送客户端上线请求
                     @Override
                     public Object operate(Object input) throws Throwable {
                         // 广播发送监听指令
@@ -118,14 +117,14 @@ public class SharedDiskManager {
         final Gson gson = new Gson();
         String desc = "startServerSniffer";
         listenNodeJob = new Job(desc)
-                .append(new Operator() {
+                .then(new Operator() {
                     @Override
                     public Object operate(Object input) throws Throwable {
                         ipToSharedDiskMapping.clear();
                         return input;
                     }
                 })
-                .append(new Operator<Object, DatagramSocket>() {
+                .then(new Operator<Object, DatagramSocket>() {
                     @Override
                     public DatagramSocket operate(Object input) throws Throwable {
                         DatagramSocket server = new DatagramSocket(Main.PORT);
