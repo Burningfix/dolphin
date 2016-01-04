@@ -1,19 +1,16 @@
 package org.dolphin.job;
 
-import org.dolphin.job.operator.JobOperatorIterator;
 import org.dolphin.job.operator.OperatorWrapper;
 import org.dolphin.job.operator.UntilOperator;
-import org.dolphin.job.schedulers.JobEngine;
 import org.dolphin.job.schedulers.Scheduler;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.lib.ValueUtil;
 
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.dolphin.lib.Preconditions.checkArgument;
 import static org.dolphin.lib.Preconditions.checkNotNull;
@@ -22,30 +19,56 @@ import static org.dolphin.lib.Preconditions.checkState;
 /**
  * Created by hanyanan on 2015/9/28.
  */
-public class Job implements Comparable<Job> {
+public class Job<I, O> implements Comparable<Job> {
     public static final String TAG = "Job";
-    private static long sSequence = 0;
+    /**
+     * 序列号生成器
+     */
+    private static final AtomicLong SEQUENCE_CREATOR = new AtomicLong(0);
+    /**
+     * 当前Job的序列号
+     */
+    public long sequence = SEQUENCE_CREATOR.getAndIncrement();
 
-    public long sequence = sSequence++;
-
+    /**
+     * 当前Job是否取消了
+     */
     public final AtomicBoolean aborted = new AtomicBoolean(false);
     /**
-     *  是否还能够修改属性，比如添加监听，修改描述属性......
+     * 是否还能够修改属性，比如添加监听，修改描述属性......
      */
-    public final AtomicBoolean freezing  = new AtomicBoolean(false);
+    public final AtomicBoolean frozen = new AtomicBoolean(false);
+    /**
+     * Job的tag，用于保存临时信息
+     */
     protected Object tag = null;
-    protected final List<Operator> operatorList = new LinkedList<Operator>();
-    protected Scheduler workScheduler = null;
+    protected final List<Operator> operators = new LinkedList<Operator>();
+    protected Scheduler workScheduler = Schedulers.computation();
     protected Scheduler observerScheduler = null;
-    protected Object input = null;
+    protected final I input;
+    protected O output;
     protected JobWorkPolicy workPolicy = null;
     protected Action1 resultAction;
     protected Action2 errorAction;
-    protected String traceNode;
+    protected String logNode;
 
-    public Job(Object input) {
+    public Job(I input) {
         this.input = input;
     }
+
+    /**
+     * 返回当前job的输入
+     */
+    public I getInput() {
+        return this.input;
+    }
+
+//    public O get() {
+//        if (null == output) {
+//            output = JobEngine.instance().getResult(this);
+//        }
+//        return output;
+//    }
 
     /**
      * until命令：循环执行，直到结束。
@@ -59,8 +82,8 @@ public class Job implements Comparable<Job> {
      */
     public final Job until(Operator operator) {
         checkNotNull(operator);
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
-        operatorList.add(new UntilOperator(operator));
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
+        operators.add(new UntilOperator(operator));
         return this;
     }
 
@@ -69,15 +92,15 @@ public class Job implements Comparable<Job> {
      */
     public final Job until(Operator operator, boolean notifyNextCallback) {
         checkNotNull(operator);
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
-        operatorList.add(new UntilOperator(operator, notifyNextCallback));
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
+        operators.add(new UntilOperator(operator, notifyNextCallback));
         return this;
     }
 
     public final Job then(Operator operator) {
         checkNotNull(operator);
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
-        operatorList.add(operator);
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
+        operators.add(operator);
         return this;
     }
 
@@ -88,13 +111,13 @@ public class Job implements Comparable<Job> {
      */
     public final Job merge(Iterable<Operator> operators) {
         checkNotNull(operators);
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
-        operatorList.add(new OperatorWrapper(operators));
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
+        this.operators.add(new OperatorWrapper(operators));
         return this;
     }
 
-    public final List<Operator> getOperatorList() {
-        return new LinkedList<Operator>(operatorList);
+    public final List<Operator> getOperators() {
+        return new LinkedList<Operator>(operators);
     }
 
     /**
@@ -104,12 +127,12 @@ public class Job implements Comparable<Job> {
      * @return
      */
     public final Job finalize(Operator<?, Void> operator) {
-
+        // finalize release resources
         return this;
     }
 
     public final Job workOn(Scheduler scheduler) {
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
         workScheduler = scheduler;
         return this;
     }
@@ -119,7 +142,7 @@ public class Job implements Comparable<Job> {
     }
 
     public final Job observerOn(Scheduler scheduler) {
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change properties.");
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
         // 可以使用一个运算符进行代替
         observerScheduler = scheduler;
         return this;
@@ -130,32 +153,26 @@ public class Job implements Comparable<Job> {
     }
 
     public Job workDelayed(long millTimes) {
-        freezing.set(true);
-        JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(millTimes, TimeUnit.MILLISECONDS)));
+        frozen.set(true);
+        JobEngine.loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(millTimes, TimeUnit.MILLISECONDS)));
         return this;
     }
 
     public Job workDelayed(long delay, TimeUnit timeUnit) {
-        freezing.set(true);
-        JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(delay, timeUnit)));
+        frozen.set(true);
+        JobEngine.loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(delay, timeUnit)));
         return this;
     }
 
     public Job work() {
-        freezing.set(true);
-        JobEngine.instance().loadJob(this);
+        frozen.set(true);
+        JobEngine.loadJob(setWorkPolicy(JobWorkPolicy.immediately()));
         return this;
     }
 
     public Job workPeriodic(long initDelay, long periodic, TimeUnit timeUnit) {
-        freezing.set(true);
-        JobEngine.instance().loadJob(setWorkPolicy(JobWorkPolicy.workPolicy(initDelay, periodic, timeUnit)));
-        return this;
-    }
-
-    public final Job setTag(Object object) {
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
-        this.tag = object;
+        frozen.set(true);
+        JobEngine.loadJob(setWorkPolicy(JobWorkPolicy.workPolicy(initDelay, periodic, timeUnit)));
         return this;
     }
 
@@ -164,27 +181,27 @@ public class Job implements Comparable<Job> {
     }
 
     public Job setWorkPolicy(JobWorkPolicy workPolicy) {
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change any property.");
         this.workPolicy = workPolicy;
         return this;
     }
 
-    public final Job result(Action1 action){
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
+    public final Job result(Action1 action) {
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change any property.");
         this.resultAction = action;
         return this;
     }
 
-    public final Job error(Action2 action){
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
+    public final Job error(Action2 action) {
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change any property.");
         this.errorAction = action;
         return this;
     }
 
     public final Job abort() {
-        freezing.set(false);
+        frozen.set(false);
         aborted.set(true);
-        JobEngine.instance().abort(this);
+        JobEngine.abort(this);
         return this;
     }
 
@@ -192,17 +209,19 @@ public class Job implements Comparable<Job> {
         return aborted.get();
     }
 
-
     @Override
     public int compareTo(Job o) {
         long diff = sequence - o.sequence;
         return diff < 0 ? -1 : (diff == 0 ? 0 : 1);
     }
 
-    public Job setTraceNode(String node) {
+    /**
+     * 设置当前node的log的信息，一般如下Request.SubRequest.Session1
+     */
+    public Job setLogNode(String node) {
         checkNotNull(node);
-        checkArgument(!freezing.get(), "The job has frozen, Cannot change any property.");
-        this.traceNode = node;
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change any property.");
+        this.logNode = node;
         return this;
     }
 
@@ -210,8 +229,8 @@ public class Job implements Comparable<Job> {
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Job");
-        if(!ValueUtil.isEmpty(traceNode)){
-            sb.append('[').append(traceNode).append(']');
+        if (!ValueUtil.isEmpty(logNode)) {
+            sb.append('[').append(logNode).append(']');
         }
         if (null != input) {
             sb.append("{" + input.toString() + "} With Sequence \t" + sequence);
@@ -219,19 +238,21 @@ public class Job implements Comparable<Job> {
         return sb.toString();
     }
 
-    public final Object getTag(){
+    public final Job setTag(Object object) {
+        checkArgument(!frozen.get(), "The job has frozen, Cannot change any property.");
+        this.tag = object;
+        return this;
+    }
+
+    public final Object getTag() {
         return this.tag;
     }
 
-    public abstract class Action1 <T>{
-        public void call(T result){
-            // Default implement
-        }
+    public interface Action1<T> {
+        public void call(T result);
     }
 
-    public abstract class Action2 <T>{
-        public void call(Throwable throwable, T ... unexpectedResult){
-            // Default implement
-        }
+    public interface Action2<T> {
+        public void call(Throwable throwable, T... unexpectedResult);
     }
 }

@@ -1,5 +1,6 @@
 package org.dolphin.job.schedulers;
 
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -19,7 +20,7 @@ public interface Scheduler {
      *            the Runnable to schedule
      * @return a subscription to be able to unsubscribe the action (unschedule it if not executed)
      */
-    Subscription schedule(final Runnable runnable);
+    Future schedule(final Runnable runnable);
 
     /**
      * Schedules an Action for execution at some point in the future.
@@ -36,7 +37,7 @@ public interface Scheduler {
      *            the time unit of {@code delayTime}
      * @return a subscription to be able to unsubscribe the action (unschedule it if not executed)
      */
-    Subscription schedule(final Runnable runnable, final long delayTime, final TimeUnit unit);
+    Future schedule(final Runnable runnable, final long delayTime, final TimeUnit unit);
 
     /**
      * Schedules a cancelable action to be executed periodically. This default implementation schedules
@@ -58,5 +59,5 @@ public interface Scheduler {
      *            the time unit of {@code period}
      * @return a subscription to be able to unsubscribe the action (unschedule it if not executed)
      */
-    Subscription schedulePeriodically(final Runnable runnable, long initialDelay, long period, TimeUnit unit);
+    Future schedulePeriodically(final Runnable runnable, long initialDelay, long period, TimeUnit unit);
 }

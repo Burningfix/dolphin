@@ -1,10 +1,6 @@
 package org.dolphin.http;
 
-import com.sun.corba.se.spi.orbutil.fsm.Input;
-
 import org.dolphin.lib.exception.AbortException;
-
-import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 

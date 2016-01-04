@@ -3,7 +3,6 @@ package org.dolphin.job.http;
 import org.dolphin.http.HttpResponse;
 import org.dolphin.job.Job;
 import org.dolphin.job.util.Log;
-import org.dolphin.job.Observer;
 import org.dolphin.job.tuple.TwoTuple;
 
 /**

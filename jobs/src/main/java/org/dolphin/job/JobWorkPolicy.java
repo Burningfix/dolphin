@@ -6,6 +6,10 @@ import java.util.concurrent.TimeUnit;
  * Created by hanyanan on 2015/11/10.
  */
 public abstract class JobWorkPolicy {
+    public static final JobWorkPolicy DEFAULT_JOB_WORK_POLICY = new JobWorkPolicy(0, -1) {
+
+    };
+
     private final long delayNanoTime;
 
     private final long periodicNanoTime;

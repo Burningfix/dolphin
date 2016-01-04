@@ -1,7 +1,8 @@
-package org.dolphin.job.schedulers;
+package org.dolphin.job;
 
-import org.dolphin.job.*;
 import org.dolphin.job.operator.UntilOperator;
+import org.dolphin.job.schedulers.Scheduler;
+import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.*;
 import org.dolphin.job.util.Log;
 import org.dolphin.lib.IOUtil;
@@ -9,34 +10,26 @@ import org.dolphin.lib.IOUtil;
 import java.io.Closeable;
 import java.util.List;
 import java.util.WeakHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Created by hanyanan on 2015/10/27.
  */
 public class JobEngine {
-    private static JobEngine instance = null;
+    private final static WeakHashMap<Object, Future> sJobReference = new WeakHashMap<Object, Future>();
 
-    public synchronized static JobEngine instance() {
-        if (null == instance) {
-            instance = new JobEngine();
-        }
-
-        return instance;
-    }
-
-    private JobEngine() {
+    public synchronized static void dispose() {
 
     }
 
-    private final WeakHashMap<Object, Subscription> jobReference = new WeakHashMap<Object, Subscription>();
-
-    public synchronized void loadJob(final Job job) {
+    public synchronized static void loadJob(final Job job) {
         JobWorkPolicy workPolicy = job.getWorkPolicy();
+        workPolicy = workPolicy == null ? JobWorkPolicy.DEFAULT_JOB_WORK_POLICY : workPolicy;
         if (null == workPolicy) {
             JobRunnable jobRunnable = new JobRunnable(job);
-            Subscription subscription = getWorkScheduler(job).schedule(jobRunnable);
-            jobReference.put(job, subscription);
+            Future future = getWorkScheduler(job).schedule(jobRunnable);
+            sJobReference.put(job, future);
         } else {
             if (workPolicy.periodicNanoTime() > 0) {
                 // 周期性的
@@ -48,22 +41,22 @@ public class JobEngine {
         }
     }
 
-    private synchronized void loadJob(Job job, long delayTime, TimeUnit unit) {
+    private synchronized static void loadJob(Job job, long delayTime, TimeUnit unit) {
         JobRunnable jobRunnable = new JobRunnable(job);
-        Subscription subscription = getWorkScheduler(job).schedule(jobRunnable, delayTime, unit);
-        jobReference.put(job, subscription);
+        Future future = getWorkScheduler(job).schedule(jobRunnable, delayTime, unit);
+        sJobReference.put(job, future);
     }
 
-    private synchronized void loadJob(Job job, long initialDelay, long period, TimeUnit unit) {
+    private synchronized static void loadJob(Job job, long initialDelay, long period, TimeUnit unit) {
         JobRunnable jobRunnable = new JobRunnable(job);
-        Subscription subscription = getWorkScheduler(job).schedulePeriodically(jobRunnable, initialDelay, period, unit);
-        jobReference.put(job, subscription);
+        Future future = getWorkScheduler(job).schedulePeriodically(jobRunnable, initialDelay, period, unit);
+        sJobReference.put(job, future);
     }
 
     public synchronized void abort(Job job) {
-        Subscription subscription = jobReference.get(job);
-        if (null != subscription && !subscription.isUnsubscription()) {
-            subscription.unsubscription();
+        Future future = sJobReference.get(job);
+        if (null != future && !future.isCancelled()) {
+            future.cancel(true);
         }
     }
 
@@ -72,39 +65,40 @@ public class JobEngine {
      */
     private static Scheduler getWorkScheduler(final Job job) {
         Scheduler scheduler = job.getWorkScheduler();
+        return scheduler == null ? Schedulers.computation() : scheduler;
+    }
+
+    /**
+     * 得到回调的工作的线程
+     */
+    private Scheduler getCallbackScheduler(final Job job) {
+        Scheduler scheduler = job.getObserverScheduler();
         if (null == scheduler) {
-            return Schedulers.computation();
+            scheduler = Schedulers.immediate();
         }
         return scheduler;
     }
 
+
     /**
      * 最终运行都是JobRunnable。
      */
-    private class JobRunnable implements Runnable, Comparable<JobRunnable> {
+    private static class JobRunnable implements Runnable, Comparable<JobRunnable> {
         private final Job job;
 
         private JobRunnable(Job job) {
             this.job = job;
         }
 
-        private Scheduler getObserverScheduler() {
-            Scheduler scheduler = job.getObserverScheduler();
-            if (null == scheduler) {
-                scheduler = Schedulers.immediate();
-            }
-            return scheduler;
-        }
-
         private void notifyCancellation() {
-            if (getObserverScheduler() == null) {
+            if (getCallbackScheduler() == null) {
                 return;
             }
             final Observer observer = job.getObserver();
             if (null == observer) {
                 return;
             }
-            getObserverScheduler().schedule(new Runnable() {
+            getCallbackScheduler().schedule(new Runnable() {
                 @Override
                 public void run() {
                     observer.onCancellation(job);
@@ -113,14 +107,14 @@ public class JobEngine {
         }
 
         private void notifyComplete(final Object res) {
-            if (getObserverScheduler() == null) {
+            if (getCallbackScheduler() == null) {
                 return;
             }
             final Observer observer = job.getObserver();
             if (null == observer) {
                 releaseResource(res);
             } else {
-                getObserverScheduler().schedule(new Runnable() {
+                getCallbackScheduler().schedule(new Runnable() {
                     @Override
                     public void run() {
                         if (!job.isAborted()) {
@@ -135,14 +129,14 @@ public class JobEngine {
         }
 
         private void notifyFailed(final Job job, final Throwable error) {
-            if (getObserverScheduler() == null) {
+            if (getCallbackScheduler() == null) {
                 return;
             }
             final Observer observer = job.getObserver();
             if (null == observer) {
                 return;
             }
-            getObserverScheduler().schedule(new Runnable() {
+            getCallbackScheduler().schedule(new Runnable() {
                 @Override
                 public void run() {
                     if (!job.isAborted()) {
@@ -155,14 +149,14 @@ public class JobEngine {
         }
 
         private void notifyProgress(final Object next) {
-            if (getObserverScheduler() == null) {
+            if (getCallbackScheduler() == null) {
                 return;
             }
             final Observer observer = job.getObserver();
             if (null == observer) {
                 return;
             }
-            getObserverScheduler().schedule(new Runnable() {
+            getCallbackScheduler().schedule(new Runnable() {
                 @Override
                 public void run() {
                     if (!job.isAborted()) {
@@ -176,7 +170,7 @@ public class JobEngine {
         private void notifyPreJobRunning(final Job job) {
             final JobRunningState runningState = job.getRunningState();
             if (null == runningState) return;
-            Scheduler scheduler = getObserverScheduler();
+            Scheduler scheduler = getCallbackScheduler();
             scheduler.schedule(new Runnable() {
                 @Override
                 public void run() {
@@ -189,7 +183,7 @@ public class JobEngine {
         private void notifyPostJobRunning(final Job job) {
             final JobRunningState runningState = job.getRunningState();
             if (null == runningState) return;
-            Scheduler scheduler = getObserverScheduler();
+            Scheduler scheduler = getCallbackScheduler();
             scheduler.schedule(new Runnable() {
                 @Override
                 public void run() {
@@ -206,7 +200,7 @@ public class JobEngine {
             }
             long loadTime = System.currentTimeMillis();
             Log.i("Scheduler", "Load Job[" + job.description() + "]");
-            List<Operator> operatorList = job.getOperatorList();
+            List<Operator> operatorList = job.getOperators();
             Object tmp = job.getInput();
             while (operatorList.size() > 0) {
                 Operator operator = operatorList.remove(0);

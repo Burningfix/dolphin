@@ -16,7 +16,6 @@ public class LoaderApplication extends Application {
         if(null == dexLoadApplication) {
             throw new RuntimeException("instance is null!");
         }
-
         return dexLoadApplication;
     }
 
