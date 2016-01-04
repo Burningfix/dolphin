@@ -1,5 +1,7 @@
 package org.dolphin.job;
 
+import com.squareup.okhttp.Call;
+
 import org.dolphin.job.operator.OperatorWrapper;
 import org.dolphin.job.operator.UntilOperator;
 import org.dolphin.job.schedulers.Scheduler;
@@ -48,8 +50,9 @@ public class Job<I, O> implements Comparable<Job> {
     protected final I input;
     protected O output;
     protected JobWorkPolicy workPolicy = null;
-    protected Action1 resultAction;
-    protected Action2 errorAction;
+    protected Callback1 resultCallback;
+    protected Callback2 errorCallback;
+    protected Callback0 cancelCallback;
     protected String logNode;
 
     public Job(I input) {
@@ -148,7 +151,7 @@ public class Job<I, O> implements Comparable<Job> {
         return this;
     }
 
-    public final Scheduler getObserverScheduler() {
+    public final Scheduler getCallbackScheduler() {
         return observerScheduler;
     }
 
@@ -186,16 +189,33 @@ public class Job<I, O> implements Comparable<Job> {
         return this;
     }
 
-    public final Job result(Action1 action) {
+    public final Job result(Callback1 action) {
         checkArgument(!frozen.get(), "The job has frozen, Cannot change any property.");
-        this.resultAction = action;
+        this.resultCallback = action;
         return this;
     }
 
-    public final Job error(Action2 action) {
+    public final Job error(Callback2 action) {
         checkArgument(!frozen.get(), "The job has frozen, Cannot change any property.");
-        this.errorAction = action;
+        this.errorCallback = action;
         return this;
+    }
+
+    public final Callback1 getResultCallback() {
+        return resultCallback;
+    }
+
+    public final Callback2 getErrorCallback() {
+        return errorCallback;
+    }
+
+    public final Job setCancelCallback(Callback0 cancelCallback) {
+        this.cancelCallback = cancelCallback;
+        return this;
+    }
+
+    public final Callback0 getCancelCallback(){
+        return cancelCallback;
     }
 
     public final Job abort() {
@@ -248,11 +268,16 @@ public class Job<I, O> implements Comparable<Job> {
         return this.tag;
     }
 
-    public interface Action1<T> {
+
+    public interface Callback0 {
+        public void call();
+    }
+
+    public interface Callback1<T> {
         public void call(T result);
     }
 
-    public interface Action2<T> {
+    public interface Callback2<T> {
         public void call(Throwable throwable, T... unexpectedResult);
     }
 }

@@ -63,7 +63,7 @@ public class JobEngine {
     /**
      * Get default work schedule for specify job.
      */
-    private static Scheduler getWorkScheduler(final Job job) {
+    public static Scheduler getWorkScheduler(final Job job) {
         Scheduler scheduler = job.getWorkScheduler();
         return scheduler == null ? Schedulers.computation() : scheduler;
     }
@@ -71,12 +71,9 @@ public class JobEngine {
     /**
      * 得到回调的工作的线程
      */
-    private Scheduler getCallbackScheduler(final Job job) {
-        Scheduler scheduler = job.getObserverScheduler();
-        if (null == scheduler) {
-            scheduler = Schedulers.immediate();
-        }
-        return scheduler;
+    public static Scheduler getCallbackScheduler(final Job job) {
+        Scheduler scheduler = job.getCallbackScheduler();
+        return scheduler == null ? Schedulers.immediate() : scheduler;
     }
 
 
@@ -91,36 +88,33 @@ public class JobEngine {
         }
 
         private void notifyCancellation() {
-            if (getCallbackScheduler() == null) {
-                return;
-            }
-            final Observer observer = job.getObserver();
-            if (null == observer) {
+            final Job.Callback0 callback = job.getCancelCallback();
+            if (null == callback) {
                 return;
             }
             getCallbackScheduler().schedule(new Runnable() {
                 @Override
                 public void run() {
-                    observer.onCancellation(job);
+                    callback.call();
                 }
             });
         }
 
-        private void notifyComplete(final Object res) {
-            if (getCallbackScheduler() == null) {
-                return;
-            }
-            final Observer observer = job.getObserver();
-            if (null == observer) {
+        private void notifyResult(final Object res) {
+            final Job.Callback1 callback = job.getResultCallback();
+            if (null == callback) {
                 releaseResource(res);
             } else {
                 getCallbackScheduler().schedule(new Runnable() {
                     @Override
                     public void run() {
                         if (!job.isAborted()) {
-                            observer.onCompleted(job, res);
+                            callback.call(res);
                         } else {
-                            observer.onCancellation(job);
+                            Job.Callback0 callback = job.getCancelCallback();
+                            if (null != callback) {
+                                callback.call();
+                            }
                         }
                         releaseResource(res);
                     }
@@ -128,43 +122,44 @@ public class JobEngine {
             }
         }
 
-        private void notifyFailed(final Job job, final Throwable error) {
-            if (getCallbackScheduler() == null) {
-                return;
-            }
-            final Observer observer = job.getObserver();
-            if (null == observer) {
+        private void notifyError(final Throwable error, final Object ... unExpectResult) {
+            final Job.Callback2 errorCallback = job.getErrorCallback();
+            if (null == errorCallback) {
                 return;
             }
             getCallbackScheduler().schedule(new Runnable() {
                 @Override
                 public void run() {
                     if (!job.isAborted()) {
-                        observer.onFailed(job, error);
+                        errorCallback.call(error, unExpectResult);
                     } else {
-                        observer.onCancellation(job);
+                        Job.Callback0 callback = job.getCancelCallback();
+                        if (null != callback) {
+                            callback.call();
+                        }
                     }
+                    releaseResource(unExpectResult);
                 }
             });
         }
 
-        private void notifyProgress(final Object next) {
-            if (getCallbackScheduler() == null) {
-                return;
-            }
-            final Observer observer = job.getObserver();
-            if (null == observer) {
-                return;
-            }
-            getCallbackScheduler().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (!job.isAborted()) {
-                        observer.onNext(job, next);
-                    }
-                }
-            });
-        }
+//        private void notifyProgress(final Object next) {
+//            if (getCallbackScheduler() == null) {
+//                return;
+//            }
+//            final Observer observer = job.getObserver();
+//            if (null == observer) {
+//                return;
+//            }
+//            getCallbackScheduler().schedule(new Runnable() {
+//                @Override
+//                public void run() {
+//                    if (!job.isAborted()) {
+//                        observer.onNext(job, next);
+//                    }
+//                }
+//            });
+//        }
 
         @Deprecated
         private void notifyPreJobRunning(final Job job) {
