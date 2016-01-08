@@ -1,15 +1,21 @@
 package org.dolphin.job.schedulers;
 
+import org.dolphin.job.Log;
+
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by hanyanan on 2015/10/28.
  */
 public class ExecutorScheduler implements Scheduler {
+    private static final String TAG = "ExecutorScheduler";
     private final Timer timer = new Timer();
     private final Executor executor;
 
@@ -28,95 +34,92 @@ public class ExecutorScheduler implements Scheduler {
     }
 
     @Override
-    public Subscription schedule(final Runnable runnable) {
-        final Subscription subscription = new Subscription() {
-            private final AtomicBoolean isUnsubscription = new AtomicBoolean(false);
-
-            @Override
-            public void unsubscription() {
-                if (isUnsubscription.get()) {
-                    return;
-                }
-                isUnsubscription.set(true);
-            }
-
-            @Override
-            public boolean isUnsubscription() {
-                return isUnsubscription.get();
-            }
-        };
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                if (subscription.isUnsubscription()) {
-                    return;
-                }
-                runnable.run();
-            }
-        });
-
-        return subscription;
+    public Future schedule(final Runnable runnable) {
+        FutureRunnable futureRunnable = new FutureRunnable(runnable);
+        executor.execute(futureRunnable);
+        return futureRunnable;
     }
 
     @Override
-    public Subscription schedule(Runnable runnable, long delayTime, TimeUnit unit) {
-        SubscriptionTimeTask subscriptionTimeTask = new SubscriptionTimeTask(runnable);
-
+    public Future schedule(Runnable runnable, long delayTime, TimeUnit unit) {
+        FutureRunnable futureRunnable = new FutureRunnable(runnable);
+        SubscriptionTimeTask subscriptionTimeTask = new SubscriptionTimeTask(futureRunnable);
         timer.schedule(subscriptionTimeTask, unit.toMillis(delayTime));
-
-        return subscriptionTimeTask;
+        return futureRunnable;
     }
 
     @Override
-    public Subscription schedulePeriodically(final Runnable runnable, long initialDelay, long period, TimeUnit unit) {
-        SubscriptionTimeTask subscriptionTimeTask = new SubscriptionTimeTask(runnable);
-
+    public Future schedulePeriodically(final Runnable runnable, long initialDelay, long period, TimeUnit unit) {
+        FutureRunnable futureRunnable = new FutureRunnable(runnable);
+        SubscriptionTimeTask subscriptionTimeTask = new SubscriptionTimeTask(futureRunnable);
         timer.schedule(subscriptionTimeTask, unit.toMillis(initialDelay), unit.toMillis(period));
-
-        return subscriptionTimeTask;
+        return futureRunnable;
     }
 
 
-    private class SubscriptionTimeTask extends TimerTask implements Subscription {
-        Runnable runnable;
-        AtomicBoolean isUnsubscription = new AtomicBoolean(false);
+    private class SubscriptionTimeTask extends TimerTask {
+        private final FutureRunnable runnable;
 
-        private SubscriptionTimeTask(Runnable runnable) {
+        private SubscriptionTimeTask(FutureRunnable runnable) {
             this.runnable = runnable;
         }
 
         @Override
-        public void unsubscription() {
-            synchronized (this) {
-                if (!isUnsubscription.get()) {
-                    this.cancel();
-                }
-                isUnsubscription.set(true);
-            }
+        public void run() {
+            runnable.run();
+        }
+    }
+
+
+    private static class FutureRunnable implements Future, Runnable {
+        protected final AtomicBoolean cancelled = new AtomicBoolean(false);
+        protected final AtomicBoolean isDone = new AtomicBoolean(false);
+        protected final Runnable realLoadedRunnable;
+
+        public FutureRunnable(Runnable runnable) {
+            this.realLoadedRunnable = runnable;
         }
 
         @Override
-        public boolean isUnsubscription() {
-            synchronized (this) {
-                return isUnsubscription.get();
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            if (isDone.get()) {
+                Log.w(TAG, "try cancel a finished job!");
+                return false;
             }
+            if (cancelled.get()) {
+                Log.w(TAG, "try cancel a cancelled job!");
+            }
+            cancelled.set(true);
+            return true;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return cancelled.get();
+        }
+
+        @Override
+        public boolean isDone() {
+            return isDone.get();
+        }
+
+        @Override
+        public Object get() throws InterruptedException, ExecutionException {
+            throw new RuntimeException("Not support get function!");
+        }
+
+        @Override
+        public Object get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            throw new RuntimeException("Not support get function!");
         }
 
         @Override
         public void run() {
-            if (isUnsubscription()) {
+            if (cancelled.get()) {
                 return;
             }
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    if (isUnsubscription()) {
-                        return;
-                    }
-                    runnable.run();
-                }
-            });
-
+            realLoadedRunnable.run();
+            isDone.set(true);
         }
     }
 }

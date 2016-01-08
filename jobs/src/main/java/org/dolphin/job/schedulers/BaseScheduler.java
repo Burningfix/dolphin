@@ -1,7 +1,5 @@
 package org.dolphin.job.schedulers;
 
-import org.dolphin.job.util.Log;
-
 import java.util.concurrent.*;
 
 /**

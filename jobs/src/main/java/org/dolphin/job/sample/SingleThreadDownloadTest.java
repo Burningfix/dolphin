@@ -5,7 +5,7 @@ import org.dolphin.http.HttpResponse;
 import org.dolphin.http.TrafficRecorder;
 import org.dolphin.job.*;
 import org.dolphin.job.http.HttpJobs;
-import org.dolphin.job.util.Log;
+import org.dolphin.job.Log;
 import org.dolphin.job.operator.*;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.TwoTuple;
@@ -24,25 +24,20 @@ public class SingleThreadDownloadTest {
         Job printJob = Jobs.httpGet("http://httpbin.org/get");
         printJob.observerOn(null);
         printJob.workOn(Schedulers.computation());
-        printJob.observer(new Observer<TwoTuple<Long, Long>, String>() {
+        printJob.result(new Job.Callback1() {
             @Override
-            public void onNext(Job job, TwoTuple<Long, Long> next) {
-
-            }
-
-            @Override
-            public void onCompleted(Job job, String result) {
+            public void call(Object result) {
                 Log.d("PrintGetRequest", "onCompleted");
             }
-
+        }).cancel(new Job.Callback0() {
             @Override
-            public void onFailed(Job job, Throwable error) {
-                Log.d("PrintGetRequest", "onFailed");
-            }
-
-            @Override
-            public void onCancellation(Job job) {
+            public void call() {
                 Log.d("PrintGetRequest", "onCancellation");
+            }
+        }).error(new Job.Callback2() {
+            @Override
+            public void call(Throwable throwable, Object[] unexpectedResult) {
+                Log.d("PrintGetRequest", "onFailed");
             }
         });
     }
@@ -82,34 +77,26 @@ public class SingleThreadDownloadTest {
         operatorList.add(size);
         job.merge(operatorList);
         job.until(new StreamCopyOperator(), true);
-        job.observer(new Observer<TwoTuple<Long, Long>, Object>() {
+        job.result(new Job.Callback1() {
             @Override
-            public void onNext(Job job, TwoTuple<Long, Long> next) {
-                if (null != next) {
-                    Log.d("runBlockDownload", "next [" + next.value1 + " - " + next.value2 + "]");
-                }
-            }
-
-            @Override
-            public void onCompleted(Job job, Object result) {
+            public void call(Object result) {
                 TrafficRecorder global = TrafficRecorder.GLOBAL_TRAFFIC_RECORDER;
                 Log.d("runBlockDownload", "onCompleted");
                 Log.d("runBlockDownload", "global TrafficRecorder size " + global.getInSize()+"\t cost " + global.getInCost());
             }
-
+        }).cancel(new Job.Callback0() {
             @Override
-            public void onFailed(Job job, Throwable error) {
+            public void call() {
+                Log.d("PrintGetRequest", "onCancellation");
+            }
+        }).error(new Job.Callback2() {
+            @Override
+            public void call(Throwable throwable, Object[] unexpectedResult) {
                 TrafficRecorder global = TrafficRecorder.GLOBAL_TRAFFIC_RECORDER;
                 Log.d("runBlockDownload", "onFailed");
                 Log.d("runBlockDownload", "global TrafficRecorder size " + global.getInSize()+"\t cost " + global.getInCost());
             }
-
-            @Override
-            public void onCancellation(Job job) {
-                Log.d("runBlockDownload", "onCancellation");
-            }
         });
-
         job.work();
     }
 

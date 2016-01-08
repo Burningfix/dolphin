@@ -4,15 +4,12 @@ import org.dolphin.http.HttpRequest;
 import org.dolphin.http.HttpResponse;
 import org.dolphin.http.HttpResponseHeader;
 import org.dolphin.job.Job;
-import org.dolphin.job.Observer;
 import org.dolphin.job.Operator;
 import org.dolphin.job.http.HttpJobs;
 import org.dolphin.job.operator.*;
-import org.dolphin.job.tuple.TwoTuple;
-import org.dolphin.job.util.Log;
+import org.dolphin.job.Log;
 import org.dolphin.lib.FileInfo;
 import org.dolphin.lib.ValueUtil;
-
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -102,30 +99,22 @@ public class HttpMemoryLeakTester {
             operatorList.add(size);
             job.merge(operatorList);
             job.until(new StreamCopyOperator(), true);
-            job.observer(new Observer<TwoTuple<Long, Long>, Object>() {
+            job.result(new Job.Callback1() {
                 @Override
-                public void onNext(Job job, TwoTuple<Long, Long> next) {
-                    if (null != next) {
-                        Log.d("runBlockDownload", defaultName + " next [" + next.value1 + " - " + next.value2 + "]");
-                    }
-                }
-
-                @Override
-                public void onCompleted(Job job, Object result) {
+                public void call(Object result) {
                     Log.d("runBlockDownload", defaultName + " onCompleted");
                 }
-
+            }).error(new Job.Callback2() {
                 @Override
-                public void onFailed(Job job, Throwable error) {
+                public void call(Throwable throwable, Object[] unexpectedResult) {
                     Log.d("runBlockDownload", defaultName + " onFailed");
                 }
-
+            }).cancel(new Job.Callback0() {
                 @Override
-                public void onCancellation(Job job) {
+                public void call() {
                     Log.d("runBlockDownload", defaultName + " onCancellation");
                 }
             });
-
             res[index++] = job;
         }
         return res;

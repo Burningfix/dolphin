@@ -4,10 +4,10 @@ import org.dolphin.job.operator.UntilOperator;
 import org.dolphin.job.schedulers.Scheduler;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.*;
-import org.dolphin.job.util.Log;
 import org.dolphin.lib.IOUtil;
 
 import java.io.Closeable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.Future;
@@ -17,7 +17,12 @@ import java.util.concurrent.TimeUnit;
  * Created by hanyanan on 2015/10/27.
  */
 public class JobEngine {
+    private final static String TAG = "JobEngine";
     private final static WeakHashMap<Object, Future> sJobReference = new WeakHashMap<Object, Future>();
+
+    private JobEngine() throws IllegalAccessException {
+        throw new IllegalAccessException("JobEngin cannot instance!");
+    }
 
     public synchronized static void dispose() {
 
@@ -53,11 +58,12 @@ public class JobEngine {
         sJobReference.put(job, future);
     }
 
-    public synchronized void abort(Job job) {
+    public synchronized static void abort(Job job) {
         Future future = sJobReference.get(job);
         if (null != future && !future.isCancelled()) {
             future.cancel(true);
         }
+        sJobReference.remove(job);
     }
 
     /**
@@ -76,6 +82,106 @@ public class JobEngine {
         return scheduler == null ? Schedulers.immediate() : scheduler;
     }
 
+    /**
+     * 调用取消的回调
+     */
+    private static void notifyCancellation(final Job job) {
+        Job.Callback0 callback = null;
+        synchronized (JobEngine.class) {
+            callback = job.getCancelCallback();
+        }
+        if (null == callback) {
+            return;
+        }
+        final Job.Callback0 call = callback;
+        getCallbackScheduler(job).schedule(new Runnable() {
+            @Override
+            public void run() {
+                call.call();
+            }
+        });
+    }
+
+    /**
+     * 调用结果回调，
+     * 1. 如果有回调，则调用结果回调，但是不释放资源，由回调函数中释放资源；
+     * 2. 如果没有回调监听，则直接释放资源
+     */
+    private static void notifyResult(final Job job, final Object res) {
+        Job.Callback1 callback = null;
+        synchronized (JobEngine.class) {
+            callback = job.getResultCallback();
+        }
+        if (null == callback) {
+            releaseResource(res);
+            return;
+        }
+
+        if (job.isAborted()) {
+            releaseResource(res);
+            notifyCancellation(job);
+            return;
+        }
+
+        final Job.Callback1 call = callback;
+        getCallbackScheduler(job).schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (!job.isAborted()) {
+                    call.call(res);
+                } else {
+                    releaseResource(res);
+                    Job.Callback0 callback = null;
+                    synchronized (JobEngine.class) {
+                        callback = job.getCancelCallback();
+                    }
+                    if (null != callback) {
+                        callback.call();
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * 调用错误的回调
+     */
+    private static void notifyError(final Job job, final Throwable error, final Object... unExpectResult) {
+        Job.Callback2 errorCallback;
+        synchronized (JobEngine.class) {
+            errorCallback = job.getErrorCallback();
+        }
+
+        if (null == errorCallback) {
+            releaseResource(unExpectResult);
+            return;
+        }
+
+        if (job.isAborted()) {
+            releaseResource(unExpectResult);
+            notifyCancellation(job);
+            return;
+        }
+
+        final Job.Callback2 call = errorCallback;
+        getCallbackScheduler(job).schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (!job.isAborted()) {
+                    call.call(error, unExpectResult);
+                } else {
+                    releaseResource(unExpectResult);
+                    Job.Callback0 callback = null;
+                    synchronized (JobEngine.class) {
+                        callback = job.getCancelCallback();
+                    }
+                    if (null != callback) {
+                        callback.call();
+                    }
+                }
+            }
+        });
+    }
 
     /**
      * 最终运行都是JobRunnable。
@@ -87,184 +193,61 @@ public class JobEngine {
             this.job = job;
         }
 
-        private void notifyCancellation() {
-            final Job.Callback0 callback = job.getCancelCallback();
-            if (null == callback) {
-                return;
-            }
-            getCallbackScheduler().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    callback.call();
-                }
-            });
-        }
-
-        private void notifyResult(final Object res) {
-            final Job.Callback1 callback = job.getResultCallback();
-            if (null == callback) {
-                releaseResource(res);
-            } else {
-                getCallbackScheduler().schedule(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (!job.isAborted()) {
-                            callback.call(res);
-                        } else {
-                            Job.Callback0 callback = job.getCancelCallback();
-                            if (null != callback) {
-                                callback.call();
-                            }
-                        }
-                        releaseResource(res);
-                    }
-                });
-            }
-        }
-
-        private void notifyError(final Throwable error, final Object ... unExpectResult) {
-            final Job.Callback2 errorCallback = job.getErrorCallback();
-            if (null == errorCallback) {
-                return;
-            }
-            getCallbackScheduler().schedule(new Runnable() {
-                @Override
-                public void run() {
-                    if (!job.isAborted()) {
-                        errorCallback.call(error, unExpectResult);
-                    } else {
-                        Job.Callback0 callback = job.getCancelCallback();
-                        if (null != callback) {
-                            callback.call();
-                        }
-                    }
-                    releaseResource(unExpectResult);
-                }
-            });
-        }
-
-//        private void notifyProgress(final Object next) {
-//            if (getCallbackScheduler() == null) {
-//                return;
-//            }
-//            final Observer observer = job.getObserver();
-//            if (null == observer) {
-//                return;
-//            }
-//            getCallbackScheduler().schedule(new Runnable() {
-//                @Override
-//                public void run() {
-//                    if (!job.isAborted()) {
-//                        observer.onNext(job, next);
-//                    }
-//                }
-//            });
-//        }
-
-        @Deprecated
-        private void notifyPreJobRunning(final Job job) {
-            final JobRunningState runningState = job.getRunningState();
-            if (null == runningState) return;
-            Scheduler scheduler = getCallbackScheduler();
-            scheduler.schedule(new Runnable() {
-                @Override
-                public void run() {
-                    runningState.preRunningJob(job);
-                }
-            });
-        }
-
-        @Deprecated
-        private void notifyPostJobRunning(final Job job) {
-            final JobRunningState runningState = job.getRunningState();
-            if (null == runningState) return;
-            Scheduler scheduler = getCallbackScheduler();
-            scheduler.schedule(new Runnable() {
-                @Override
-                public void run() {
-                    runningState.postRunningJob(job);
-                }
-            });
-        }
-
         @Override
         public void run() {
             if (job.isAborted()) {
-                notifyCancellation();
+                notifyCancellation(job);
                 return;
             }
             long loadTime = System.currentTimeMillis();
-            Log.i("Scheduler", "Load Job[" + job.description() + "]");
+            Log.i(TAG, "Load Job[" + job.toString() + "]");
             List<Operator> operatorList = job.getOperators();
             Object tmp = job.getInput();
             while (operatorList.size() > 0) {
                 Operator operator = operatorList.remove(0);
                 if (job.isAborted()) { // 当前任务是否取消
-                    Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
+                    Log.i(TAG, "Cancel Job cost " + (System.currentTimeMillis() - loadTime) + " [" + job.toString() + "]");
                     releaseResource(tmp);
-                    notifyCancellation();
+                    notifyCancellation(job);
                     return;
                 }
 
                 try {
                     if (UntilOperator.class.isInstance(operator)) {
                         UntilOperator untilOperator = (UntilOperator) operator; // 可能会执行多次
-                        boolean notifyNextCallback = untilOperator.notifyNextCallback(); // 是否需压调用onNext回调
                         while (true) {
-                            Object next = untilOperator.operate(tmp);
+                            Object progressValue = untilOperator.operate(tmp);
                             if (job.isAborted()) { // 当前任务是否取消
-                                Log.i("Scheduler", "Cancel Job[" + job.description() + "]");
-                                notifyCancellation();
-                                releaseResource(next);
+                                Log.i(TAG, "Cancel Job cost " + (System.currentTimeMillis() - loadTime) + " [" + job.toString() + "]");
+                                notifyCancellation(job);
+                                releaseResource(progressValue);
                                 releaseResource(tmp);
                                 return;
                             }
-                            if (null == next) {
+                            //TODO:  notify progress
+                            if (untilOperator.over()) { // 运行结束
+                                releaseResource(progressValue);
+                                releaseResource(tmp);
                                 break;
                             }
-                            if (notifyNextCallback) { // 通知当前进度
-                                notifyProgress(next);
-                            }
-                            releaseResource(next);
                         }
                     } else {
                         tmp = operator.operate(tmp);
                     }
-
                 } catch (Throwable throwable) {
-                    Log.d("Scheduler", throwable.getMessage());
+                    Log.d(TAG, throwable.getMessage());
                     throwable.printStackTrace();
-                    Log.i("Scheduler", "Failed running Job[" + job.description() + "]");
                     long endTime = System.currentTimeMillis();
-                    Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
-                    JobErrorHandler handler = getErrorHandler(job);
-                    JobRunningResult runningResult = handler.handleError(job, throwable);
-                    if (runningResult == JobRunningResult.TERMINATE) {
-                        notifyFailed(job, throwable);
-                        releaseResource(tmp);
-                        abort(job);
-                    } else {
-                        if (tmp != job.getInput()) {
-                            releaseResource(tmp);
-                        }
-                        abort(job);
-                        Log.i("Scheduler", "Prepare running Job again[" + job.description() + "]");
-                        JobWorkPolicy workPolicy = job.getWorkPolicy();
-                        loadJob(job.setWorkPolicy(JobWorkPolicy.workPolicy(workPolicy.periodicNanoTime(), workPolicy.periodicNanoTime(), TimeUnit.NANOSECONDS)));
-                    }
+                    Log.i(TAG, "Failed Job cost " + (endTime - loadTime) + " [" + job.toString() + "]");
+                    notifyError(job, throwable);
+                    releaseResource(tmp);
+                    abort(job);
                     return;
                 }
             }
             long endTime = System.currentTimeMillis();
-            notifyComplete(tmp);
-            Log.i("Scheduler", "Success finish Job[" + job.description() + "]");
-            Log.i("Scheduler", "Job[" + job.description() + "] Cost " + (endTime - loadTime) + "ms");
-        }
-
-        private JobErrorHandler getErrorHandler(final Job job) {
-            JobErrorHandler handler = job.getErrorHandler();
-            if (handler == null) return JobErrorHandler.TERMINATE_HANDLER;
-            return handler;
+            Log.i(TAG, "Complete Job cost " + (endTime - loadTime) + " [" + job.toString() + "]");
+            notifyResult(job, tmp);
         }
 
         @Override
@@ -273,8 +256,17 @@ public class JobEngine {
         }
     }
 
-    private static void releaseResource(Object object) {
+    public static void releaseResource(Object object) {
         if (null == object) {
+            return;
+        }
+
+        if (Iterable.class.isInstance(object)) {
+            Iterable iterable = (Iterable) object;
+            Iterator iterator = iterable.iterator();
+            while (iterator.hasNext()) {
+                releaseResource(iterator.next());
+            }
             return;
         }
 

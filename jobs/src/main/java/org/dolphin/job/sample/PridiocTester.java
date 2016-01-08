@@ -1,11 +1,8 @@
 package org.dolphin.job.sample;
 
 import org.dolphin.job.Job;
-import org.dolphin.job.JobErrorHandler;
-import org.dolphin.job.JobRunningResult;
 import org.dolphin.job.Operator;
-import org.dolphin.job.util.Log;
-import org.dolphin.job.Observer;
+import org.dolphin.job.Log;
 import org.dolphin.job.operator.PrintTimeOperator;
 import org.dolphin.job.schedulers.Schedulers;
 
@@ -28,31 +25,10 @@ public class PridiocTester {
                         return input;
                     }
                 })
-                .observer(new Observer() {
+                .error(new Job.Callback2() {
                     @Override
-                    public void onNext(Job job, Object next) {
-
-                    }
-
-                    @Override
-                    public void onCompleted(Job job, Object result) {
-
-                    }
-
-                    @Override
-                    public void onFailed(Job job, Throwable error) {
-                        Log.d("job", "onFailed");
-                    }
-
-                    @Override
-                    public void onCancellation(Job job) {
-
-                    }
-                })
-                .handleError(new JobErrorHandler() {
-                    @Override
-                    public JobRunningResult handleError(Job job, Throwable throwable) {
-                        return JobRunningResult.CONTINUE;
+                    public void call(Throwable throwable, Object[] unexpectedResult) {
+                        Log.d("", "Throwable " + throwable.getMessage());
                     }
                 })
                 .workPeriodic(100, 2000, TimeUnit.MILLISECONDS);

@@ -5,6 +5,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Created by hanyanan on 2015/9/25.
+ *
+ * 可以运行task的调度器
  */
 public interface Scheduler {
 

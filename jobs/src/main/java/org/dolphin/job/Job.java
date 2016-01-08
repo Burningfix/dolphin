@@ -1,7 +1,5 @@
 package org.dolphin.job;
 
-import com.squareup.okhttp.Call;
-
 import org.dolphin.job.operator.OperatorWrapper;
 import org.dolphin.job.operator.UntilOperator;
 import org.dolphin.job.schedulers.Scheduler;
@@ -83,20 +81,20 @@ public class Job<I, O> implements Comparable<Job> {
      * .append(new CloseHttpOperator()) // operator.operate(TwoTuple(HttRequest, fileOutputStream))关闭输出输出流
      * }
      */
-    public final Job until(Operator operator) {
+    public final <T extends UntilOperator> Job until(UntilOperator operator) {
         checkNotNull(operator);
         checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
-        operators.add(new UntilOperator(operator));
+        operators.add(operator);
         return this;
     }
 
     /**
      * until命令：循环执行，知道中断
      */
-    public final Job until(Operator operator, boolean notifyNextCallback) {
+    public final <T extends UntilOperator> Job until(UntilOperator operator, boolean notifyNextCallback) {
         checkNotNull(operator);
         checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
-        operators.add(new UntilOperator(operator, notifyNextCallback));
+        operators.add(operator);
         return this;
     }
 
@@ -156,26 +154,26 @@ public class Job<I, O> implements Comparable<Job> {
     }
 
     public Job workDelayed(long millTimes) {
-        frozen.set(true);
         JobEngine.loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(millTimes, TimeUnit.MILLISECONDS)));
+        frozen.set(true);
         return this;
     }
 
     public Job workDelayed(long delay, TimeUnit timeUnit) {
-        frozen.set(true);
         JobEngine.loadJob(setWorkPolicy(JobWorkPolicy.delayWorkPolicy(delay, timeUnit)));
+        frozen.set(true);
         return this;
     }
 
     public Job work() {
-        frozen.set(true);
         JobEngine.loadJob(setWorkPolicy(JobWorkPolicy.immediately()));
+        frozen.set(true);
         return this;
     }
 
     public Job workPeriodic(long initDelay, long periodic, TimeUnit timeUnit) {
-        frozen.set(true);
         JobEngine.loadJob(setWorkPolicy(JobWorkPolicy.workPolicy(initDelay, periodic, timeUnit)));
+        frozen.set(true);
         return this;
     }
 
@@ -201,6 +199,11 @@ public class Job<I, O> implements Comparable<Job> {
         return this;
     }
 
+    public final Job cancel(Callback0 callback) {
+        this.cancelCallback = callback;
+        return this;
+    }
+
     public final Callback1 getResultCallback() {
         return resultCallback;
     }
@@ -214,7 +217,7 @@ public class Job<I, O> implements Comparable<Job> {
         return this;
     }
 
-    public final Callback0 getCancelCallback(){
+    public final Callback0 getCancelCallback() {
         return cancelCallback;
     }
 
@@ -252,8 +255,9 @@ public class Job<I, O> implements Comparable<Job> {
         if (!ValueUtil.isEmpty(logNode)) {
             sb.append('[').append(logNode).append(']');
         }
+        sb.append(":").append(sequence).append("\t");
         if (null != input) {
-            sb.append("{" + input.toString() + "} With Sequence \t" + sequence);
+            sb.append("{").append(input.toString()).append("}");
         }
         return sb.toString();
     }

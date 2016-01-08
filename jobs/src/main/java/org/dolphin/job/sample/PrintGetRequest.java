@@ -2,10 +2,8 @@ package org.dolphin.job.sample;
 
 import org.dolphin.job.Job;
 import org.dolphin.job.Jobs;
-import org.dolphin.job.util.Log;
-import org.dolphin.job.Observer;
+import org.dolphin.job.Log;
 import org.dolphin.job.schedulers.Schedulers;
-import org.dolphin.job.tuple.TwoTuple;
 
 /**
  * Created by hanyanan on 2015/10/23.
@@ -15,24 +13,19 @@ public class PrintGetRequest {
         Job printJob = Jobs.httpGet("http://httpbin.org/get");
         printJob.observerOn(null);
         printJob.workOn(Schedulers.computation());
-        printJob.observer(new Observer<TwoTuple<Long, Long>, String>() {
+        printJob.result(new Job.Callback1() {
             @Override
-            public void onNext(Job job, TwoTuple<Long, Long> next) {
-
-            }
-
-            @Override
-            public void onCompleted(Job job, String result) {
+            public void call(Object result) {
                 Log.d("PrintGetRequest", "onCompleted");
             }
-
+        }).error(new Job.Callback2() {
             @Override
-            public void onFailed(Job job, Throwable error) {
+            public void call(Throwable throwable, Object[] unexpectedResult) {
                 Log.d("PrintGetRequest", "onFailed");
             }
-
+        }).cancel(new Job.Callback0() {
             @Override
-            public void onCancellation(Job job) {
+            public void call() {
                 Log.d("PrintGetRequest", "onCancellation");
             }
         });

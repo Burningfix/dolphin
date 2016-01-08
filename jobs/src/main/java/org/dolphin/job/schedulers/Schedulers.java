@@ -1,16 +1,15 @@
 package org.dolphin.job.schedulers;
 
+import java.util.Timer;
 import java.util.concurrent.*;
 
 /**
  * Created by hanyanan on 2015/10/13.
  */
 public class Schedulers {
-    public static ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
     public final Scheduler io;
     public final Scheduler computationScheduler;
     public final Scheduler immediateScheduler;
-    public static Scheduler OBSERVER_SCHEDULER = null;
 
     private static final Schedulers INSTANCE = new Schedulers();
 

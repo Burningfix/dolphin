@@ -15,12 +15,12 @@ public class PriorityScheduledThreadPoolExecutor extends PausableThreadPoolExecu
     /**
      * False if should cancel/suppress periodic tasks on shutdown.
      */
-    private volatile boolean continueExistingPeriodicTasksAfterShutdown;
+    private volatile boolean continueExistingPeriodicTasksAfterShutdown = false;
 
     /**
      * False if should cancel non-periodic tasks on shutdown.
      */
-    private volatile boolean executeExistingDelayedTasksAfterShutdown = true;
+    private volatile boolean executeExistingDelayedTasksAfterShutdown = false;
 
     /**
      * True if ScheduledFutureTask.cancel should remove from queue
@@ -71,6 +71,10 @@ public class PriorityScheduledThreadPoolExecutor extends PausableThreadPoolExecu
          */
         int heapIndex;
 
+        /**
+         * 取消的时候，是否中断正在运行的任务
+         */
+        boolean mayInterruptIfRunning = true;
 
         private Object input;
 
@@ -185,7 +189,7 @@ public class PriorityScheduledThreadPoolExecutor extends PausableThreadPoolExecu
         public void run() {
             boolean periodic = isPeriodic();
             if (!canRunInCurrentRunState(periodic))
-                cancel(false);
+                cancel(mayInterruptIfRunning);
             else if (!periodic)
                 ScheduledFutureTask.super.run();
             else if (ScheduledFutureTask.super.runAndReset()) {

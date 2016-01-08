@@ -1,5 +1,6 @@
 package org.dolphin.job.schedulers;
 
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -30,18 +31,18 @@ public class ImmediateScheduler implements Scheduler {
     }
 
     @Override
-    public Subscription schedule(Runnable runnable) {
+    public Future schedule(Runnable runnable) {
         runnable.run();
         return null;
     }
 
     @Override
-    public Subscription schedule(Runnable runnable, long delayTime, TimeUnit unit) {
+    public Future schedule(Runnable runnable, long delayTime, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Subscription schedulePeriodically(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
+    public Future schedulePeriodically(Runnable runnable, long initialDelay, long period, TimeUnit unit) {
         throw new UnsupportedOperationException();
     }
 }

@@ -1,8 +1,7 @@
 package org.dolphin.job.sample;
 
 import org.dolphin.job.Job;
-import org.dolphin.job.util.Log;
-import org.dolphin.job.Observer;
+import org.dolphin.job.Log;
 import org.dolphin.job.operator.PrintTimeOperator;
 import org.dolphin.job.schedulers.Schedulers;
 
@@ -22,31 +21,16 @@ public class PriorityTester {
         Job jobs[] = new Job[sDelayTime.length];
         for (int i = 0; i < jobs.length; ++i) {
             jobs[i] = new Job(i);
+            final Job job = jobs[i];
             jobs[i].workOn(Schedulers.computation())
                     .then(new PrintTimeOperator())
-                    .observer(new Observer() {
+                    .result(new Job.Callback1() {
                         @Override
-                        public void onNext(Job job, Object next) {
-
-                        }
-
-                        @Override
-                        public void onCompleted(Job job, Object result) {
-                            Log.d("","onCompleted " + job.toString());
-                        }
-
-                        @Override
-                        public void onFailed(Job job, Throwable error) {
-
-                        }
-
-                        @Override
-                        public void onCancellation(Job job) {
-
+                        public void call(Object result) {
+                            Log.d("", "onCompleted " + job.toString());
                         }
                     })
                     .workDelayed(sDelayTime[i]);
-
         }
     }
 }
