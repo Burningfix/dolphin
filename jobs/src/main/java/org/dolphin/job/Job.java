@@ -6,6 +6,7 @@ import org.dolphin.job.schedulers.Scheduler;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.lib.ValueUtil;
 
+import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -20,8 +21,12 @@ import static org.dolphin.lib.Preconditions.checkState;
 
 /**
  * Created by hanyanan on 2015/9/28.
+ *
+ * 当需要释放内存时，可以把Job可以序列化，但是如下参数是不会被序列化的：输入，输出，成功/失败/取消的回调,
+ * 这样当需要恢复的时候，需要重新设置输入参数和回调接口。
+ *
  */
-public class Job<I, O> implements Comparable<Job> {
+public class Job<I, O> implements Comparable<Job> , Serializable{
     public static final String TAG = "Job";
     /**
      * 序列号生成器
@@ -47,16 +52,25 @@ public class Job<I, O> implements Comparable<Job> {
     protected final List<Operator> operators = new LinkedList<Operator>();
     protected Scheduler workScheduler = Schedulers.computation();
     protected Scheduler observerScheduler = null;
-    protected final I input;
-    protected O output;
+    protected transient I input;
+    protected transient O output;
     protected JobWorkPolicy workPolicy = null;
-    protected Callback1 resultCallback;
-    protected Callback2 errorCallback;
-    protected Callback0 cancelCallback;
+    protected transient Callback1 resultCallback;
+    protected transient Callback2 errorCallback;
+    protected transient Callback0 cancelCallback;
     protected String logNode;
 
     public Job(I input) {
         this.input = input;
+    }
+
+    public Job(){
+
+    }
+
+    public Job input(I input){
+        this.input = input;
+        return this;
     }
 
     /**
