@@ -1,11 +1,13 @@
 package org.dolphin.arch;
 
+import java.io.Serializable;
+
 /**
  * Created by hanyanan on 2015/12/4.
  *
- * 只保存状态，不保存数据
+ * 需要保存数据
  */
-public class PageViewModel {
+public class PageViewModel implements Serializable {
 
 
 

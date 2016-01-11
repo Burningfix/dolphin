@@ -13,6 +13,8 @@ import android.view.ViewGroup;
  */
 public abstract class PageView extends Fragment {
     public static final String RESTORE_KAY = "!@@!_restore_!##!";
+    private final
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -39,7 +41,7 @@ public abstract class PageView extends Fragment {
      * @param viewModel 需要被绑定的数据
      * @param <T> ViewModel的数据类型
      */
-    public abstract <T> void bindViewModel(View view, T viewModel);
+    public abstract  void bindViewModel(View view, PageViewModel viewModel);
 
 
 

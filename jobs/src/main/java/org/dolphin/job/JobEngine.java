@@ -16,16 +16,16 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by hanyanan on 2015/10/27.
  */
-public class JobEngine {
+class JobEngine {
     private final static String TAG = "JobEngine";
     private final static WeakHashMap<Object, Future> sJobReference = new WeakHashMap<Object, Future>();
 
     private JobEngine() throws IllegalAccessException {
-        throw new IllegalAccessException("JobEngin cannot instance!");
+        throw new IllegalAccessException("JobEngine cannot instance!");
     }
 
     public synchronized static void dispose() {
-
+        // TODO
     }
 
     public synchronized static void loadJob(final Job job) {
@@ -86,7 +86,7 @@ public class JobEngine {
      * 调用取消的回调
      */
     private static void notifyCancellation(final Job job) {
-        Job.Callback0 callback = null;
+        Job.Callback0 callback;
         synchronized (JobEngine.class) {
             callback = job.getCancelCallback();
         }
@@ -108,7 +108,7 @@ public class JobEngine {
      * 2. 如果没有回调监听，则直接释放资源
      */
     private static void notifyResult(final Job job, final Object res) {
-        Job.Callback1 callback = null;
+        Job.Callback1 callback;
         synchronized (JobEngine.class) {
             callback = job.getResultCallback();
         }
@@ -171,7 +171,7 @@ public class JobEngine {
                     call.call(error, unExpectResult);
                 } else {
                     releaseResource(unExpectResult);
-                    Job.Callback0 callback = null;
+                    Job.Callback0 callback;
                     synchronized (JobEngine.class) {
                         callback = job.getCancelCallback();
                     }

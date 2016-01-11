@@ -4,11 +4,10 @@ import org.dolphin.http.HttpRequest;
 import org.dolphin.http.HttpResponse;
 import org.dolphin.http.TrafficRecorder;
 import org.dolphin.job.*;
-import org.dolphin.job.http.HttpJobs;
+import org.dolphin.job.HttpJobs;
 import org.dolphin.job.Log;
 import org.dolphin.job.operator.*;
 import org.dolphin.job.schedulers.Schedulers;
-import org.dolphin.job.tuple.TwoTuple;
 
 import java.io.FileOutputStream;
 import java.io.InputStream;

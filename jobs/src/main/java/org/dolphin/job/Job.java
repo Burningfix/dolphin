@@ -12,6 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javafx.util.Callback;
+
 import static org.dolphin.lib.Preconditions.checkArgument;
 import static org.dolphin.lib.Preconditions.checkNotNull;
 import static org.dolphin.lib.Preconditions.checkState;
@@ -283,5 +285,14 @@ public class Job<I, O> implements Comparable<Job> {
 
     public interface Callback2<T> {
         public void call(Throwable throwable, T... unexpectedResult);
+    }
+
+
+    private static class Callback0Wrapper implements Callback0 {
+
+        @Override
+        public void call() {
+
+        }
     }
 }

@@ -5,7 +5,7 @@ import org.dolphin.http.HttpResponse;
 import org.dolphin.http.HttpResponseHeader;
 import org.dolphin.job.Job;
 import org.dolphin.job.Operator;
-import org.dolphin.job.http.HttpJobs;
+import org.dolphin.job.HttpJobs;
 import org.dolphin.job.operator.*;
 import org.dolphin.job.Log;
 import org.dolphin.lib.FileInfo;
