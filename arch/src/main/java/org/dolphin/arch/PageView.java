@@ -31,22 +31,11 @@ public abstract class PageView extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if(null != savedInstanceState) {
-            // 尝试恢复pageModel
-            pageModel = savedInstanceState.getParcelable(RESTORE_MODEL_KAY);
-
-            //尝试恢复pageViewModel
-            ArrayList<PageViewModel> parcelableArrayList = (ArrayList<PageViewModel>) savedInstanceState.getSerializable(RESTORE_MODEL_VIEW_KAY);
-            if(null != parcelableArrayList) {
-                pageViewModels.addAll(parcelableArrayList);
-            }
-        }
-
-        if(null == pageModel) {
-            pageModel = createModel();
-        }
+        pageViewModels.addAll(getPageViewModels(savedInstanceState));
+        pageModel = getPageModel(savedInstanceState);
         pageModel.start();
     }
+
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
@@ -56,6 +45,7 @@ public abstract class PageView extends Fragment {
         outState.putSerializable(RESTORE_MODEL_VIEW_KAY, pageViewModels);
     }
 
+
     @Override
     public void onViewStateRestored(Bundle savedInstanceState) {
         super.onViewStateRestored(savedInstanceState);
@@ -64,23 +54,56 @@ public abstract class PageView extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        View rootView = createView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState))
         return null;
     }
 
-    public abstract <T extends PageModel> T createModel();
+
+    @Nullable
+    public abstract View createView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState);
+
+    /**
+     * 尝试恢复已经存在的pageViewModel
+     */
+    private ArrayList<PageViewModel> getPageViewModels(Bundle savedInstanceState) {
+        ArrayList<PageViewModel> res = new ArrayList<PageViewModel>();
+        if (null != savedInstanceState) {
+            ArrayList<PageViewModel> parcelableArrayList = (ArrayList<PageViewModel>)
+                    savedInstanceState.getSerializable(RESTORE_MODEL_VIEW_KAY);
+            if (null != parcelableArrayList) {
+                res.addAll(parcelableArrayList);
+            }
+        }
+        return res;
+    }
+
+    private PageModel getPageModel(Bundle savedInstanceState) {
+        if (null != savedInstanceState) {
+            // 尝试恢复pageModel
+            pageModel = savedInstanceState.getParcelable(RESTORE_MODEL_KAY);
+        }
+
+        if (pageModel == null) {
+            pageModel = createPageModel();
+        }
+        return pageModel;
+    }
+
+    public abstract <T extends PageModel> T createPageModel();
 
     /**
      * android view的data binding， 当viewModel改变是view会自动更新；view更新时viewModel也会自动更新
-     * @param view 需要绑定的view
+     *
+     * @param view      需要绑定的view
      * @param viewModel 需要被绑定的数据
-     * @param <T> ViewModel的数据类型
+     * @param <T>       ViewModel的数据类型
      */
     public abstract <T extends PageViewModel> void bindViewModel(View view, T viewModel);
 
     /**
      * 当有新的viewModel创建时调用此方法
+     *
      * @param viewModel
      */
-    public abstract void  updateViewModel(PageViewModel viewModel);
-
+    public abstract void updateViewModel(PageViewModel viewModel);
 }
