@@ -21,7 +21,7 @@ import java.util.List;
 public class SingleThreadDownloadTest {
     public static void runStringDownload(){
         Job printJob = Jobs.httpGet("http://httpbin.org/get");
-        printJob.observerOn(null);
+        printJob.callbackOn(null);
         printJob.workOn(Schedulers.computation());
         printJob.result(new Job.Callback1() {
             @Override

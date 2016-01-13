@@ -2,7 +2,10 @@ package org.dolphin.arch;
 
 import android.os.Parcel;
 import android.os.Parcelable;
+
 import org.dolphin.job.Job;
+import org.dolphin.lib.ValueReference;
+
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.Map;
@@ -17,48 +20,58 @@ public class PageModel implements Parcelable {
      * 剩余需要执行的job
      */
     private final LinkedList<Job<? extends Serializable, ?>> remainderJobs = new LinkedList<Job<? extends Serializable, ?>>();
+
     /**
      * 绑定的pagevView
      */
     private PageView bindedPageView;
 
-    public <T extends PageViewModel> void addHttpJsonJob(String url, Map<String, String> params, Class<T> viewModelClazz) {
-
+    /**
+     * 从server下载的数据直接就是可以使用的json，直接转化成指定的viewModel type。
+     *
+     * @param url            请求的url
+     * @param params         请求的参数
+     * @param viewModelClazz 转化的最终的json
+     */
+    public <T extends PageViewModel> void registerQuest(String url, Map<String, String> params, String token, Class<T> viewModelClazz) {
+        final ValueReference<Job> delayValueRef = new ValueReference<Job>();
+        Job.Callback1<T> responseCallback = new Job.Callback1<T>() {
+            @Override
+            public void call(T result) {
+                bindedPageView.foundViewModel(result);
+                Job job = delayValueRef.getValue();
+                if (null != job) {
+                    remainderJobs.remove(job);
+                }
+            }
+        };
+        Job job = ArchJobs.parseHttpGetJob(url, params, token, viewModelClazz, responseCallback);
+        delayValueRef.setValue(job);
+        remainderJobs.add(job);
     }
 
-    public <T extends PageViewModel> void addHttpJsonJob(String url, Map<String, String> params) {
-
-    }
-
-    public void addJob(Job<? extends Serializable, ?> job) {
-
-    }
-
-    public <T extends PageView> void setBindedPageView(T bindedPageView) {
-        this.bindedPageView = bindedPageView;
+    public <T extends PageView> void setBindPageView(T bindPageView) {
+        this.bindedPageView = bindPageView;
     }
 
     public void start() {
         Util.checkThreadState();
-
+        for (Job job : remainderJobs) {
+            job.work();
+        }
     }
 
     public void stop() {
         Util.checkThreadState();
-
+        for (Job job : remainderJobs) {
+            job.abort();
+        }
     }
-
-    public void reset() {
-        Util.checkThreadState();
-
-    }
-
 
     @Override
     public int describeContents() {
         return 0;
     }
-
 
     private PageModel(Parcel in) {
         int size = in.readInt();
@@ -80,7 +93,6 @@ public class PageModel implements Parcelable {
             dest.writeSerializable(job.getInput());
             dest.writeSerializable(job);
         }
-        dest.writeStrongBinder();
     }
 
     public static final Parcelable.Creator<PageModel> CREATOR = new Parcelable.Creator<PageModel>() {

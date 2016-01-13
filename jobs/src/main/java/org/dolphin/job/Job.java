@@ -68,7 +68,7 @@ public class Job<I, O> implements Comparable<Job> , Serializable{
 
     }
 
-    public Job input(I input){
+    public Job setInput(I input){
         this.input = input;
         return this;
     }
@@ -158,7 +158,7 @@ public class Job<I, O> implements Comparable<Job> , Serializable{
         return workScheduler;
     }
 
-    public final Job observerOn(Scheduler scheduler) {
+    public final Job callbackOn(Scheduler scheduler) {
         checkArgument(!frozen.get(), "The job has frozen, Cannot change properties.");
         // 可以使用一个运算符进行代替
         observerScheduler = scheduler;

@@ -1,16 +1,16 @@
 package org.dolphin.arch;
 
 import android.app.Fragment;
-import android.content.Context;
 import android.os.Bundle;
-import android.os.Parcelable;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by hanyanan on 2015/12/4.
@@ -28,6 +28,8 @@ public abstract class PageView extends Fragment {
      */
     private LinkedList<PageViewModel> pageViewModels = new LinkedList<PageViewModel>();
 
+    private WeakReference<View> rootViewRef = null;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,7 +37,6 @@ public abstract class PageView extends Fragment {
         pageModel = getPageModel(savedInstanceState);
         pageModel.start();
     }
-
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
@@ -45,22 +46,32 @@ public abstract class PageView extends Fragment {
         outState.putSerializable(RESTORE_MODEL_VIEW_KAY, pageViewModels);
     }
 
-
-    @Override
-    public void onViewStateRestored(Bundle savedInstanceState) {
-        super.onViewStateRestored(savedInstanceState);
+    public LinkedList<PageViewModel> getPageViewModels() {
+        return new LinkedList<PageViewModel>(pageViewModels);
     }
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View rootView = createView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState))
-        return null;
+        View rootView = createView(inflater, container, savedInstanceState);
+        rootViewRef = new WeakReference<View>(rootView);
+        LinkedList<PageViewModel> currentViewPages = getPageViewModels();
+        for (PageViewModel pageViewModel : currentViewPages) {
+            bindViewModel(pageViewModel);
+        }
+        return rootView;
     }
 
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+    }
 
-    @Nullable
-    public abstract View createView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState);
+    @Override
+    public void onDestroy() {
+        pageModel.stop();
+        super.onDestroy();
+    }
 
     /**
      * 尝试恢复已经存在的pageViewModel
@@ -68,8 +79,7 @@ public abstract class PageView extends Fragment {
     private ArrayList<PageViewModel> getPageViewModels(Bundle savedInstanceState) {
         ArrayList<PageViewModel> res = new ArrayList<PageViewModel>();
         if (null != savedInstanceState) {
-            ArrayList<PageViewModel> parcelableArrayList = (ArrayList<PageViewModel>)
-                    savedInstanceState.getSerializable(RESTORE_MODEL_VIEW_KAY);
+            List<PageViewModel> parcelableArrayList = (List<PageViewModel>)savedInstanceState.getSerializable(RESTORE_MODEL_VIEW_KAY);
             if (null != parcelableArrayList) {
                 res.addAll(parcelableArrayList);
             }
@@ -84,9 +94,21 @@ public abstract class PageView extends Fragment {
         }
 
         if (pageModel == null) {
+            // 创建新的pageModel
             pageModel = createPageModel();
         }
+        pageModel.setBindPageView(this);
         return pageModel;
+    }
+
+    /**
+     * 当有新的viewModel创建时调用此方法
+     *
+     * @param viewModel
+     */
+    public void foundViewModel(PageViewModel viewModel) {
+        pageViewModels.add(viewModel);
+        bindViewModel(viewModel);
     }
 
     public abstract <T extends PageModel> T createPageModel();
@@ -100,10 +122,13 @@ public abstract class PageView extends Fragment {
      */
     public abstract <T extends PageViewModel> void bindViewModel(View view, T viewModel);
 
+
+    @Nullable
+    public abstract View createView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState);
+
+
     /**
-     * 当有新的viewModel创建时调用此方法
-     *
-     * @param viewModel
+     * 将指定的ViewModel与当前的绑定
      */
-    public abstract void updateViewModel(PageViewModel viewModel);
+    public abstract void bindViewModel(PageViewModel viewModel);
 }

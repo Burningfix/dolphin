@@ -11,7 +11,7 @@ import org.dolphin.job.schedulers.Schedulers;
 public class PrintGetRequest {
     public static void main(String []argv) {
         Job printJob = Jobs.httpGet("http://httpbin.org/get");
-        printJob.observerOn(null);
+        printJob.callbackOn(null);
         printJob.workOn(Schedulers.computation());
         printJob.result(new Job.Callback1() {
             @Override
