@@ -10,9 +10,9 @@ import java.util.regex.Pattern;
  * @author		uestc.Mobius <mobius@toraleap.com>
  * @version	2010.1025
  */
-public class FileInfo {
+public class FileInfoUtil {
 
-    private FileInfo() { }
+    private FileInfoUtil() { }
 
     /**
      * 获取给定文件名的主文件名名部分

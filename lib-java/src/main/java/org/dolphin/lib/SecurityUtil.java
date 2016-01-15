@@ -1,6 +1,7 @@
 package org.dolphin.lib;
 
 import javax.crypto.*;
+import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import java.io.UnsupportedEncodingException;
@@ -241,10 +242,59 @@ public class SecurityUtil {
         return null;
     }
 
+    /**
+     * 加密
+     *
+     * @param content
+     *            待加密内容
+     * @param key
+     *            加密的密钥
+     * @return
+     */
+    public static byte[] desEncrypt(String content, String key) {
+        try {
+            SecureRandom random = new SecureRandom();
+            DESKeySpec desKey = new DESKeySpec(key.getBytes());
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+            SecretKey securekey = keyFactory.generateSecret(desKey);
+            Cipher cipher = Cipher.getInstance("DES");
+            cipher.init(Cipher.ENCRYPT_MODE, securekey, random);
+            byte[] result = cipher.doFinal(content.getBytes());
+            return result;
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * 解密
+     *
+     * @param content
+     *            待解密内容
+     * @param key
+     *            解密的密钥
+     * @return
+     */
+    public static String desDecrypt(byte[] content, String key) {
+        try {
+            SecureRandom random = new SecureRandom();
+            DESKeySpec desKey = new DESKeySpec(key.getBytes());
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance("DES");
+            SecretKey securekey = keyFactory.generateSecret(desKey);
+            Cipher cipher = Cipher.getInstance("DES");
+            cipher.init(Cipher.DECRYPT_MODE, securekey, random);
+            byte[] result = cipher.doFinal(content);
+            return new String(result);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
     public static void main(String[] argv) {
-        String src = "Test";
-        String key = "123";
+        String src = "TestTest";
+        String key = "12345678";
         System.out.println("Raw data: " + src + "\tKey: " + key);
         System.out.println("SHA1 data: " + sha1(src));
         System.out.println("Md5 data: " + md5(src));
@@ -252,5 +302,6 @@ public class SecurityUtil {
         String aes = aesEncrypt(src, key);
         System.out.println("Aes data: " + aes);
         System.out.println("Aes Decode data: " + decrypt(aes, key));
+        System.out.println("Des data: " + desEncrypt(src, key));
     }
 }
