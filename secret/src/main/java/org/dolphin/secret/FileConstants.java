@@ -1,6 +1,9 @@
 package org.dolphin.secret;
 
+import org.dolphin.http.MimeType;
 import org.dolphin.lib.ByteUtil;
+import org.dolphin.lib.MimeTypeMap;
+import org.dolphin.lib.Preconditions;
 
 import java.util.Random;
 
@@ -31,6 +34,8 @@ import java.util.Random;
  * 218ud()_(09)0               | 乱码，移动的块大小-上面的头部大小         | (1024 * 2 * X-上面的大小)字节
  * ****************************|*******************************************|************************
  * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。
+ * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。
+ * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。
  * ****************************|*******************************************|************************
  * 加密后的末尾                | 有移动的块大小决定大小                    | 1024 * 2 * X
  * ****************************|*******************************************|************************
@@ -50,12 +55,15 @@ public class FileConstants {
     public static final byte[] FILE_DOM = "SECRET CALCULATOR".getBytes(); // 32字节
     public static final byte[] SOFTWARE_VERSION = ByteUtil.intToBytes(0x0001); // 软件版本， 4字节
     public static final byte[] ENCODE_VERSION = ByteUtil.intToBytes(0x0001); // 软件加密版本，4字节
-
+    public static final int TRANSFER_PAGE_SIZE = 2048;
+    public static final int EXTRA_MESSAGE_SIZE = 1024;
 
 
     // 文件dom,32字节
     public static byte[] getFileDom() {
-        return FILE_DOM;
+        byte[] res = new byte[32];
+        System.arraycopy(FILE_DOM, 0, res, 0, FILE_DOM.length);
+        return res;
     }
 
     // 软件版本， 4字节
@@ -69,10 +77,30 @@ public class FileConstants {
     }
 
     // 随机填充字符， 16字节
-    public static byte[] getRandomBoundByte() {
-        byte[] res = new byte[16];
+    public static byte[] getRandomBoundByte(int size) {
+        byte[] res = new byte[size];
         RANDOM.nextBytes(res);
         return res;
+    }
+
+    // 原始文件类型, 32字节
+    public static byte[] getMimeType(String fileName) {
+        byte[] res = new byte[32];
+        String originalMimeType = MimeType.createFromFileName(fileName).getMimeType();
+        byte[] data = originalMimeType.getBytes();
+        System.arraycopy(data, 0, res, 0, data.length);
+        return res;
+    }
+
+    public static byte[] encode(byte[] data) {
+        Preconditions.checkArgument(data != null && data.length % 2048 != 0, "");
+        // TODO
+        return data;
+    }
+
+    public static byte[] decode(byte[] data) {
+        // TODO
+        return data;
     }
 
 
