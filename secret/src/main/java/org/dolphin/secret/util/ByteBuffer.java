@@ -80,7 +80,6 @@ public class ByteBuffer {
     }
 
 
-    pub
     /**
      * Checks that the range described by {@code start} and {@code end} doesn't exceed
      * {@code len}.

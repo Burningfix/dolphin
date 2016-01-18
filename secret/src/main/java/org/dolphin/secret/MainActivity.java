@@ -4,15 +4,46 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.TextView;
 
+import org.dolphin.secret.core.FileDecodeOperator;
+import org.dolphin.secret.core.FileEncodeOperator;
+import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secretremotecontroller.R;
 
-public class MainActivity extends AppCompatActivity {
+import java.io.File;
 
+public class MainActivity extends AppCompatActivity {
+    public static final String FilePath = "/sdcard/test.jpg";
+    public static final FileEncodeOperator fileEncodeOperator = new FileEncodeOperator();
+    public static final FileDecodeOperator fileDecodeOperator = new FileDecodeOperator();
+    TextView tv1, tv2;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        tv1 = (TextView) findViewById(R.id.tv1);
+        tv2 = (TextView) findViewById(R.id.tv2);
+    }
+
+    public void encode(View view) {
+        try {
+            FileInfo fileInfo = fileEncodeOperator.operate(new File(FilePath));
+            tv1.setText(fileInfo.toString());
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
+    }
+
+    public void decode(View view) {
+        try {
+            FileInfo fileInfo = fileDecodeOperator.operate(new File(FilePath));
+            tv2.setText(fileInfo.toString());
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
     }
 
     @Override

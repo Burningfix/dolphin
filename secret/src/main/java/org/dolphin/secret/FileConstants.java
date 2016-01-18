@@ -21,7 +21,7 @@ import java.util.Random;
  * ****************************|*******************************************|************************
  * 34343434                    | 原始文件长度(long)                        | 8字节
  * ****************************|*******************************************|************************
- * 12343455                    | 原是文件名长度(int)                       | 4字节
+ * 12343455                    | 原始文件名长度(int)                       | 4字节
  * ****************************|*******************************************|************************
  * 原始文件名                  | 原始文件名(char)                          | N字节
  * ****************************|*******************************************|************************
@@ -53,11 +53,10 @@ import java.util.Random;
 public class FileConstants {
     public static final Random RANDOM = new Random();
     public static final byte[] FILE_DOM = "SECRET CALCULATOR".getBytes(); // 32字节
-    public static final byte[] SOFTWARE_VERSION = ByteUtil.intToBytes(0x0001); // 软件版本， 4字节
-    public static final byte[] ENCODE_VERSION = ByteUtil.intToBytes(0x0001); // 软件加密版本，4字节
+    public static final byte[] SOFTWARE_VERSION = ByteUtil.intToBytes(1); // 软件版本， 4字节
+    public static final byte[] ENCODE_VERSION = ByteUtil.intToBytes(1); // 软件加密版本，4字节
     public static final int TRANSFER_PAGE_SIZE = 2048;
     public static final int EXTRA_MESSAGE_SIZE = 1024;
-
 
     // 文件dom,32字节
     public static byte[] getFileDom() {
@@ -93,15 +92,21 @@ public class FileConstants {
     }
 
     public static byte[] encode(byte[] data) {
-        Preconditions.checkArgument(data != null && data.length % 2048 != 0, "");
+        Preconditions.checkArgument(data != null && data.length % 2048 == 0, "");
         // TODO
         return data;
     }
 
     public static byte[] decode(byte[] data) {
+        Preconditions.checkArgument(data != null && data.length % 2048 == 0, "");
         // TODO
         return data;
     }
 
-
+    /**
+     * 返回当前系统时间
+     */
+    public static long getCurrentTime() {
+        return System.currentTimeMillis();
+    }
 }

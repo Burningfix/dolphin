@@ -13,11 +13,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import javafx.util.Callback;
-
 import static org.dolphin.lib.Preconditions.checkArgument;
 import static org.dolphin.lib.Preconditions.checkNotNull;
-import static org.dolphin.lib.Preconditions.checkState;
 
 /**
  * Created by hanyanan on 2015/9/28.

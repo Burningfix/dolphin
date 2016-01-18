@@ -3,9 +3,8 @@ package org.dolphin.http;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
-import org.dolphin.lib.FileInfo;
+import org.dolphin.lib.FileInfoUtil;
 
 /**
  * Created by dolphin on 2015/5/11.
@@ -100,7 +99,7 @@ public interface TrafficRecorder {
 
 
             if (now - lastPrintInTime > printTimeInterval) {
-                System.out.println("应用下载速度: " + FileInfo.sizeString(spotDownSpeed()));
+                System.out.println("应用下载速度: " + FileInfoUtil.sizeString(spotDownSpeed()));
                 lastPrintInTime = now;
             }
         }

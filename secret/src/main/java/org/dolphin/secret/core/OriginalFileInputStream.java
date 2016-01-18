@@ -1,4 +1,4 @@
-package org.dolphin.secret.coder;
+package org.dolphin.secret.core;
 
 import java.io.File;
 import java.io.IOException;
