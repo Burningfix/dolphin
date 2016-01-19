@@ -111,6 +111,16 @@ public class FileEncodeOperator implements Operator<File, FileInfo> {
         return null;
     }
 
+    // 尽量的靠近200*200
+    public static Bitmap createVideoThumbnail(String path) {
+        return null;
+    }
+
+    // 尽量的靠近200*200
+    public static Bitmap createAudioThumbnail(String path) {
+        return null;
+    }
+
     /**
      * 返回当前系统时间
      */
