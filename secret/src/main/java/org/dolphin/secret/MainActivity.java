@@ -1,24 +1,34 @@
 package org.dolphin.secret;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import org.dolphin.lib.IOUtil;
 import org.dolphin.secret.core.FileDecodeOperator;
 import org.dolphin.secret.core.FileEncodeOperator;
 import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ReadableFileInputStream;
 import org.dolphin.secretremotecontroller.R;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class MainActivity extends AppCompatActivity {
     public static final String FilePath = "/sdcard/test.jpg";
     public static final FileEncodeOperator fileEncodeOperator = new FileEncodeOperator();
     public static final FileDecodeOperator fileDecodeOperator = new FileDecodeOperator();
     TextView tv1, tv2;
+    ImageView imageView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -26,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
 
         tv1 = (TextView) findViewById(R.id.tv1);
         tv2 = (TextView) findViewById(R.id.tv2);
+        imageView = (ImageView) findViewById(R.id.iv);
     }
 
     public void encode(View view) {
@@ -44,6 +55,25 @@ public class MainActivity extends AppCompatActivity {
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
+    }
+
+    public void display(View view) {
+        try {
+            InputStream inputStream = new ReadableFileInputStream(new File(FilePath));
+            FileOutputStream fileOutputStream = new FileOutputStream(FilePath+".copy.jpg");
+            inputStream.mark(0);
+            IOUtil.copy(inputStream, fileOutputStream);
+            fileOutputStream.flush();
+            fileOutputStream.close();
+            inputStream.reset();
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            imageView.setImageBitmap(bitmap);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override

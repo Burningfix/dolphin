@@ -19,10 +19,16 @@ public class ReadableFileInputStream extends InputStream {
     private long nextReadIndex = 0;
     private FileInfoContentCache contentCache;
     private RandomAccessFile randomAccessFile;
-    private Integer markLimit = new Integer(0);
+    private int markLimit = 0;
 
     public ReadableFileInputStream(File file) throws FileNotFoundException {
         this.file = file;
+        randomAccessFile = new RandomAccessFile(file, "r");
+    }
+
+    public ReadableFileInputStream(File file, FileInfo fileInfo) throws FileNotFoundException {
+        this.file = file;
+        this.fileInfo = fileInfo;
         randomAccessFile = new RandomAccessFile(file, "r");
     }
 
@@ -132,12 +138,12 @@ public class ReadableFileInputStream extends InputStream {
 
     @Override
     public void mark(int readlimit) {
-        markLimit = Integer.valueOf(readlimit);
+        markLimit = readlimit;
     }
 
     @Override
     public boolean markSupported() {
-        return true;
+        return false;
     }
 
 
@@ -149,21 +155,27 @@ public class ReadableFileInputStream extends InputStream {
 
     @Override
     public long skip(long byteCount) throws IOException {
-        FileInfo fileInfo = getFileInfo();
-        long max = fileInfo.originalFileLength - nextReadIndex;
-        byteCount = max > byteCount ? byteCount : max;
-        nextReadIndex += byteCount;
-        randomAccessFile.seek(nextReadIndex);
-        return byteCount;
+        try {
+            FileInfo fileInfo = getFileInfo();
+            long max = fileInfo.originalFileLength - nextReadIndex;
+            byteCount = max > byteCount ? byteCount : max;
+            nextReadIndex += byteCount;
+            randomAccessFile.seek(nextReadIndex);
+            return byteCount;
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            throw new IOException(throwable);
+        }
     }
 
 
     @Override
     public void close() throws IOException {
+        IOUtil.safeClose(randomAccessFile);
         super.close();
     }
 
-    private FileInfoContentCache getContentCache() {
+    private FileInfoContentCache getContentCache() throws Throwable {
         if (null == contentCache) {
             contentCache = createContentCache(file, getFileInfo());
         }
@@ -179,7 +191,7 @@ public class ReadableFileInputStream extends InputStream {
         return fileInfo;
     }
 
-    private static FileInfoContentCache createContentCache(File file, FileInfo fileInfo) throws FileNotFoundException, IOException {
+    private static FileInfoContentCache createContentCache(File file, FileInfo fileInfo) throws IOException {
         FileInfoContentCache cache = new FileInfoContentCache();
         FileInfo.Range headRange = fileInfo.originalFileHeaderRange;
         FileInfo.Range footRange = fileInfo.originalFileFooterRange;
