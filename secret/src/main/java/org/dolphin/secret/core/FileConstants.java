@@ -1,10 +1,13 @@
-package org.dolphin.secret;
+package org.dolphin.secret.core;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.lib.ByteUtil;
-import org.dolphin.lib.MimeTypeMap;
+import org.dolphin.lib.IOUtil;
 import org.dolphin.lib.Preconditions;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Random;
 
 /**
@@ -101,6 +104,40 @@ public class FileConstants {
         Preconditions.checkArgument(data != null && data.length % 2048 == 0, "");
         // TODO
         return data;
+    }
+
+    public static FileInfoContentCache createContentCache(File file, FileInfo fileInfo) throws IOException {
+        FileInfoContentCache cache = new FileInfoContentCache();
+        FileInfo.Range headRange = fileInfo.originalFileHeaderRange;
+        FileInfo.Range footRange = fileInfo.originalFileFooterRange;
+        RandomAccessFile randomAccessFile = null;
+        try {
+            randomAccessFile = new RandomAccessFile(file, "r");
+            randomAccessFile.seek(footRange.offset);
+            byte[] readedContent = new byte[footRange.count];
+            randomAccessFile.readFully(readedContent);
+            cache.footBodyContent = FileConstants.decode(readedContent);
+
+            randomAccessFile.seek(headRange.offset);
+            byte[] readedHeadContent = new byte[headRange.count];
+            randomAccessFile.readFully(readedHeadContent);
+            cache.headBodyContent = FileConstants.decode(readedHeadContent);
+        } finally {
+            IOUtil.safeClose(randomAccessFile);
+        }
+
+        return cache;
+    }
+
+
+    public static int calculateSampleSize(int originalWidth, int originalHeight, int exceptionWidth, int exceptionHeight) {
+        int inSample = 1;
+        while (originalWidth > exceptionWidth || originalHeight > exceptionHeight) {
+            inSample *= 2;
+            originalWidth /=2;
+            originalHeight /=2;
+        }
+        return inSample;
     }
 
     /**

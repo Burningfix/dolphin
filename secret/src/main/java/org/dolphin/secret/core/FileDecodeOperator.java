@@ -2,7 +2,6 @@ package org.dolphin.secret.core;
 
 import org.dolphin.job.Operator;
 import org.dolphin.lib.IOUtil;
-import org.dolphin.secret.FileConstants;
 
 import java.io.File;
 import java.io.IOException;

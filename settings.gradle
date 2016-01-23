@@ -1,1 +1,1 @@
-include ':tinyhttpclient', ':lib-java', ':tinyhttpserver', ':jobs', ':sharelink', ':hotpatch', ':hotpatchpluginapp', ':arch', ':asyncjob', ':storage', ':secret'
+include ':tinyhttpclient', ':lib-java', ':tinyhttpserver', ':jobs', ':sharelink', ':hotpatch', ':hotpatchpluginapp', ':arch', ':storage', ':secret'

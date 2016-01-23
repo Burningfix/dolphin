@@ -1,10 +1,10 @@
 package org.dolphin.secret.core;
 
+import android.util.Log;
+
 import org.dolphin.lib.IOUtil;
-import org.dolphin.secret.FileConstants;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,6 +29,13 @@ public class ReadableFileInputStream extends InputStream {
     public ReadableFileInputStream(File file, FileInfo fileInfo) throws FileNotFoundException {
         this.file = file;
         this.fileInfo = fileInfo;
+        randomAccessFile = new RandomAccessFile(file, "r");
+    }
+
+    public ReadableFileInputStream(File file, FileInfo fileInfo, FileInfoContentCache cache) throws FileNotFoundException {
+        this.file = file;
+        this.fileInfo = fileInfo;
+        this.contentCache = cache;
         randomAccessFile = new RandomAccessFile(file, "r");
     }
 
@@ -76,6 +83,7 @@ public class ReadableFileInputStream extends InputStream {
 
     @Override
     public int read(byte[] buffer, int byteOffset, int byteCount) throws IOException {
+        Log.d("InputStream", "byteOffset " + byteCount + "\tbyteCount " + byteCount);
         int result = 0;
         try {
             FileInfo fileInfo = getFileInfo();
@@ -138,23 +146,25 @@ public class ReadableFileInputStream extends InputStream {
 
     @Override
     public void mark(int readlimit) {
+        Log.d("InputStream", "mark " + readlimit);
         markLimit = readlimit;
     }
 
     @Override
     public boolean markSupported() {
-        return false;
+        return true;
     }
-
 
     @Override
     public synchronized void reset() throws IOException {
         nextReadIndex = markLimit;
         randomAccessFile.seek(nextReadIndex);
+        Log.d("InputStream", "reset " + nextReadIndex);
     }
 
     @Override
     public long skip(long byteCount) throws IOException {
+        Log.d("InputStream", "skip " + byteCount);
         try {
             FileInfo fileInfo = getFileInfo();
             long max = fileInfo.originalFileLength - nextReadIndex;
@@ -177,7 +187,7 @@ public class ReadableFileInputStream extends InputStream {
 
     private FileInfoContentCache getContentCache() throws Throwable {
         if (null == contentCache) {
-            contentCache = createContentCache(file, getFileInfo());
+            contentCache = FileConstants.createContentCache(file, getFileInfo());
         }
 
         return contentCache;
@@ -189,28 +199,5 @@ public class ReadableFileInputStream extends InputStream {
             fileInfo = operator.operate(file);
         }
         return fileInfo;
-    }
-
-    private static FileInfoContentCache createContentCache(File file, FileInfo fileInfo) throws IOException {
-        FileInfoContentCache cache = new FileInfoContentCache();
-        FileInfo.Range headRange = fileInfo.originalFileHeaderRange;
-        FileInfo.Range footRange = fileInfo.originalFileFooterRange;
-        RandomAccessFile randomAccessFile = null;
-        try {
-            randomAccessFile = new RandomAccessFile(file, "r");
-            randomAccessFile.seek(footRange.offset);
-            byte[] readedContent = new byte[footRange.count];
-            randomAccessFile.readFully(readedContent);
-            cache.footBodyContent = FileConstants.decode(readedContent);
-
-            randomAccessFile.seek(headRange.offset);
-            byte[] readedHeadContent = new byte[headRange.count];
-            randomAccessFile.readFully(readedHeadContent);
-            cache.headBodyContent = FileConstants.decode(readedHeadContent);
-        } finally {
-            IOUtil.safeClose(randomAccessFile);
-        }
-
-        return cache;
     }
 }

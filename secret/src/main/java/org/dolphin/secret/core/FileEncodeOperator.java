@@ -1,24 +1,26 @@
 package org.dolphin.secret.core;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.job.Operator;
+import org.dolphin.job.tuple.TwoTuple;
 import org.dolphin.lib.ByteUtil;
 import org.dolphin.lib.IOUtil;
 import org.dolphin.lib.Preconditions;
-import org.dolphin.secret.FileConstants;
 import org.dolphin.secret.util.UnsupportEncode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
 /**
  * Created by hanyanan on 2016/1/15.
  */
-public class FileEncodeOperator implements Operator<File, FileInfo> {
+public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, FileInfoContentCache>> {
 
     /**
      * 加密文件，并返回加密后的文件信息
@@ -27,12 +29,15 @@ public class FileEncodeOperator implements Operator<File, FileInfo> {
      * @return
      * @throws Throwable
      */
-    public FileInfo operate(File input) throws Throwable {
+    public TwoTuple<FileInfo, FileInfoContentCache> operate(File input) throws Throwable {
         RandomAccessFile randomAccessFile = null;
         boolean success = false;
         boolean modified = false;
         byte[] originalHeadBuffer = null;
         byte[] originalFootBuffer = null;
+        FileInfoContentCache cache = new FileInfoContentCache();
+        cache.footBodyContent = originalFootBuffer;
+        cache.headBodyContent = originalHeadBuffer;
         FileInfo baseFileInfo = createFileInfo(input);
         int transferSize = calculateTransferSize(baseFileInfo);
         baseFileInfo.transferSize = transferSize;
@@ -51,7 +56,7 @@ public class FileEncodeOperator implements Operator<File, FileInfo> {
             modified = true;
             writeProguardHeader(randomAccessFile, baseFileInfo, transferSize);
             proguardOriginalTail(randomAccessFile, baseFileInfo, originalHeadBuffer, originalFootBuffer);
-            writeProguardFooter(randomAccessFile, input, baseFileInfo);
+            writeProguardFooter(randomAccessFile, input, baseFileInfo, cache);
             baseFileInfo.encodeTime = FileConstants.getCurrentTime();
             success = true;
         } finally {
@@ -65,11 +70,11 @@ public class FileEncodeOperator implements Operator<File, FileInfo> {
             }
             IOUtil.safeClose(randomAccessFile);
         }
-        return baseFileInfo;
+        return new TwoTuple<FileInfo, FileInfoContentCache>(baseFileInfo, cache);
     }
 
     /**
-     * 检查是否是支持加密，就是查看文件头部的32个字节是否是{@link org.dolphin.secret.FileConstants#FILE_DOM}
+     * 检查是否是支持加密，就是查看文件头部的32个字节是否是{@link FileConstants#FILE_DOM}
      *
      * @param dom
      * @return
@@ -99,7 +104,11 @@ public class FileEncodeOperator implements Operator<File, FileInfo> {
      */
     public static Bitmap createBitmap(File file, FileInfo fileInfo) {
         String mime = fileInfo.originalMimeType;
-        if (mime.startsWith("image")) {
+        try {
+            if (mime.startsWith("image")) {
+                return createImageThumbnail(file, fileInfo);
+            }
+        } catch (IOException exception) {
 
         }
         // TODO
@@ -107,8 +116,24 @@ public class FileEncodeOperator implements Operator<File, FileInfo> {
     }
 
     // 尽量的靠近200*200
-    public static Bitmap createImageThumbnail(String path) {
-        return null;
+    public static Bitmap createImageThumbnail(File file, FileInfo fileInfo) throws IOException {
+        ReadableFileInputStream inputStream = null;
+        try {
+            inputStream = new ReadableFileInputStream(file, fileInfo);
+            inputStream.mark(0);
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeStream(inputStream, null, options);
+            int w = options.outWidth;
+            int h = options.outHeight;
+            options.inJustDecodeBounds = false;
+            options.inSampleSize = FileConstants.calculateSampleSize(w, h, 200, 200);
+            inputStream.reset();
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream, null, options);
+            return bitmap;
+        } finally {
+            IOUtil.safeClose(inputStream);
+        }
     }
 
     // 尽量的靠近200*200
@@ -120,6 +145,7 @@ public class FileEncodeOperator implements Operator<File, FileInfo> {
     public static Bitmap createAudioThumbnail(String path) {
         return null;
     }
+
 
     /**
      * 返回当前系统时间
@@ -159,12 +185,14 @@ public class FileEncodeOperator implements Operator<File, FileInfo> {
      * @param file
      * @param fileInfo
      */
-    private static void writeProguardFooter(RandomAccessFile randomAccessFile, File file, FileInfo fileInfo) throws IOException {
+    private static void writeProguardFooter(RandomAccessFile randomAccessFile, File file, FileInfo fileInfo,
+                                            FileInfoContentCache cache) throws IOException {
         randomAccessFile.seek(fileInfo.originalFileLength + fileInfo.transferSize);
         fileInfo.extraTag = getExtraMessage(file, fileInfo);// 额外的信息，1024字节
         randomAccessFile.write(fileInfo.extraTag);
         randomAccessFile.write(ByteUtil.longToBytes(getCurrentTime())); // 写入加密时间，8字节
         Bitmap thumbnail = createBitmap(file, fileInfo);
+        cache.thumbnail = thumbnail;
         if (null == thumbnail) {
             randomAccessFile.write(ByteUtil.intToBytes(0));
         } else {

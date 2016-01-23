@@ -10,12 +10,15 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import org.dolphin.job.tuple.TwoTuple;
 import org.dolphin.lib.IOUtil;
+import org.dolphin.secret.browser.BrowserManager;
 import org.dolphin.secret.core.FileDecodeOperator;
 import org.dolphin.secret.core.FileEncodeOperator;
 import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.FileInfoContentCache;
 import org.dolphin.secret.core.ReadableFileInputStream;
-import org.dolphin.secretremotecontroller.R;
+import org.dolphin.secret.R;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -29,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     public static final FileDecodeOperator fileDecodeOperator = new FileDecodeOperator();
     TextView tv1, tv2;
     ImageView imageView;
+    private BrowserManager browserManager;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,12 +41,15 @@ public class MainActivity extends AppCompatActivity {
         tv1 = (TextView) findViewById(R.id.tv1);
         tv2 = (TextView) findViewById(R.id.tv2);
         imageView = (ImageView) findViewById(R.id.iv);
+
+        browserManager = BrowserManager.getInstance(new File("/sdcard/"));
+        browserManager.start();
     }
 
     public void encode(View view) {
         try {
-            FileInfo fileInfo = fileEncodeOperator.operate(new File(FilePath));
-            tv1.setText(fileInfo.toString());
+            TwoTuple<FileInfo, FileInfoContentCache> fileInfo = fileEncodeOperator.operate(new File(FilePath));
+            tv1.setText(fileInfo.value1.toString());
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }

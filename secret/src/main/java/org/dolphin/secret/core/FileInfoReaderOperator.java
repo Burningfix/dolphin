@@ -4,7 +4,6 @@ import org.dolphin.job.Operator;
 import org.dolphin.lib.ByteUtil;
 import org.dolphin.lib.IOUtil;
 import org.dolphin.lib.Preconditions;
-import org.dolphin.secret.FileConstants;
 import org.dolphin.secret.util.UnsupportEncode;
 
 import java.io.File;
@@ -36,7 +35,7 @@ public class FileInfoReaderOperator implements Operator<File, FileInfo> {
     }
 
     /**
-     * 检查是已经加密过的，就是查看文件头部的32个字节是否是{@link org.dolphin.secret.FileConstants#FILE_DOM}
+     * 检查是已经加密过的，就是查看文件头部的32个字节是否是{@link FileConstants#FILE_DOM}
      *
      * @param dom
      * @return
