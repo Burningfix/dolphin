@@ -18,7 +18,6 @@ import org.dolphin.secret.core.FileEncodeOperator;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
 import org.dolphin.secret.core.ReadableFileInputStream;
-import org.dolphin.secret.R;
 
 import java.io.File;
 import java.io.FileNotFoundException;

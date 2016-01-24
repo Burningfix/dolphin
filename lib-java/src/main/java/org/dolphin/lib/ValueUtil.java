@@ -10,6 +10,12 @@ public class ValueUtil {
         return false;
     }
 
+    public static boolean isEquals(Object obj1, Object obj2) {
+        if (obj1 == obj2) return true;
+        if (null == obj1 || null == obj2) return false;
+        return obj1.equals(obj2);
+    }
+
     public static long parseLong(String s, long defaultValue) {
         if (isEmpty(s)) return defaultValue;
 
