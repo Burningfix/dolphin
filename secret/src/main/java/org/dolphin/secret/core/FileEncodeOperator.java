@@ -181,7 +181,7 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
 
     /**
      * 向文件的末尾写入一些额外的信息
-     *
+     * 包括额外的信息，thumbnail
      * @param file
      * @param fileInfo
      */

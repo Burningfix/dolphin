@@ -1,9 +1,14 @@
 package org.dolphin.secret.core;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+
 import org.dolphin.http.MimeType;
 import org.dolphin.lib.ByteUtil;
 import org.dolphin.lib.IOUtil;
 import org.dolphin.lib.Preconditions;
+import org.dolphin.lib.ValueUtil;
+import org.dolphin.secret.browser.CacheManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -129,13 +134,36 @@ public class FileConstants {
         return cache;
     }
 
+    public static Bitmap readThumbnailFromEncodedFile(File file, FileInfo fileInfo) throws IOException {
+        FileInfoContentCache cache = CacheManager.getInstance().getCache(file.getPath());
+        if (null == cache) {
+            cache = createContentCache(file, fileInfo);
+            CacheManager.getInstance().putCache(file.getPath(), cache);
+        }
+        RandomAccessFile randomAccessFile = null;
+        try {
+            randomAccessFile = new RandomAccessFile(file, "r");
+            randomAccessFile.seek(file.length() - 4);
+            byte[] buff = new byte[4];
+            randomAccessFile.readFully(buff);
+            int thumbnailSize = ByteUtil.bytesToInt(buff);
+            if (thumbnailSize <= 0) return null;
+            randomAccessFile.seek(file.length() - 4 - thumbnailSize);
+            byte data[] = new byte[thumbnailSize];
+            randomAccessFile.readFully(data);
+            return BitmapFactory.decodeByteArray(data, 0, data.length);
+        } finally {
+            IOUtil.closeQuietly(randomAccessFile);
+        }
+    }
+
 
     public static int calculateSampleSize(int originalWidth, int originalHeight, int exceptionWidth, int exceptionHeight) {
         int inSample = 1;
         while (originalWidth > exceptionWidth || originalHeight > exceptionHeight) {
             inSample *= 2;
-            originalWidth /=2;
-            originalHeight /=2;
+            originalWidth /= 2;
+            originalHeight /= 2;
         }
         return inSample;
     }

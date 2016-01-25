@@ -3,6 +3,7 @@ package org.dolphin.secret.core;
 import android.util.Log;
 
 import org.dolphin.lib.IOUtil;
+import org.dolphin.secret.browser.CacheManager;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -188,6 +189,7 @@ public class ReadableFileInputStream extends InputStream {
     private FileInfoContentCache getContentCache() throws Throwable {
         if (null == contentCache) {
             contentCache = FileConstants.createContentCache(file, getFileInfo());
+            CacheManager.getInstance().putCache(this.file.getPath(), contentCache);
         }
 
         return contentCache;

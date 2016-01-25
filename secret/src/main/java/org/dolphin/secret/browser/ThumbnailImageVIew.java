@@ -2,14 +2,17 @@ package org.dolphin.secret.browser;
 
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.os.Build;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.ImageView;
 
 import org.dolphin.job.Job;
+import org.dolphin.job.Operator;
 import org.dolphin.lib.ValueUtil;
 import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.FileInfoContentCache;
 
 /**
  * Created by yananh on 2016/1/23.
@@ -40,22 +43,20 @@ public class ThumbnailImageVIew extends ImageView {
 
     @Override
     protected void onAttachedToWindow() {
-        attached = true;
-        visible = true;
+        notifyPropertyChanged(true, true, this.filePath, this.fileInfo);
         super.onAttachedToWindow();
     }
 
     @Override
     protected void onDetachedFromWindow() {
-        attached = false;
-        visible = false;
+        notifyPropertyChanged(false, false, this.filePath, this.fileInfo);
         super.onDetachedFromWindow();
     }
 
 
     @Override
     protected void onVisibilityChanged(View changedView, int visibility) {
-        visible = VISIBLE == visibility;
+        notifyPropertyChanged(this.attached, VISIBLE == visibility, this.filePath, this.fileInfo);
         super.onVisibilityChanged(changedView, visibility);
     }
 
@@ -85,8 +86,7 @@ public class ThumbnailImageVIew extends ImageView {
                     loadJob.abort();
                     loadJob = null;
                 }
-                loadJob = getLoadJob(newPath, newFileInfo);
-                loadJob.work();
+                loadThumbnail(newPath, newFileInfo);
                 break;
             case 2:
                 if (loadJob != null) {
@@ -96,16 +96,40 @@ public class ThumbnailImageVIew extends ImageView {
                 break;
         }
 
-        this.visible = visible;
-        this.attached = attached;
-        this.fileInfo = fileInfo;
-        this.filePath = filePath;
+        this.visible = newVisible;
+        this.attached = newAttached;
+        this.fileInfo = newFileInfo;
+        this.filePath = newPath;
     }
 
 
-    private Job getLoadJob(String filePath, FileInfo fileInfo) {
+    private void loadThumbnail(final String filePath, final FileInfo fileInfo) {
+        if (loadJob != null) {
+            loadJob.abort();
+            loadJob = null;
+        }
+        FileInfoContentCache cache = CacheManager.getInstance().getCache(filePath);
+        if (null != cache) {
+            Bitmap bm = cache.thumbnail;
+            if (null != bm) {
+                this.setImageBitmap(bm);
+                return;
+            }
+        }
 
-        return null;
+        Job job = new Job(filePath);
+        job.then(new Operator<String, Bitmap>() {
+            @Override
+            public Bitmap operate(String input) throws Throwable {
+
+
+
+                return null;
+            }
+        });
+
+
+        return;
     }
 
 
