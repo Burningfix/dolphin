@@ -2,6 +2,8 @@ package org.dolphin.secret.core;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.ThumbnailUtils;
+import android.provider.MediaStore;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.job.Operator;
@@ -107,6 +109,9 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
         try {
             if (mime.startsWith("image")) {
                 return createImageThumbnail(file, fileInfo);
+            }
+            if(mime.startsWith("video")) {
+                return ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MINI_KIND);
             }
         } catch (IOException exception) {
 

@@ -8,11 +8,16 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.widget.ImageView;
 
+import org.dolphin.arch.AndroidMainScheduler;
 import org.dolphin.job.Job;
 import org.dolphin.job.Operator;
+import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.lib.ValueUtil;
+import org.dolphin.secret.core.FileConstants;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
+
+import java.io.File;
 
 /**
  * Created by yananh on 2016/1/23.
@@ -123,16 +128,32 @@ public class ThumbnailImageVIew extends ImageView {
         Job job = new Job(filePath);
         job.then(new Operator<String, Bitmap>() {
             @Override
-            public Bitmap operate(String input) throws Throwable {
-
-
-                return null;
+            public Bitmap operate(String filePath) throws Throwable {
+                File file = new File(filePath);
+                Bitmap bitmap = FileConstants.readThumbnailFromEncodedFile(file, fileInfo);
+                return bitmap;
             }
-        });
-
-
-        return;
+        })
+                .workOn(Schedulers.computation())
+                .callbackOn(AndroidMainScheduler.INSTANCE)
+                .error(new Job.Callback2() {
+                    @Override
+                    public void call(Throwable throwable, Object[] unexpectedResult) {
+                        // TODO
+                    }
+                })
+                .result(new Job.Callback1<Bitmap>() {
+                    @Override
+                    public void call(Bitmap result) {
+                        if (null == result) return;
+                        FileInfoContentCache cache = CacheManager.getInstance().getCache(filePath);
+                        if (null != cache) {
+                            cache.thumbnail = result;
+                        }
+                        CacheManager.getInstance().putCache(filePath, cache);
+                        ThumbnailImageVIew.this.setImageBitmap(result);
+                    }
+                })
+                .work();
     }
-
-
 }

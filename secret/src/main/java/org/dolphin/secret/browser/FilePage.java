@@ -34,9 +34,9 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         listView = new ListView(inflater.getContext());
         listView.setAdapter(listAdapter);
-        this.fileList.addAll(BrowserManager.getInstance(rootDir).getImageFileList());
+        this.fileList.addAll(BrowserManager.getInstance().getImageFileList());
         notifyStateChange();
-        BrowserManager.getInstance(rootDir).addImageFileChangeListener(this);
+        BrowserManager.getInstance().addImageFileChangeListener(this);
         return listView;
     }
 

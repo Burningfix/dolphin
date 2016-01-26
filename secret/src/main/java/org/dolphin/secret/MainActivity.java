@@ -38,15 +38,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        tv1 = (TextView) findViewById(R.id.tv1);
-//        tv2 = (TextView) findViewById(R.id.tv2);
-//        imageView = (ImageView) findViewById(R.id.iv);
-//
-        browserManager = BrowserManager.getInstance(new File("/sdcard/"));
-        browserManager.start();
-
         FilePage filePage = new FilePage();
-
         getFragmentManager().beginTransaction().replace(R.id.container, filePage).commit();
     }
 
@@ -84,7 +76,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     @Override

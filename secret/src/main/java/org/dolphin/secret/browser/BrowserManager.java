@@ -150,7 +150,9 @@ public class BrowserManager {
     }
 
     private synchronized void onLeakedFile(List<String> leakedFileList) {
-
+        if (null == leakedFileList || leakedFileList.isEmpty()) {
+            return;
+        }
     }
 
     private synchronized void onScanFailed(Throwable throwable) {
