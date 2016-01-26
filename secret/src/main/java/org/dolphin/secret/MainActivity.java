@@ -13,6 +13,7 @@ import android.widget.TextView;
 import org.dolphin.job.tuple.TwoTuple;
 import org.dolphin.lib.IOUtil;
 import org.dolphin.secret.browser.BrowserManager;
+import org.dolphin.secret.browser.FilePage;
 import org.dolphin.secret.core.FileDecodeOperator;
 import org.dolphin.secret.core.FileEncodeOperator;
 import org.dolphin.secret.core.FileInfo;
@@ -37,12 +38,16 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        tv1 = (TextView) findViewById(R.id.tv1);
-        tv2 = (TextView) findViewById(R.id.tv2);
-        imageView = (ImageView) findViewById(R.id.iv);
-
+//        tv1 = (TextView) findViewById(R.id.tv1);
+//        tv2 = (TextView) findViewById(R.id.tv2);
+//        imageView = (ImageView) findViewById(R.id.iv);
+//
         browserManager = BrowserManager.getInstance(new File("/sdcard/"));
         browserManager.start();
+
+        FilePage filePage = new FilePage();
+
+        getFragmentManager().beginTransaction().replace(R.id.container, filePage).commit();
     }
 
     public void encode(View view) {

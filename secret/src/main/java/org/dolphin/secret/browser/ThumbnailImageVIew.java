@@ -36,6 +36,10 @@ public class ThumbnailImageVIew extends ImageView {
         super(context, attrs, defStyleAttr);
     }
 
+    public void setFile(String path, FileInfo fileInfo) {
+        notifyPropertyChanged(this.attached, this.visible, path, fileInfo);
+    }
+
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public ThumbnailImageVIew(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
@@ -52,7 +56,6 @@ public class ThumbnailImageVIew extends ImageView {
         notifyPropertyChanged(false, false, this.filePath, this.fileInfo);
         super.onDetachedFromWindow();
     }
-
 
     @Override
     protected void onVisibilityChanged(View changedView, int visibility) {
@@ -121,7 +124,6 @@ public class ThumbnailImageVIew extends ImageView {
         job.then(new Operator<String, Bitmap>() {
             @Override
             public Bitmap operate(String input) throws Throwable {
-
 
 
                 return null;

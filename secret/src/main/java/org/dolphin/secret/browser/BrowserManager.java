@@ -20,11 +20,12 @@ import java.util.List;
  * Created by hanyanan on 2016/1/20.
  */
 public class BrowserManager {
+    public static File sRootDir = new File("/sdcard/");
     private static BrowserManager sInstance = null;
 
-    public synchronized static BrowserManager getInstance(File rootDir) {
+    public synchronized static BrowserManager getInstance() {
         if (null == sInstance) {
-            sInstance = new BrowserManager(rootDir);
+            sInstance = new BrowserManager();
         }
 
         return sInstance;
@@ -33,16 +34,16 @@ public class BrowserManager {
     private File rootDir;
     private Job scanerJob = null;
 
-    private BrowserManager(File rootDir) {
+    private BrowserManager() {
+        this.rootDir = sRootDir;
         if (!rootDir.isDirectory()) {
             throw new IllegalArgumentException("");
         }
-        this.rootDir = rootDir;
     }
 
-    private final List<ImageFileChangeListener> imageFileChangeListeners = new ArrayList<ImageFileChangeListener>();
-    private final List<ImageFileChangeListener> videoFileChangeListeners = new ArrayList<ImageFileChangeListener>();
-    private final List<ImageFileChangeListener> audioFileChangeListeners = new ArrayList<ImageFileChangeListener>();
+    private final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
+    private final List<FileChangeListener> videoFileChangeListeners = new ArrayList<FileChangeListener>();
+    private final List<FileChangeListener> audioFileChangeListeners = new ArrayList<FileChangeListener>();
 
     private final List<TwoTuple<String, FileInfo>> imageFileList = new ArrayList<TwoTuple<String, FileInfo>>();
     private final List<TwoTuple<String, FileInfo>> videoFileList = new ArrayList<TwoTuple<String, FileInfo>>();
@@ -53,6 +54,7 @@ public class BrowserManager {
         imageFileList.clear();
         videoFileList.clear();
         audioFileList.clear();
+        leakedFileList.clear();
         if (scanerJob != null) {
             scanerJob.abort();
         }
@@ -125,20 +127,26 @@ public class BrowserManager {
 
     private synchronized void onImageFileFound(List<TwoTuple<String, FileInfo>> files) {
         if (null == files || files.isEmpty()) {
-            Log.d("DDD", "No image file found!");
             return;
         }
-        for (TwoTuple<String, FileInfo> tuple : files) {
-            Log.d("DDD", "Found image file " + tuple.value1 + "\tOriginal file Name: " + tuple.value2.originalFileName);
-        }
+        this.imageFileList.addAll(files);
+        notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
     }
 
     private synchronized void onVideoFileFound(List<TwoTuple<String, FileInfo>> files) {
-
+        if (null == files || files.isEmpty()) {
+            return;
+        }
+        this.videoFileList.addAll(files);
+        notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
     }
 
     private synchronized void onAudioFileFound(List<TwoTuple<String, FileInfo>> files) {
-
+        if (null == files || files.isEmpty()) {
+            return;
+        }
+        this.audioFileList.addAll(files);
+        notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
     }
 
     private synchronized void onLeakedFile(List<String> leakedFileList) {
@@ -149,6 +157,10 @@ public class BrowserManager {
 
     }
 
+    public List<TwoTuple<String, FileInfo>> getImageFileList() {
+        return imageFileList;
+    }
+
     public void stop() {
         if (scanerJob != null) {
             scanerJob.abort();
@@ -157,32 +169,54 @@ public class BrowserManager {
     }
 
 
-    public synchronized void addImageFileChangeListener(ImageFileChangeListener listener) {
+    public synchronized void addImageFileChangeListener(FileChangeListener listener) {
         if (!imageFileChangeListeners.contains(listener)) {
             imageFileChangeListeners.add(listener);
         }
     }
 
-    private void notifyImageFileChanged(List<TwoTuple<String, FileInfo>> files) {
-        final List<ImageFileChangeListener> imageFileChangeListeners = new ArrayList<ImageFileChangeListener>();
+    public synchronized void removeImageFileChangeListener(FileChangeListener listener) {
+        if (imageFileChangeListeners.contains(listener)) {
+            imageFileChangeListeners.remove(listener);
+        }
+    }
+
+    public synchronized void addVideoFileChangeListener(FileChangeListener listener) {
+        if (!videoFileChangeListeners.contains(listener)) {
+            videoFileChangeListeners.add(listener);
+        }
+    }
+
+    public synchronized void removeVideoFileChangeListener(FileChangeListener listener) {
+        if (videoFileChangeListeners.contains(listener)) {
+            videoFileChangeListeners.remove(listener);
+        }
+    }
+
+    public synchronized void addAudioFileChangeListener(FileChangeListener listener) {
+        if (!audioFileChangeListeners.contains(listener)) {
+            audioFileChangeListeners.add(listener);
+        }
+    }
+
+    public synchronized void removeAudioFileChangeListener(FileChangeListener listener) {
+        if (audioFileChangeListeners.contains(listener)) {
+            audioFileChangeListeners.remove(listener);
+        }
+    }
+
+    private void notifyFileChanged(List<TwoTuple<String, FileInfo>> files, List<FileChangeListener> listeners) {
+        final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
         synchronized (BrowserManager.class) {
-            imageFileChangeListeners.addAll(this.imageFileChangeListeners);
+            imageFileChangeListeners.addAll(listeners);
         }
-        for (ImageFileChangeListener listener : imageFileChangeListeners) {
-            listener.onImageFileList(files);
+        for (FileChangeListener listener : imageFileChangeListeners) {
+            listener.onFileList(files);
         }
     }
 
 
-    public interface ImageFileChangeListener {
-        public void onImageFileList(List<TwoTuple<String, FileInfo>> files);
-    }
-
-    public interface VideoFileChangeListener {
-        public void onImageFileList(List<TwoTuple<String, FileInfo>> files);
-    }
-
-    public interface AudioFileChangeListener {
-        public void onImageFileList(List<TwoTuple<String, FileInfo>> files);
+    public interface FileChangeListener {
+        public void onFileList(List<TwoTuple<String, FileInfo>> files);
     }
 }

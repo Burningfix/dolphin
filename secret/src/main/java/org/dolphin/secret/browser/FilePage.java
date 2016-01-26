@@ -6,30 +6,81 @@ import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
+
+import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.secret.core.FileInfo;
+
+import java.io.File;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by yananh on 2016/1/23.
  */
-public class FilePage extends Fragment {
+public class FilePage extends Fragment implements BrowserManager.FileChangeListener {
+    public static final File rootDir = new File("/sdcard/");
+
     public enum State {
         Normal,
-        Selcteable,
+        Selectable,
     }
+    private final List<TwoTuple<String, FileInfo>> fileList = new LinkedList<TwoTuple<String, FileInfo>>();
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return super.onCreateView(inflater, container, savedInstanceState);
+        listView = new ListView(inflater.getContext());
+        listView.setAdapter(listAdapter);
+        this.fileList.addAll(BrowserManager.getInstance(rootDir).getImageFileList());
+        notifyStateChange();
+        BrowserManager.getInstance(rootDir).addImageFileChangeListener(this);
+        return listView;
     }
 
     private State state = State.Normal;
-
+    private ListView listView;
     public void setState(State state) {
         this.state = state;
         notifyStateChange();
     }
 
     public void notifyStateChange() {
-
+        listAdapter.notifyDataSetChanged();
     }
+
+    @Override
+    public void onFileList(List<TwoTuple<String, FileInfo>> files) {
+        if(null != files) {
+            fileList.addAll(files);
+        }
+        notifyStateChange();
+    }
+
+    private BaseAdapter listAdapter = new BaseAdapter() {
+        @Override
+        public int getCount() {
+            return fileList.size();
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return fileList.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ThumbnailImageVIew imageVIew = new ThumbnailImageVIew(FilePage.this.getActivity());
+            TwoTuple<String, FileInfo> item = (TwoTuple<String, FileInfo>) getItem(position);
+            imageVIew.setFile(item.value1, item.value2);
+            return imageVIew;
+        }
+    };
 }
