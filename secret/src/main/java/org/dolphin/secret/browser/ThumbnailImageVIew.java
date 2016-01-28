@@ -116,7 +116,7 @@ public class ThumbnailImageVIew extends ImageView {
             loadJob.abort();
             loadJob = null;
         }
-        FileInfoContentCache cache = CacheManager.getInstance().getCache(filePath);
+        FileInfoContentCache cache = CacheManager.getInstance().getCache(fileInfo);
         if (null != cache) {
             Bitmap bm = cache.thumbnail;
             if (null != bm) {
@@ -146,11 +146,11 @@ public class ThumbnailImageVIew extends ImageView {
                     @Override
                     public void call(Bitmap result) {
                         if (null == result) return;
-                        FileInfoContentCache cache = CacheManager.getInstance().getCache(filePath);
+                        FileInfoContentCache cache = CacheManager.getInstance().getCache(fileInfo);
                         if (null != cache) {
                             cache.thumbnail = result;
                         }
-                        CacheManager.getInstance().putCache(filePath, cache);
+                        CacheManager.getInstance().putCache(fileInfo, cache);
                         ThumbnailImageVIew.this.setImageBitmap(result);
                     }
                 })

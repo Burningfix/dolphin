@@ -14,6 +14,8 @@ import java.io.RandomAccessFile;
  * Created by hanyanan on 2016/1/15.
  */
 public class FileInfoReaderOperator implements Operator<File, FileInfo> {
+    public static final FileInfoReaderOperator DEFAULT = new FileInfoReaderOperator();
+
     @Override
     public FileInfo operate(File input) throws Throwable {
         FileInfo fileInfo = new FileInfo();
@@ -21,12 +23,25 @@ public class FileInfoReaderOperator implements Operator<File, FileInfo> {
         try {
             randomAccessFile = new RandomAccessFile(input, "r");
             fileVerify(randomAccessFile);
+            fileInfo.proguardFileName = input.getName();
             readFirst64Bytes(randomAccessFile, fileInfo);
             readOriginalFileName(randomAccessFile, fileInfo);
             readExtraHeadInfo(randomAccessFile, fileInfo);
-            readOriginalHeaderAndFooterRange(randomAccessFile, fileInfo);
-            readThumbnailRange(randomAccessFile, fileInfo);
-            readExtraMessage(randomAccessFile, fileInfo);
+            if (fileInfo.encodeVersion == 1) {
+                readOriginalHeaderAndFooterRange(randomAccessFile, fileInfo);
+                readThumbnailRange(randomAccessFile, fileInfo);
+                readExtraMessage(randomAccessFile, fileInfo);
+            } else {
+                long currPosition = randomAccessFile.getFilePointer();
+                int thumbnailSize = FileConstants.readInt(randomAccessFile, -1);
+                if (thumbnailSize > 0) {
+                    fileInfo.thumbnailRange = new FileInfo.Range();
+                    fileInfo.thumbnailRange.count = thumbnailSize;
+                    fileInfo.thumbnailRange.offset = currPosition;
+                }
+                fileInfo.encodeTime = FileConstants.readLong(randomAccessFile, -1);
+                fileInfo.extraTag = FileConstants.readBytes(randomAccessFile, -1, 1024);
+            }
         } finally {
             IOUtil.safeClose(randomAccessFile);
         }
@@ -111,14 +126,15 @@ public class FileInfoReaderOperator implements Operator<File, FileInfo> {
     // 读取原始的头部和尾部的区域
     private static void readOriginalHeaderAndFooterRange(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
         Preconditions.checkState(outFileInfo.transferSize > 0);
-        FileInfo.Range headRange = new FileInfo.Range();
-        headRange.count = outFileInfo.transferSize;
-        headRange.offset = outFileInfo.originalFileLength;
-        outFileInfo.originalFileHeaderRange = headRange;
         FileInfo.Range footRange = new FileInfo.Range();
         footRange.count = outFileInfo.transferSize;
         footRange.offset = outFileInfo.originalFileLength - outFileInfo.transferSize;
         outFileInfo.originalFileFooterRange = footRange;
+
+        FileInfo.Range headRange = new FileInfo.Range();
+        headRange.count = outFileInfo.transferSize;
+        headRange.offset = outFileInfo.originalFileLength;
+        outFileInfo.originalFileHeaderRange = headRange;
     }
 
     // 读取thumbnail的信息

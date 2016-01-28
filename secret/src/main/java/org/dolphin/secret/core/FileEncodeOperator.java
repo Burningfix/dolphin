@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.ThumbnailUtils;
 import android.provider.MediaStore;
+import android.util.Log;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.job.Operator;
@@ -18,11 +19,13 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Date;
 
 /**
  * Created by hanyanan on 2016/1/15.
  */
 public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, FileInfoContentCache>> {
+    public static final String TAG = "FileEncodeOperator";
 
     /**
      * 加密文件，并返回加密后的文件信息
@@ -32,19 +35,154 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
      * @throws Throwable
      */
     public TwoTuple<FileInfo, FileInfoContentCache> operate(File input) throws Throwable {
+        boolean success = false;
+        FileInfoContentCache cache = new FileInfoContentCache();
+        FileInfo baseFileInfo = createFileInfo(input);
+        int transferSize = calculateTransferSize(baseFileInfo);
+        baseFileInfo.transferSize = transferSize;
+        baseFileInfo.encodeTime = FileConstants.getCurrentTime();
+        long originalFileLength = input.length();
+        try {
+            if (originalFileLength > baseFileInfo.transferSize * 4 && originalFileLength > 64 * 1024) { //打文件模式，混淆局部
+                success = proguardLargeFile(input, baseFileInfo, cache);
+            } else { // 全局加密，将信息保存在头部，实际的信息保存在尾部
+                success = proguardSmallFile(input, baseFileInfo, cache);
+            }
+        } catch (Throwable throwable) {
+            Log.e(TAG, "Encode file " + input.getName() + " Failed!");
+            throw throwable;
+        }
+
+//        try {
+//            randomAccessFile = new RandomAccessFile(input, "rw");
+//            byte[] dom = new byte[32];
+//            randomAccessFile.read(dom);
+//            fileVerify(dom);
+//            randomAccessFile.seek(0);
+//            originalHeadBuffer = new byte[transferSize];
+//            originalFootBuffer = new byte[transferSize];
+//            randomAccessFile.readFully(originalHeadBuffer);
+//            randomAccessFile.seek(baseFileInfo.originalFileLength - transferSize);
+//            randomAccessFile.readFully(originalFootBuffer);
+//            randomAccessFile.seek(0);
+//            modified = true;
+//            writeProguardHeader(randomAccessFile, baseFileInfo, transferSize);
+//            proguardOriginalTail(randomAccessFile, baseFileInfo, originalHeadBuffer, originalFootBuffer);
+//            writeProguardFooter(randomAccessFile, input, baseFileInfo, cache);
+//            cache.footBodyContent = originalFootBuffer;
+//            cache.headBodyContent = originalHeadBuffer;
+//            success = true;
+//        } finally {
+//            if (!success && modified) {
+//                // 加密出现异常，并且文件已经被修改过。需要恢复以前的初始态
+//                randomAccessFile.seek(0);
+//                randomAccessFile.write(originalHeadBuffer);
+//                randomAccessFile.seek(baseFileInfo.originalFileLength - transferSize);
+//                randomAccessFile.write(originalFootBuffer);
+//                randomAccessFile.setLength(baseFileInfo.originalFileLength);
+//            }
+//            IOUtil.safeClose(randomAccessFile);
+//        }
+
+        if (success) { // 修改文件名称
+            String proguardFileName = createProguardFileName(input.getName());
+            try {
+                IOUtil.renameTo(input, new File(input.getParentFile(), proguardFileName), true);
+                baseFileInfo.proguardFileName = proguardFileName;
+            } catch (IOException exception) {
+                exception.printStackTrace();
+                baseFileInfo.proguardFileName = input.getName();
+            }
+
+            Log.d(TAG, "Encode file " + baseFileInfo);
+        }
+        return new TwoTuple<FileInfo, FileInfoContentCache>(baseFileInfo, cache);
+    }
+
+    /**
+     * 混淆大文件，一般只是混淆头部和尾部，encodeversion为2
+     */
+    private static boolean proguardSmallFile(File originalFile, FileInfo fileInfo, FileInfoContentCache cache) throws Throwable {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        RandomAccessFile randomAccessFile = null;
+        boolean success = false;
+        boolean modify = false;
+        byte[] body = null;
+        int thumbnailRangeOffset = 0;
+        int thumbnailRangeCount = 0;
+        cache.footBodyContent = null;
+        int originalFileLength = (int) originalFile.length();
+        try {
+            randomAccessFile = new RandomAccessFile(originalFile, "rw");
+            byte[] dom = new byte[32];
+            randomAccessFile.read(dom);
+            randomAccessFile.seek(0);
+            fileVerify(dom);
+            fileInfo.encodeVersion = 2;
+            fileInfo.transferSize = originalFileLength;
+            outputStream.write(FileConstants.getFileDom()); // 文件的格式
+            outputStream.write(FileConstants.getSoftwareVersion()); // 程序的版本号
+            outputStream.write(ByteUtil.intToBytes(fileInfo.encodeVersion)); // 加密算法的版本号
+            outputStream.write(FileConstants.getRandomBoundByte(16)); // 随即填充字符
+            outputStream.write(ByteUtil.longToBytes(fileInfo.originalFileLength)); // 原始文件长度
+            outputStream.write(ByteUtil.intToBytes(fileInfo.originalFileName.getBytes().length)); // 原是文件名长度
+            outputStream.write(fileInfo.originalFileName.getBytes()); // 原始文件名
+            outputStream.write(ByteUtil.longToBytes(fileInfo.originalModifyTimeStamp)); // 原始文件修改时间
+            outputStream.write(FileConstants.getMimeType(fileInfo.originalFileName)); // 原始文件类型
+            outputStream.write(ByteUtil.intToBytes(fileInfo.transferSize)); // transferSize
+            thumbnailRangeOffset = outputStream.size();
+            Bitmap thumbnail = createBitmap(originalFile, fileInfo);
+            if (null == thumbnail) {
+                outputStream.write(ByteUtil.intToBytes(0)); // thumbnail大小
+            } else {
+                ByteArrayOutputStream bitmapOutputStream = new ByteArrayOutputStream();
+                thumbnail.compress(Bitmap.CompressFormat.PNG, 100, bitmapOutputStream);
+                byte[] bm = bitmapOutputStream.toByteArray();
+                outputStream.write(ByteUtil.intToBytes(bm.length)); // thumbnail大小
+                outputStream.write(bm); // thumbnail大小
+                thumbnailRangeCount = bm.length;
+            }
+            outputStream.write(ByteUtil.longToBytes(fileInfo.encodeTime)); // 加密时间戳
+            outputStream.write(getExtraMessage(originalFile, fileInfo));
+            body = new byte[originalFileLength];
+            randomAccessFile.readFully(body);
+            outputStream.write(FileConstants.encode(body));
+            modify = true;
+            randomAccessFile.setLength(outputStream.size());
+            randomAccessFile.write(outputStream.toByteArray());
+            success = true;
+            fileInfo.originalFileFooterRange = null;
+            fileInfo.originalFileHeaderRange = null;
+            if (thumbnailRangeOffset > 0 && thumbnailRangeCount > 0) {
+                fileInfo.thumbnailRange = new FileInfo.Range();
+                fileInfo.thumbnailRange.offset = thumbnailRangeOffset;
+                fileInfo.thumbnailRange.count = thumbnailRangeCount;
+            }
+            cache.footBodyContent = body;
+            cache.thumbnail = thumbnail;
+        } finally {
+            if (!success && modify) { //加密失败，恢复原始文件
+                randomAccessFile.seek(fileInfo.originalFileLength);
+                randomAccessFile.seek(0);
+                randomAccessFile.write(body);
+            }
+            IOUtil.safeClose(outputStream);
+        }
+        return success;
+    }
+
+    /**
+     * 混淆大文件，一般只是混淆头部和尾部，encodeversion为1
+     */
+    private static boolean proguardLargeFile(File originalFile, FileInfo fileInfo, FileInfoContentCache cache) throws Throwable {
         RandomAccessFile randomAccessFile = null;
         boolean success = false;
         boolean modified = false;
         byte[] originalHeadBuffer = null;
         byte[] originalFootBuffer = null;
-        FileInfoContentCache cache = new FileInfoContentCache();
-        cache.footBodyContent = originalFootBuffer;
-        cache.headBodyContent = originalHeadBuffer;
-        FileInfo baseFileInfo = createFileInfo(input);
-        int transferSize = calculateTransferSize(baseFileInfo);
-        baseFileInfo.transferSize = transferSize;
+        int transferSize = fileInfo.transferSize;
         try {
-            randomAccessFile = new RandomAccessFile(input, "rw");
+            randomAccessFile = new RandomAccessFile(originalFile, "rw");
             byte[] dom = new byte[32];
             randomAccessFile.read(dom);
             fileVerify(dom);
@@ -52,28 +190,31 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
             originalHeadBuffer = new byte[transferSize];
             originalFootBuffer = new byte[transferSize];
             randomAccessFile.readFully(originalHeadBuffer);
-            randomAccessFile.seek(baseFileInfo.originalFileLength - transferSize);
+            randomAccessFile.seek(fileInfo.originalFileLength - transferSize);
             randomAccessFile.readFully(originalFootBuffer);
             randomAccessFile.seek(0);
             modified = true;
-            writeProguardHeader(randomAccessFile, baseFileInfo, transferSize);
-            proguardOriginalTail(randomAccessFile, baseFileInfo, originalHeadBuffer, originalFootBuffer);
-            writeProguardFooter(randomAccessFile, input, baseFileInfo, cache);
-            baseFileInfo.encodeTime = FileConstants.getCurrentTime();
+            writeProguardHeader(randomAccessFile, fileInfo, transferSize);
+            proguardOriginalTail(randomAccessFile, fileInfo, originalHeadBuffer, originalFootBuffer);
+            writeProguardFooter(randomAccessFile, originalFile, fileInfo, cache);
+            cache.footBodyContent = originalFootBuffer;
+            cache.headBodyContent = originalHeadBuffer;
             success = true;
         } finally {
             if (!success && modified) {
                 // 加密出现异常，并且文件已经被修改过。需要恢复以前的初始态
                 randomAccessFile.seek(0);
                 randomAccessFile.write(originalHeadBuffer);
-                randomAccessFile.seek(baseFileInfo.originalFileLength - transferSize);
+                randomAccessFile.seek(fileInfo.originalFileLength - transferSize);
                 randomAccessFile.write(originalFootBuffer);
-                randomAccessFile.setLength(baseFileInfo.originalFileLength);
+                randomAccessFile.setLength(fileInfo.originalFileLength);
             }
             IOUtil.safeClose(randomAccessFile);
         }
-        return new TwoTuple<FileInfo, FileInfoContentCache>(baseFileInfo, cache);
+
+        return success;
     }
+
 
     /**
      * 检查是否是支持加密，就是查看文件头部的32个字节是否是{@link FileConstants#FILE_DOM}
@@ -110,7 +251,7 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
             if (mime.startsWith("image")) {
                 return createImageThumbnail(file, fileInfo);
             }
-            if(mime.startsWith("video")) {
+            if (mime.startsWith("video")) {
                 return ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MINI_KIND);
             }
         } catch (IOException exception) {
@@ -139,11 +280,6 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
         } finally {
             IOUtil.safeClose(inputStream);
         }
-    }
-
-    // 尽量的靠近200*200
-    public static Bitmap createVideoThumbnail(String path) {
-        return null;
     }
 
     // 尽量的靠近200*200
@@ -179,14 +315,15 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
         fileInfo.originalFileFooterRange = footRange;
 
         FileInfo.Range headRange = new FileInfo.Range();
-        footRange.offset = fileInfo.originalFileLength;
-        footRange.count = fileInfo.transferSize;
+        headRange.offset = fileInfo.originalFileLength;
+        headRange.count = fileInfo.transferSize;
         fileInfo.originalFileHeaderRange = headRange;
     }
 
     /**
      * 向文件的末尾写入一些额外的信息
-     * 包括额外的信息，thumbnail
+     * 包括额外的信息，加密时间，thumbnail
+     *
      * @param file
      * @param fileInfo
      */
@@ -195,7 +332,7 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
         randomAccessFile.seek(fileInfo.originalFileLength + fileInfo.transferSize);
         fileInfo.extraTag = getExtraMessage(file, fileInfo);// 额外的信息，1024字节
         randomAccessFile.write(fileInfo.extraTag);
-        randomAccessFile.write(ByteUtil.longToBytes(getCurrentTime())); // 写入加密时间，8字节
+        randomAccessFile.write(ByteUtil.longToBytes(fileInfo.encodeTime)); // 写入加密时间，8字节
         Bitmap thumbnail = createBitmap(file, fileInfo);
         cache.thumbnail = thumbnail;
         if (null == thumbnail) {
@@ -293,4 +430,10 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
         return fileInfo;
     }
 
+    // 单项，不可逆
+    public static String createProguardFileName(String originalFileName) {
+        Date date = new Date();
+
+        return String.valueOf(System.currentTimeMillis());
+    }
 }

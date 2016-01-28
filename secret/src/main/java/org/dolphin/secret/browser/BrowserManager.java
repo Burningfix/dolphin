@@ -7,8 +7,11 @@ import org.dolphin.job.Job;
 import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.FourTuple;
+import org.dolphin.job.tuple.ThreeTuple;
 import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.secret.core.FileEncodeOperator;
 import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.FileInfoContentCache;
 import org.dolphin.secret.core.FileInfoReaderOperator;
 
 import java.io.File;
@@ -20,7 +23,8 @@ import java.util.List;
  * Created by hanyanan on 2016/1/20.
  */
 public class BrowserManager {
-    public static File sRootDir = new File("/sdcard/");
+    private static final String TAG = "BrowserManager";
+    public static File sRootDir = new File("/sdcard/se");
     private static BrowserManager sInstance = null;
 
     public synchronized static BrowserManager getInstance() {
@@ -33,6 +37,7 @@ public class BrowserManager {
 
     private File rootDir;
     private Job scanerJob = null;
+    private Job encodeJob = null;
 
     private BrowserManager() {
         this.rootDir = sRootDir;
@@ -45,9 +50,9 @@ public class BrowserManager {
     private final List<FileChangeListener> videoFileChangeListeners = new ArrayList<FileChangeListener>();
     private final List<FileChangeListener> audioFileChangeListeners = new ArrayList<FileChangeListener>();
 
-    private final List<TwoTuple<String, FileInfo>> imageFileList = new ArrayList<TwoTuple<String, FileInfo>>();
-    private final List<TwoTuple<String, FileInfo>> videoFileList = new ArrayList<TwoTuple<String, FileInfo>>();
-    private final List<TwoTuple<String, FileInfo>> audioFileList = new ArrayList<TwoTuple<String, FileInfo>>();
+    private final List<FileInfo> imageFileList = new ArrayList<FileInfo>();
+    private final List<FileInfo> videoFileList = new ArrayList<FileInfo>();
+    private final List<FileInfo> audioFileList = new ArrayList<FileInfo>();
     private final List<String> leakedFileList = new ArrayList<String>();
 
     public void start() {
@@ -66,15 +71,15 @@ public class BrowserManager {
                 return Arrays.asList(files);
             }
         })
-                .then(new Operator<List<String>, FourTuple<List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<String>>>() {
+                .then(new Operator<List<String>, FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>>() {
                     @Override
-                    public FourTuple<List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<String>> operate(List<String> input) throws Throwable {
+                    public FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>> operate(List<String> input) throws Throwable {
                         if (null == input || input.isEmpty()) return null;
-                        List<TwoTuple<String, FileInfo>> images = new ArrayList<TwoTuple<String, FileInfo>>();
-                        List<TwoTuple<String, FileInfo>> videos = new ArrayList<TwoTuple<String, FileInfo>>();
-                        List<TwoTuple<String, FileInfo>> audios = new ArrayList<TwoTuple<String, FileInfo>>();
+                        List<FileInfo> images = new ArrayList<FileInfo>();
+                        List<FileInfo> videos = new ArrayList<FileInfo>();
+                        List<FileInfo> audios = new ArrayList<FileInfo>();
                         List<String> leaks = new ArrayList<String>();
-                        FileInfoReaderOperator fileInfoReaderOperator = new FileInfoReaderOperator();
+                        FileInfoReaderOperator fileInfoReaderOperator = FileInfoReaderOperator.DEFAULT;
                         for (String name : input) {
                             try {
                                 File file = new File(rootDir, name);
@@ -82,12 +87,13 @@ public class BrowserManager {
                                     continue;
                                 }
                                 FileInfo fileInfo = fileInfoReaderOperator.operate(file);
+                                Log.d(TAG, "Found File " + fileInfo.toString());
                                 if (fileInfo.originalMimeType.startsWith("image")) {
-                                    images.add(new TwoTuple<String, FileInfo>(name, fileInfo));
+                                    images.add(fileInfo);
                                 } else if (fileInfo.originalMimeType.startsWith("video")) {
-                                    videos.add(new TwoTuple<String, FileInfo>(name, fileInfo));
+                                    videos.add(fileInfo);
                                 } else if (fileInfo.originalMimeType.startsWith("audio")) {
-                                    audios.add(new TwoTuple<String, FileInfo>(name, fileInfo));
+                                    audios.add(fileInfo);
                                 } else {
                                     leaks.add(name);
                                 }
@@ -95,7 +101,7 @@ public class BrowserManager {
                                 leaks.add(name);
                             }
                         }
-                        return new FourTuple<List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<String>>(images, videos, audios, leaks);
+                        return new FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>(images, videos, audios, leaks);
                     }
                 })
                 .workOn(Schedulers.computation())
@@ -106,14 +112,14 @@ public class BrowserManager {
                         onScanFailed(throwable);
                     }
                 })
-                .result(new Job.Callback1<FourTuple<List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<String>>>() {
+                .result(new Job.Callback1<FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>>() {
                     @Override
-                    public void call(FourTuple<List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<TwoTuple<String, FileInfo>>, List<String>> result) {
+                    public void call(FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>> result) {
                         if (null == result) {
-                            onImageFileFound(result.value1);
-                            onVideoFileFound(result.value2);
-                            onAudioFileFound(result.value3);
-                            onLeakedFile(result.value4);
+                            onImageFileFound(null);
+                            onVideoFileFound(null);
+                            onAudioFileFound(null);
+                            onLeakedFile(null);
                             return;
                         }
                         onImageFileFound(result.value1);
@@ -125,7 +131,7 @@ public class BrowserManager {
                 .work();
     }
 
-    private synchronized void onImageFileFound(List<TwoTuple<String, FileInfo>> files) {
+    private synchronized void onImageFileFound(List<FileInfo> files) {
         if (null == files || files.isEmpty()) {
             return;
         }
@@ -133,7 +139,7 @@ public class BrowserManager {
         notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
     }
 
-    private synchronized void onVideoFileFound(List<TwoTuple<String, FileInfo>> files) {
+    private synchronized void onVideoFileFound(List<FileInfo> files) {
         if (null == files || files.isEmpty()) {
             return;
         }
@@ -141,7 +147,7 @@ public class BrowserManager {
         notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
     }
 
-    private synchronized void onAudioFileFound(List<TwoTuple<String, FileInfo>> files) {
+    private synchronized void onAudioFileFound(List<FileInfo> files) {
         if (null == files || files.isEmpty()) {
             return;
         }
@@ -153,13 +159,80 @@ public class BrowserManager {
         if (null == leakedFileList || leakedFileList.isEmpty()) {
             return;
         }
+
+        StringBuilder sb = new StringBuilder();
+        for (String fileName : leakedFileList) {
+            sb.append(fileName).append(" ");
+        }
+        Log.d(TAG, "Found leak file[" + sb.toString() + "]");
+
+        if (null != encodeJob) {
+            encodeJob.abort();
+            encodeJob = null;
+        }
+        encodeJob = new Job(leakedFileList);
+        encodeJob.then(new Operator<List<String>, List<TwoTuple<FileInfo, FileInfoContentCache>>>() {
+            @Override
+            public List<TwoTuple<FileInfo, FileInfoContentCache>> operate(List<String> input) throws Throwable {
+                if (null == input || input.isEmpty()) {
+                    return null;
+                }
+                FileEncodeOperator operator = new FileEncodeOperator();
+                List<TwoTuple<FileInfo, FileInfoContentCache>> res = new ArrayList<TwoTuple<FileInfo, FileInfoContentCache>>();
+                for (String fileName : input) {
+                    try {
+                        TwoTuple<FileInfo, FileInfoContentCache> tuple = operator.operate(new File(rootDir, fileName));
+                        res.add(new TwoTuple<FileInfo, FileInfoContentCache>(tuple.value1, tuple.value2));
+                        Log.i(TAG, "Encode file success: " + fileName);
+                    } catch (Throwable throwable) {
+                        throwable.printStackTrace();
+                        Log.w(TAG, "Failed encode file " + fileName);
+                    }
+                }
+                return res;
+            }
+        })
+                .workOn(Schedulers.computation())
+                .callbackOn(AndroidMainScheduler.INSTANCE)
+                .error(new Job.Callback2() {
+                    @Override
+                    public void call(Throwable throwable, Object[] unexpectedResult) {
+
+                    }
+                })
+                .result(new Job.Callback1<List<TwoTuple<FileInfo, FileInfoContentCache>>>() {
+                    @Override
+                    public void call(List<TwoTuple<FileInfo, FileInfoContentCache>> result) {
+                        if (null == result || result.isEmpty()) {
+                            return;
+                        }
+                        List<FileInfo> images = new ArrayList<FileInfo>();
+                        List<FileInfo> video = new ArrayList<FileInfo>();
+                        List<FileInfo> audio = new ArrayList<FileInfo>();
+
+                        for (TwoTuple<FileInfo, FileInfoContentCache> tuple : result) {
+                            CacheManager.getInstance().putCache(tuple.value1, tuple.value2);
+                            if (tuple.value1.originalMimeType.startsWith("image")) {
+                                images.add(tuple.value1);
+                            } else if (tuple.value1.originalMimeType.startsWith("video")) {
+                                video.add(tuple.value1);
+                            } else if (tuple.value1.originalMimeType.startsWith("audio")) {
+                                audio.add(tuple.value1);
+                            }
+                        }
+                        onImageFileFound(images);
+                        onVideoFileFound(video);
+                        onAudioFileFound(audio);
+                    }
+                })
+                .work();
     }
 
     private synchronized void onScanFailed(Throwable throwable) {
 
     }
 
-    public List<TwoTuple<String, FileInfo>> getImageFileList() {
+    public List<FileInfo> getImageFileList() {
         return imageFileList;
     }
 
@@ -207,7 +280,7 @@ public class BrowserManager {
         }
     }
 
-    private void notifyFileChanged(List<TwoTuple<String, FileInfo>> files, List<FileChangeListener> listeners) {
+    private void notifyFileChanged(List<FileInfo> files, List<FileChangeListener> listeners) {
         final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
         synchronized (BrowserManager.class) {
             imageFileChangeListeners.addAll(listeners);
@@ -219,6 +292,6 @@ public class BrowserManager {
 
 
     public interface FileChangeListener {
-        public void onFileList(List<TwoTuple<String, FileInfo>> files);
+        public void onFileList(List<FileInfo> files);
     }
 }

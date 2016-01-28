@@ -21,13 +21,11 @@ import java.util.List;
  * Created by yananh on 2016/1/23.
  */
 public class FilePage extends Fragment implements BrowserManager.FileChangeListener {
-    public static final File rootDir = new File("/sdcard/");
-
     public enum State {
         Normal,
         Selectable,
     }
-    private final List<TwoTuple<String, FileInfo>> fileList = new LinkedList<TwoTuple<String, FileInfo>>();
+    private final List<FileInfo> fileList = new LinkedList<FileInfo>();
 
     @Nullable
     @Override
@@ -52,7 +50,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     }
 
     @Override
-    public void onFileList(List<TwoTuple<String, FileInfo>> files) {
+    public void onFileList(List<FileInfo> files) {
         if(null != files) {
             fileList.addAll(files);
         }
@@ -78,8 +76,8 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             ThumbnailImageVIew imageVIew = new ThumbnailImageVIew(FilePage.this.getActivity());
-            TwoTuple<String, FileInfo> item = (TwoTuple<String, FileInfo>) getItem(position);
-            imageVIew.setFile(item.value1, item.value2);
+            FileInfo item = (FileInfo) getItem(position);
+            imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
             return imageVIew;
         }
     };

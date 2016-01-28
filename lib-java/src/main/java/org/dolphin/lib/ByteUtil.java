@@ -47,23 +47,6 @@ public class ByteUtil {
         return null;
     }
 
-    public static byte[] intToBytes(int i) {
-        byte[] result = new byte[4];
-        result[0] = (byte) ((i >> 24) & 0xFF);
-        result[1] = (byte) ((i >> 16) & 0xFF);
-        result[2] = (byte) ((i >> 8) & 0xFF);
-        result[3] = (byte) (i & 0xFF);
-        return result;
-    }
-
-    public static int bytesToInt(byte[] b, int offset) {
-        int value = 0;
-        for (int i = 0; i < 4; i++) {
-            int shift = (4 - 1 - i) * 8;
-            value += (b[i + offset] & 0x000000FF) << shift;
-        }
-        return value;
-    }
 
     public static byte[] floatToBytes(float f) {
         // 把float转换为byte[]
@@ -126,6 +109,48 @@ public class ByteUtil {
         return bytes;
     }
 
+    public static long bytesToLong(byte[] bytes) {
+        return bytesToLong(bytes, 0);
+    }
+
+    public static long bytesToLong(byte[] bytes, int offset) {
+        return (0xffL & (long) bytes[offset])
+                | (0xff00L & ((long) bytes[offset + 1] << 8))
+                | (0xff0000L & ((long) bytes[offset + 2] << 16))
+                | (0xff000000L & ((long) bytes[offset + 3] << 24))
+                | (0xff00000000L & ((long) bytes[offset + 4] << 32))
+                | (0xff0000000000L & ((long) bytes[offset + 5] << 40))
+                | (0xff000000000000L & ((long) bytes[offset + 6] << 48))
+                | (0xff00000000000000L & ((long) bytes[offset + 7] << 56));
+    }
+
+    public static int bytesToInt(byte[] bytes) {
+        return (0xff & bytes[0])
+                | (0xff00 & (bytes[1] << 8))
+                | (0xff0000 & (bytes[2] << 16))
+                | (0xff000000 & (bytes[3] << 24));
+    }
+
+    public static byte[] intToBytes(int i) {
+        byte[] result = new byte[4];
+//        result[0] = (byte) ((i >> 24) & 0xFF);
+//        result[1] = (byte) ((i >> 16) & 0xFF);
+//        result[2] = (byte) ((i >> 8) & 0xFF);
+//        result[3] = (byte) (i & 0xFF);
+        result[0] = (byte) (i & 0xff);
+        result[1] = (byte) ((i >> 8) & 0xff);
+        result[2] = (byte) ((i >> 16) & 0xff);
+        result[3] = (byte) ((i >> 24) & 0xff);
+        return result;
+    }
+
+    public static int bytesToInt(byte[] b, int offset) {
+        return (0xff & b[offset])
+                | (0xff00 & (b[offset + 1] << 8))
+                | (0xff0000 & (b[offset + 2] << 16))
+                | (0xff000000 & (b[offset + 3] << 24));
+    }
+
     public static byte[] doubleToBytes(double data) {
         long intBits = Double.doubleToLongBits(data);
         return longToBytes(intBits);
@@ -143,27 +168,6 @@ public class ByteUtil {
         return (char) ((0xff & bytes[0]) | (0xff00 & (bytes[1] << 8)));
     }
 
-    public static int bytesToInt(byte[] bytes) {
-        return (0xff & bytes[0])
-                | (0xff00 & (bytes[1] << 8))
-                | (0xff0000 & (bytes[2] << 16))
-                | (0xff000000 & (bytes[3] << 24));
-    }
-
-    public static long bytesToLong(byte[] bytes) {
-        return bytesToLong(bytes, 0);
-    }
-
-    public static long bytesToLong(byte[] bytes, int offset) {
-        return (0xffL & (long) bytes[offset])
-                | (0xff00L & ((long) bytes[offset + 1] << 8))
-                | (0xff0000L & ((long) bytes[offset + 2] << 16))
-                | (0xff000000L & ((long) bytes[offset + 3] << 24))
-                | (0xff00000000L & ((long) bytes[offset + 4] << 32))
-                | (0xff0000000000L & ((long) bytes[offset + 5] << 40))
-                | (0xff000000000000L & ((long) bytes[offset + 6] << 48))
-                | (0xff00000000000000L & ((long) bytes[offset + 7] << 56));
-    }
 
     public static float bytesToFloat(byte[] bytes) {
         return Float.intBitsToFloat(bytesToInt(bytes));

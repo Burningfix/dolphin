@@ -10,6 +10,7 @@ public class FileInfo {
     public long originalFileLength;
     public long originalModifyTimeStamp;
     public String originalFileName;
+    public String proguardFileName;
     public String originalMimeType;
     Range originalFileHeaderRange;
     Range originalFileFooterRange;
@@ -23,20 +24,33 @@ public class FileInfo {
     static class Range {
         public long offset;
         public int count;
+
+        @Override
+        public String toString() {
+            return "[offset: " + offset + ", count: " + count + "]";
+        }
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Dom: ").append(dom).append("\n");
-        sb.append("softwareVersion: ").append(softwareVersion).append("\n");
-        sb.append("encodeVersion: ").append(encodeVersion).append("\n");
-        sb.append("originalFileLength: ").append(originalFileLength).append("\n");
-        sb.append("originalModifyTimeStamp: ").append(originalModifyTimeStamp).append("\n");
-        sb.append("originalFileName: ").append(originalFileName).append("\n");
-        sb.append("originalMimeType: ").append(originalMimeType).append("\n");
-        sb.append("transferSize: ").append(transferSize).append("\n");
-        sb.append("encodeTime: ").append(encodeTime).append("\n");
+        sb.append("{\n\tDom: ").append(dom).append("\n");
+        sb.append("\tsoftwareVersion: ").append(softwareVersion).append("\n");
+        sb.append("\tencodeVersion: ").append(encodeVersion).append("\n");
+        sb.append("\toriginalFileLength: ").append(originalFileLength).append("\n");
+        sb.append("\toriginalModifyTimeStamp: ").append(originalModifyTimeStamp).append("\n");
+        sb.append("\toriginalFileName: ").append(originalFileName).append("\n");
+        sb.append("\tproguardFileName: ").append(proguardFileName).append("\n");
+        sb.append("\toriginalMimeType: ").append(originalMimeType).append("\n");
+        sb.append("\ttransferSize: ").append(transferSize).append("\n");
+        sb.append("\tencodeTime: ").append(encodeTime).append("\n");
+        sb.append("\toriginalFileHeaderRange: ").append(originalFileHeaderRange).append("\n");
+        sb.append("\toriginalFileFooterRange: ").append(originalFileFooterRange).append("\n");
+        sb.append("\tthumbnailRange: ").append(thumbnailRange).append("\n");
+        if (null != extraTag) {
+            sb.append("\textra Size: ").append(extraTag.length).append("\n");
+        }
+        sb.append("}");
         return sb.toString();
     }
 }

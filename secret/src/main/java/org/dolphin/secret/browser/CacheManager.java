@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.LruCache;
 
+import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
 
 import java.io.File;
@@ -90,11 +91,11 @@ public class CacheManager {
         }
     };
 
-    public synchronized void putCache(String path, FileInfoContentCache cache) {
-        lruCache.put(path, cache);
+    public synchronized void putCache(FileInfo fileInfo, FileInfoContentCache cache) {
+        lruCache.put(fileInfo.originalFileName, cache);
     }
 
-    public synchronized FileInfoContentCache getCache(String path) {
-        return lruCache.get(path);
+    public synchronized FileInfoContentCache getCache(FileInfo fileInfo) {
+        return lruCache.get(fileInfo.originalFileName);
     }
 }

@@ -188,8 +188,11 @@ public class ReadableFileInputStream extends InputStream {
 
     private FileInfoContentCache getContentCache() throws Throwable {
         if (null == contentCache) {
-            contentCache = FileConstants.createContentCache(file, getFileInfo());
-            CacheManager.getInstance().putCache(this.file.getPath(), contentCache);
+            contentCache = CacheManager.getInstance().getCache(getFileInfo());
+            if(null == contentCache) {
+                contentCache = FileConstants.createContentCache(file, getFileInfo());
+                CacheManager.getInstance().putCache(getFileInfo(), contentCache);
+            }
         }
 
         return contentCache;
@@ -197,7 +200,7 @@ public class ReadableFileInputStream extends InputStream {
 
     private FileInfo getFileInfo() throws Throwable {
         if (null == fileInfo) {
-            FileInfoReaderOperator operator = new FileInfoReaderOperator();
+            FileInfoReaderOperator operator = FileInfoReaderOperator.DEFAULT;
             fileInfo = operator.operate(file);
         }
         return fileInfo;
