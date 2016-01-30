@@ -16,6 +16,7 @@ import org.dolphin.secret.util.UnsupportEncode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -50,6 +51,10 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
             }
         } catch (Throwable throwable) {
             Log.e(TAG, "Encode file " + input.getName() + " Failed!");
+            // release cache
+            if (null != cache.thumbnail) {
+                cache.thumbnail.recycle();
+            }
             throw throwable;
         }
 
@@ -112,6 +117,7 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
         int thumbnailRangeCount = 0;
         cache.footBodyContent = null;
         int originalFileLength = (int) originalFile.length();
+        cache.thumbnail = createBitmap(originalFile, fileInfo);
         try {
             randomAccessFile = new RandomAccessFile(originalFile, "rw");
             byte[] dom = new byte[32];
@@ -131,12 +137,11 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
             outputStream.write(FileConstants.getMimeType(fileInfo.originalFileName)); // 原始文件类型
             outputStream.write(ByteUtil.intToBytes(fileInfo.transferSize)); // transferSize
             thumbnailRangeOffset = outputStream.size();
-            Bitmap thumbnail = createBitmap(originalFile, fileInfo);
-            if (null == thumbnail) {
+            if (null == cache.thumbnail) {
                 outputStream.write(ByteUtil.intToBytes(0)); // thumbnail大小
             } else {
                 ByteArrayOutputStream bitmapOutputStream = new ByteArrayOutputStream();
-                thumbnail.compress(Bitmap.CompressFormat.PNG, 100, bitmapOutputStream);
+                cache.thumbnail.compress(Bitmap.CompressFormat.PNG, 100, bitmapOutputStream);
                 byte[] bm = bitmapOutputStream.toByteArray();
                 outputStream.write(ByteUtil.intToBytes(bm.length)); // thumbnail大小
                 outputStream.write(bm); // thumbnail大小
@@ -148,6 +153,7 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
             randomAccessFile.readFully(body);
             outputStream.write(FileConstants.encode(body));
             modify = true;
+            randomAccessFile.seek(0);
             randomAccessFile.setLength(outputStream.size());
             randomAccessFile.write(outputStream.toByteArray());
             success = true;
@@ -159,13 +165,13 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
                 fileInfo.thumbnailRange.count = thumbnailRangeCount;
             }
             cache.footBodyContent = body;
-            cache.thumbnail = thumbnail;
         } finally {
             if (!success && modify) { //加密失败，恢复原始文件
                 randomAccessFile.seek(fileInfo.originalFileLength);
                 randomAccessFile.seek(0);
                 randomAccessFile.write(body);
             }
+            IOUtil.safeClose(randomAccessFile);
             IOUtil.safeClose(outputStream);
         }
         return success;
@@ -181,6 +187,7 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
         byte[] originalHeadBuffer = null;
         byte[] originalFootBuffer = null;
         int transferSize = fileInfo.transferSize;
+        cache.thumbnail = createBitmap(originalFile, fileInfo);
         try {
             randomAccessFile = new RandomAccessFile(originalFile, "rw");
             byte[] dom = new byte[32];
@@ -263,10 +270,10 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
 
     // 尽量的靠近200*200
     public static Bitmap createImageThumbnail(File file, FileInfo fileInfo) throws IOException {
-        ReadableFileInputStream inputStream = null;
+        FileInputStream inputStream = null;
         try {
-            inputStream = new ReadableFileInputStream(file, fileInfo);
-            inputStream.mark(0);
+            inputStream = new FileInputStream(file);
+//            inputStream.mark(0);
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             BitmapFactory.decodeStream(inputStream, null, options);
@@ -274,7 +281,9 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
             int h = options.outHeight;
             options.inJustDecodeBounds = false;
             options.inSampleSize = FileConstants.calculateSampleSize(w, h, 200, 200);
-            inputStream.reset();
+//            inputStream.reset();
+            IOUtil.safeClose(inputStream);
+            inputStream = new FileInputStream(file);
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream, null, options);
             return bitmap;
         } finally {
@@ -333,13 +342,11 @@ public class FileEncodeOperator implements Operator<File, TwoTuple<FileInfo, Fil
         fileInfo.extraTag = getExtraMessage(file, fileInfo);// 额外的信息，1024字节
         randomAccessFile.write(fileInfo.extraTag);
         randomAccessFile.write(ByteUtil.longToBytes(fileInfo.encodeTime)); // 写入加密时间，8字节
-        Bitmap thumbnail = createBitmap(file, fileInfo);
-        cache.thumbnail = thumbnail;
-        if (null == thumbnail) {
+        if (null == cache.thumbnail) {
             randomAccessFile.write(ByteUtil.intToBytes(0));
         } else {
             ByteArrayOutputStream bitmapOutputStream = new ByteArrayOutputStream();
-            thumbnail.compress(Bitmap.CompressFormat.PNG, 100, bitmapOutputStream);
+            cache.thumbnail.compress(Bitmap.CompressFormat.PNG, 100, bitmapOutputStream);
             byte[] bm = bitmapOutputStream.toByteArray();
             randomAccessFile.write(bm);
             randomAccessFile.write(ByteUtil.intToBytes(bm.length));

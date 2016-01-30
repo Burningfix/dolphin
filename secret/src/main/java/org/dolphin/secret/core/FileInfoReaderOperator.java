@@ -38,6 +38,7 @@ public class FileInfoReaderOperator implements Operator<File, FileInfo> {
                     fileInfo.thumbnailRange = new FileInfo.Range();
                     fileInfo.thumbnailRange.count = thumbnailSize;
                     fileInfo.thumbnailRange.offset = currPosition;
+                    randomAccessFile.skipBytes(thumbnailSize);
                 }
                 fileInfo.encodeTime = FileConstants.readLong(randomAccessFile, -1);
                 fileInfo.extraTag = FileConstants.readBytes(randomAccessFile, -1, 1024);
@@ -100,7 +101,7 @@ public class FileInfoReaderOperator implements Operator<File, FileInfo> {
     // 读取原始的文件名称
     public static void readOriginalFileName(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
         randomAccessFile.seek(64);
-        int length = randomAccessFile.readInt();
+        int length = FileConstants.readInt(randomAccessFile, -1);
         byte[] buff = new byte[length];
         randomAccessFile.readFully(buff);
         outFileInfo.originalFileName = new String(buff);
@@ -139,9 +140,7 @@ public class FileInfoReaderOperator implements Operator<File, FileInfo> {
 
     // 读取thumbnail的信息
     private static void readThumbnailRange(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
-        byte[] buff = new byte[4];
-        randomAccessFile.seek(randomAccessFile.length() - 4); // 最后面4字节决定thumbnail的长度
-        int length = ByteUtil.bytesToInt(buff);
+        int length = FileConstants.readInt(randomAccessFile, randomAccessFile.length() - 4);
         if (length <= 0) return;
         FileInfo.Range thumbnailRange = new FileInfo.Range();
         thumbnailRange.offset = randomAccessFile.length() - 4 - length;

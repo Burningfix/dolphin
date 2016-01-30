@@ -6,21 +6,30 @@ import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
 import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.lib.IOUtil;
+import org.dolphin.secret.core.FileDecodeOperator;
 import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ReadableFileInputStream;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
  * Created by yananh on 2016/1/23.
  */
-public class FilePage extends Fragment implements BrowserManager.FileChangeListener {
+public class FilePage extends Fragment implements BrowserManager.FileChangeListener, AdapterView.OnItemClickListener {
+
+
     public enum State {
         Normal,
         Selectable,
@@ -32,6 +41,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         listView = new ListView(inflater.getContext());
         listView.setAdapter(listAdapter);
+        listView.setOnItemClickListener(this);
         this.fileList.addAll(BrowserManager.getInstance().getImageFileList());
         notifyStateChange();
         BrowserManager.getInstance().addImageFileChangeListener(this);
@@ -57,6 +67,27 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         notifyStateChange();
     }
 
+    @Override
+    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+        FileInfo item = (FileInfo) listAdapter.getItem(position);
+        FileDecodeOperator fileDecodeOperator = new FileDecodeOperator();
+        File file = new File(BrowserManager.sRootDir, item.proguardFileName);
+        try {
+            File outFile = new File(BrowserManager.sRootDir, "out");
+            if(!outFile.exists()) outFile.createNewFile();
+            ReadableFileInputStream inputStream = new ReadableFileInputStream(file, item);
+            FileOutputStream fileOutputStream = new FileOutputStream(outFile);
+            IOUtil.copy(inputStream, fileOutputStream);
+            IOUtil.safeClose(inputStream);
+            IOUtil.safeClose(fileOutputStream);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     private BaseAdapter listAdapter = new BaseAdapter() {
         @Override
         public int getCount() {
@@ -79,6 +110,10 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
             FileInfo item = (FileInfo) getItem(position);
             imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
             return imageVIew;
+//            TextView tv = new TextView(FilePage.this.getActivity());
+//            FileInfo item = (FileInfo) getItem(position);
+//            tv.setText(item.originalFileName);
+//            return tv;
         }
     };
 }

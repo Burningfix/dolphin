@@ -94,8 +94,6 @@ public class BrowserManager {
                                     videos.add(fileInfo);
                                 } else if (fileInfo.originalMimeType.startsWith("audio")) {
                                     audios.add(fileInfo);
-                                } else {
-                                    leaks.add(name);
                                 }
                             } catch (Throwable e) {
                                 leaks.add(name);

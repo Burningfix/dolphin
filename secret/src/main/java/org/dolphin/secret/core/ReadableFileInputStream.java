@@ -189,7 +189,7 @@ public class ReadableFileInputStream extends InputStream {
     private FileInfoContentCache getContentCache() throws Throwable {
         if (null == contentCache) {
             contentCache = CacheManager.getInstance().getCache(getFileInfo());
-            if(null == contentCache) {
+            if (null == contentCache) {
                 contentCache = FileConstants.createContentCache(file, getFileInfo());
                 CacheManager.getInstance().putCache(getFileInfo(), contentCache);
             }
