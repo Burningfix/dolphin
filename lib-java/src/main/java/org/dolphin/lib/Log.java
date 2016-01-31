@@ -53,7 +53,7 @@ public class Log {
         }
     }
 
-    public void w(String tag, String msg, String ... obj) {
+    public void w(String tag, String msg, Object ... obj) {
         if (null != wLevelLogOut) {
             printLog(wLevelLogOut, "W", tag, String.format(msg, obj));
         }

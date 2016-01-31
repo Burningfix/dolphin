@@ -12,6 +12,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.lib.DateUtils;
 import org.dolphin.lib.FileInfoUtil;
 import org.dolphin.lib.IOUtil;
 import org.dolphin.secret.R;
@@ -87,8 +88,8 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
+
 
     private BaseAdapter listAdapter = new BaseAdapter() {
         @Override
@@ -113,9 +114,13 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
             ThumbnailImageVIew imageVIew = (ThumbnailImageVIew) root.findViewById(R.id.thumbnail);
             TextView nameView = (TextView) root.findViewById(R.id.name);
             TextView size = (TextView) root.findViewById(R.id.size);
+            TextView duration = (TextView) root.findViewById(R.id.duration);
+            TextView encodeTime = (TextView) root.findViewById(R.id.encode_time);
             imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
             nameView.setText(item.originalFileName);
             size.setText(FileInfoUtil.sizeString(item.originalFileLength));
+            duration.setText("12:22:22");
+            encodeTime.setText(DateUtils.formatDate(item.encodeTime));
             return root;
         }
     };

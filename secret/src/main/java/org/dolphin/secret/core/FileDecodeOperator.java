@@ -23,6 +23,7 @@ public class FileDecodeOperator implements Operator<File, FileInfo> {
             throwable.printStackTrace();
             throw throwable;
         }
+        boolean success = false;
         if (fileInfo.encodeVersion == 1) { // 局部加密，大文件模式
             byte[] proguardHeadData = new byte[fileInfo.transferSize];
             byte[] proguardFootData = new byte[fileInfo.transferSize];
@@ -34,6 +35,7 @@ public class FileDecodeOperator implements Operator<File, FileInfo> {
                 randomAccessFile.seek(fileInfo.originalFileFooterRange.offset);
                 randomAccessFile.write(FileConstants.decode(proguardFootData));
                 randomAccessFile.setLength(fileInfo.originalFileLength);
+                success = true;
             } finally {
                 IOUtil.safeClose(randomAccessFile);
             }
@@ -47,8 +49,13 @@ public class FileDecodeOperator implements Operator<File, FileInfo> {
                 randomAccessFile.seek(0);
                 randomAccessFile.write(FileConstants.decode(body));
                 randomAccessFile.setLength(fileInfo.originalFileLength);
+                success = true;
             } finally {
                 IOUtil.safeClose(randomAccessFile);
+            }
+
+            if (success) {
+                // TODO
             }
         }
         return fileInfo;

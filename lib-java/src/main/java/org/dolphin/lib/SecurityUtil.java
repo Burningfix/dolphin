@@ -293,7 +293,7 @@ public class SecurityUtil {
     }
 
     public static void main(String[] argv) {
-        String src = "TestTest";
+        String src = "TestTestTestTest";
         String key = "12345678";
         System.out.println("Raw data: " + src + "\tKey: " + key);
         System.out.println("SHA1 data: " + sha1(src));

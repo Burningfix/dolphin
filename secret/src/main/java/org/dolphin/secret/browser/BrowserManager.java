@@ -17,6 +17,7 @@ import org.dolphin.secret.core.FileInfoReaderOperator;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -288,6 +289,13 @@ public class BrowserManager {
         }
     }
 
+    public static final Comparator<FileInfo> fileInfoComparator = new Comparator<FileInfo>() {
+        @Override
+        public int compare(FileInfo lhs, FileInfo rhs) {
+            long res = lhs.encodeTime - rhs.encodeTime;
+            return res < 0 ? -1 : 1;
+        }
+    };
 
     public interface FileChangeListener {
         public void onFileList(List<FileInfo> files);

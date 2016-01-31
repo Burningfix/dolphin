@@ -140,6 +140,14 @@ public final class DateUtils {
         return formatter.format(date);
     }
 
+
+    public static String formatDate(long millTimes) {
+        Date date = new Date();
+        date.setTime(millTimes);
+        final SimpleDateFormat formatter = DateFormatHolder.formatFor( "yyyy-MM-dd HH:mm");
+        return formatter.format(date);
+    }
+
     /**
      * Clears thread-local variable containing {@link java.text.DateFormat} cache.
      *
