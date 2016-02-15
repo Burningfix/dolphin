@@ -11,6 +11,13 @@ import java.io.File;
  * Created by hanyanan on 2016/1/26.
  */
 public class SecretApplication extends Application {
+    private static SecretApplication instance = null;
+    public static SecretApplication getInstance(){
+        return instance;
+    }
+
+
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -25,5 +32,6 @@ public class SecretApplication extends Application {
     @Override
     protected void attachBaseContext(Context base) {
         super.attachBaseContext(base);
+        instance = this;
     }
 }

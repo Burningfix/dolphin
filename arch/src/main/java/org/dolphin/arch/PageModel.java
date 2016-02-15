@@ -4,6 +4,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import org.dolphin.job.Job;
+import org.dolphin.job.Operator;
 import org.dolphin.lib.ValueReference;
 
 import java.io.Serializable;
@@ -26,6 +27,7 @@ public class PageModel implements Parcelable {
      */
     private PageView bindedPageView;
 
+
     /**
      * 从server下载的数据直接就是可以使用的json，直接转化成指定的viewModel type。
      *
@@ -33,7 +35,7 @@ public class PageModel implements Parcelable {
      * @param params         请求的参数
      * @param viewModelClazz 转化的最终的json
      */
-    public <T extends PageViewModel> void registerQuest(String url, Map<String, String> params, String token, Class<T> viewModelClazz) {
+    public <T extends PageViewModel> void registerQuest(String token, String url, Map<String, String> params, Class<T> viewModelClazz) {
         final ValueReference<Job> delayValueRef = new ValueReference<Job>();
         Job.Callback1<T> responseCallback = new Job.Callback1<T>() {
             @Override
@@ -49,6 +51,22 @@ public class PageModel implements Parcelable {
         delayValueRef.setValue(job);
         remainderJobs.add(job);
     }
+
+//    public <T extends PageViewModel> void register(String token, Operator<? extends Serializable, T> operator) {
+//        final ValueReference<Job> delayValueRef = new ValueReference<Job>();
+//        Job.Callback1<T> responseCallback = new Job.Callback1<T>() {
+//            @Override
+//            public void call(T result) {
+//                bindedPageView.foundViewModel(result);
+//                Job job = delayValueRef.getValue();
+//                if (null != job) {
+//                    remainderJobs.remove(job);
+//                }
+//            }
+//        };
+//        delayValueRef.setValue(job);
+//        remainderJobs.add(job);
+//    }
 
     public <T extends PageView> void setBindPageView(T bindPageView) {
         this.bindedPageView = bindPageView;
@@ -67,6 +85,10 @@ public class PageModel implements Parcelable {
             job.abort();
         }
     }
+
+//    public final boolean supportReuse() {
+//        return false;
+//    }
 
     @Override
     public int describeContents() {

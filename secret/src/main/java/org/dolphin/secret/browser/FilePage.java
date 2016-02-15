@@ -1,9 +1,12 @@
 package org.dolphin.secret.browser;
 
 import android.app.Fragment;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -31,6 +34,12 @@ import java.util.List;
  * Created by yananh on 2016/1/23.
  */
 public class FilePage extends Fragment implements BrowserManager.FileChangeListener, AdapterView.OnItemClickListener {
+    protected final int CATCH_PHOTO_REQUEST_CODE = 1234;
+    protected final int VIDEO_REQUEST_CODE = 1235;
+    protected final int AUDIO_REQUEST_CODE = 1236;
+    protected final int IMPORT_PHOTO_REQUEST_CODE = 1344;
+
+
     public enum State {
         Normal,
         Selectable,
@@ -47,6 +56,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         this.fileList.addAll(BrowserManager.getInstance().getImageFileList());
         notifyStateChange();
         BrowserManager.getInstance().addImageFileChangeListener(this);
+        setHasOptionsMenu(true);
         return listView;
     }
 
@@ -73,7 +83,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         FileInfo item = (FileInfo) listAdapter.getItem(position);
-        FileDecodeOperator fileDecodeOperator = new FileDecodeOperator();
+        onItemClicked(item);
         File file = new File(BrowserManager.sRootDir, item.proguardFileName);
         try {
             File outFile = new File(BrowserManager.sRootDir, "out");
@@ -88,6 +98,10 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    protected void onItemClicked(FileInfo fileInfo) {
+        // TODO
     }
 
 
@@ -124,4 +138,19 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
             return root;
         }
     };
+
+    @Override
+    public void onPrepareOptionsMenu(Menu menu) {
+        super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+    }
 }

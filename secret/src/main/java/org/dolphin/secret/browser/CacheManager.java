@@ -98,4 +98,10 @@ public class CacheManager {
     public synchronized FileInfoContentCache getCache(FileInfo fileInfo) {
         return lruCache.get(fileInfo.originalFileName);
     }
+
+
+    public synchronized void remove(FileInfo fileInfo){
+        lruCache.remove(fileInfo.originalFileName);
+    }
+
 }

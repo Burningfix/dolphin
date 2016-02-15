@@ -19,6 +19,29 @@ public class FileInfo {
     public long encodeTime;
     public byte[] extraTag;
 
+    public boolean isVideoType() {
+        if (null == originalMimeType) return false;
+        if (originalMimeType.startsWith("video")) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isPhotoType() {
+        if (null == originalMimeType) return false;
+        if (originalMimeType.startsWith("image")) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isAudioType() {
+        if (null == originalMimeType) return false;
+        if (originalMimeType.startsWith("audio")) {
+            return true;
+        }
+        return false;
+    }
 
     // 闭区间
     static class Range {

@@ -7,12 +7,14 @@ import org.dolphin.job.Job;
 import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.FourTuple;
-import org.dolphin.job.tuple.ThreeTuple;
 import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.secret.core.DeleteFileOperator;
+import org.dolphin.secret.core.EncodeLeakFileOperator;
 import org.dolphin.secret.core.FileEncodeOperator;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
 import org.dolphin.secret.core.FileInfoReaderOperator;
+import org.dolphin.secret.core.TraversalFolderOperator;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -24,7 +26,7 @@ import java.util.List;
  * Created by hanyanan on 2016/1/20.
  */
 public class BrowserManager {
-    private static final String TAG = "BrowserManager";
+    public static final String TAG = "BrowserManager";
     public static File sRootDir = new File("/sdcard/se");
     private static BrowserManager sInstance = null;
 
@@ -61,48 +63,15 @@ public class BrowserManager {
         videoFileList.clear();
         audioFileList.clear();
         leakedFileList.clear();
+        scan();
+    }
+
+    private synchronized void scan() {
         if (scanerJob != null) {
             scanerJob.abort();
         }
         scanerJob = new Job(this.rootDir);
-        scanerJob.then(new Operator<File, List<String>>() {
-            public List<String> operate(File input) throws Throwable {
-                String[] files = input.list();
-                if (null == files || files.length <= 0) return null;
-                return Arrays.asList(files);
-            }
-        })
-                .then(new Operator<List<String>, FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>>() {
-                    @Override
-                    public FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>> operate(List<String> input) throws Throwable {
-                        if (null == input || input.isEmpty()) return null;
-                        List<FileInfo> images = new ArrayList<FileInfo>();
-                        List<FileInfo> videos = new ArrayList<FileInfo>();
-                        List<FileInfo> audios = new ArrayList<FileInfo>();
-                        List<String> leaks = new ArrayList<String>();
-                        FileInfoReaderOperator fileInfoReaderOperator = FileInfoReaderOperator.DEFAULT;
-                        for (String name : input) {
-                            try {
-                                File file = new File(rootDir, name);
-                                if (!file.exists() || !file.isFile() || file.isHidden() || file.isDirectory()) {
-                                    continue;
-                                }
-                                FileInfo fileInfo = fileInfoReaderOperator.operate(file);
-                                Log.d(TAG, "Found File " + fileInfo.toString());
-                                if (fileInfo.originalMimeType.startsWith("image")) {
-                                    images.add(fileInfo);
-                                } else if (fileInfo.originalMimeType.startsWith("video")) {
-                                    videos.add(fileInfo);
-                                } else if (fileInfo.originalMimeType.startsWith("audio")) {
-                                    audios.add(fileInfo);
-                                }
-                            } catch (Throwable e) {
-                                leaks.add(name);
-                            }
-                        }
-                        return new FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>(images, videos, audios, leaks);
-                    }
-                })
+        scanerJob.then(new TraversalFolderOperator())
                 .workOn(Schedulers.computation())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
@@ -119,15 +88,83 @@ public class BrowserManager {
                             onVideoFileFound(null);
                             onAudioFileFound(null);
                             onLeakedFile(null);
-                            return;
+                        } else {
+                            onImageFileFound(result.value1);
+                            onVideoFileFound(result.value2);
+                            onAudioFileFound(result.value3);
+                            onLeakedFile(result.value4);
                         }
-                        onImageFileFound(result.value1);
-                        onVideoFileFound(result.value2);
-                        onAudioFileFound(result.value3);
-                        onLeakedFile(result.value4);
                     }
                 })
                 .work();
+    }
+
+    public synchronized void addFile(String fileName) {
+        if (scanerJob != null) {
+            scanerJob.abort();
+        }
+        scanerJob = new Job(new File(this.rootDir, fileName));
+        scanerJob.then(new FileEncodeOperator())
+                .workOn(Schedulers.computation())
+                .callbackOn(AndroidMainScheduler.INSTANCE)
+                .error(new Job.Callback2() {
+                    @Override
+                    public void call(Throwable throwable, Object[] unexpectedResult) {
+                        // TODO
+                    }
+                })
+                .result(new Job.Callback1<TwoTuple<FileInfo, FileInfoContentCache>>() {
+                    @Override
+                    public void call(TwoTuple<FileInfo, FileInfoContentCache> result) {
+                        if (null == result || null == result.value1) {
+                            // do nothing
+                        } else {
+                            onFileFound(result.value1);
+                        }
+                    }
+                })
+                .work();
+    }
+
+    public synchronized void removeFile(FileInfo fileInfo) {
+        new Job(fileInfo)
+                .then(new DeleteFileOperator(rootDir))
+                .workOn(Schedulers.computation())
+                .work();
+        CacheManager.getInstance().remove(fileInfo);
+        if (fileInfo.isPhotoType()) {
+            this.imageFileList.remove(fileInfo);
+            notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
+            return;
+        }
+        if (fileInfo.isAudioType()) {
+            this.audioFileList.remove(fileInfo);
+            notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
+            return;
+        }
+        if (fileInfo.isVideoType()) {
+            this.videoFileList.remove(fileInfo);
+            notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
+            return;
+        }
+    }
+
+    private synchronized void onFileFound(FileInfo fileInfo) {
+        if (null == fileInfo) return;
+        List<FileInfo> files = new ArrayList<>();
+        files.add(fileInfo);
+        if (fileInfo.isPhotoType()) {
+            onImageFileFound(files);
+            return;
+        }
+        if (fileInfo.isVideoType()) {
+            onVideoFileFound(files);
+            return;
+        }
+        if (fileInfo.isAudioType()) {
+            onAudioFileFound(files);
+            return;
+        }
     }
 
     private synchronized void onImageFileFound(List<FileInfo> files) {
@@ -170,27 +207,7 @@ public class BrowserManager {
             encodeJob = null;
         }
         encodeJob = new Job(leakedFileList);
-        encodeJob.then(new Operator<List<String>, List<TwoTuple<FileInfo, FileInfoContentCache>>>() {
-            @Override
-            public List<TwoTuple<FileInfo, FileInfoContentCache>> operate(List<String> input) throws Throwable {
-                if (null == input || input.isEmpty()) {
-                    return null;
-                }
-                FileEncodeOperator operator = new FileEncodeOperator();
-                List<TwoTuple<FileInfo, FileInfoContentCache>> res = new ArrayList<TwoTuple<FileInfo, FileInfoContentCache>>();
-                for (String fileName : input) {
-                    try {
-                        TwoTuple<FileInfo, FileInfoContentCache> tuple = operator.operate(new File(rootDir, fileName));
-                        res.add(new TwoTuple<FileInfo, FileInfoContentCache>(tuple.value1, tuple.value2));
-                        Log.i(TAG, "Encode file success: " + fileName);
-                    } catch (Throwable throwable) {
-                        throwable.printStackTrace();
-                        Log.w(TAG, "Failed encode file " + fileName);
-                    }
-                }
-                return res;
-            }
-        })
+        encodeJob.then(new EncodeLeakFileOperator(rootDir))
                 .workOn(Schedulers.computation())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
@@ -211,11 +228,11 @@ public class BrowserManager {
 
                         for (TwoTuple<FileInfo, FileInfoContentCache> tuple : result) {
                             CacheManager.getInstance().putCache(tuple.value1, tuple.value2);
-                            if (tuple.value1.originalMimeType.startsWith("image")) {
+                            if (tuple.value1.isPhotoType()) {
                                 images.add(tuple.value1);
-                            } else if (tuple.value1.originalMimeType.startsWith("video")) {
+                            } else if (tuple.value1.isVideoType()) {
                                 video.add(tuple.value1);
-                            } else if (tuple.value1.originalMimeType.startsWith("audio")) {
+                            } else if (tuple.value1.isAudioType()) {
                                 audio.add(tuple.value1);
                             }
                         }
@@ -228,7 +245,7 @@ public class BrowserManager {
     }
 
     private synchronized void onScanFailed(Throwable throwable) {
-
+        // TODO
     }
 
     public List<FileInfo> getImageFileList() {
