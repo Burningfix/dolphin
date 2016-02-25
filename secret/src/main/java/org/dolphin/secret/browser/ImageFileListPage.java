@@ -88,7 +88,7 @@ public class ImageFileListPage extends FilePage {
         Intent pickIntent = new Intent();
         pickIntent.setType("image/*");
         pickIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        pickIntent.setAction(Intent.ACTION_GET_CONTENT);
+        pickIntent.setAction("android.intent.action.PICK");
         startActivityForResult(Intent.createChooser(pickIntent, "Select Picture"), IMPORT_PHOTO_REQUEST_CODE);
     }
 }
