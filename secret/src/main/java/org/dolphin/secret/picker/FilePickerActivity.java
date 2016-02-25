@@ -1,7 +1,5 @@
 package org.dolphin.secret.picker;
 
-import android.app.ActionBar;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -13,12 +11,10 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.GridView;
-import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.dolphin.secret.R;
 
-import java.io.File;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +33,7 @@ public class FilePickerActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.file_picker);
+        setContentView(R.layout.file_picker_layout);
 
         contentView = (GridView) findViewById(R.id.file_pick_gridview);
         submitView = findViewById(R.id.file_pick_submit);
