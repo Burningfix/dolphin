@@ -1,6 +1,8 @@
 package org.dolphin.secret.picker;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -15,6 +17,7 @@ import android.widget.TextView;
 
 import org.dolphin.secret.R;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -58,7 +61,15 @@ public class FilePickerActivity extends AppCompatActivity {
         Toolbar myToolbar = (Toolbar) findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
         onCheckChanged();
-        submitView.setTranslationY(120);
+
+        submitView.animate().translationY(300).setDuration(200).start();
+    }
+
+    public void submit(View view) {
+        Intent intent = new Intent();
+        intent.putParcelableArrayListExtra("data", new ArrayList<Parcelable>(selectedFile));
+        setResult(RESULT_OK, intent);
+        this.finish();
     }
 
     @Override
@@ -71,18 +82,18 @@ public class FilePickerActivity extends AppCompatActivity {
         setTitle(getString(R.string.selection, selectedFile.size()));
         if (selectedFile.size() > 0) {
             // display submit view
-            if(submitView.getTranslationY() <= 0) {
-                return ;
+            if (submitView.getTranslationY() <= 0) {
+                return;
             }
             submitView.animate().translationY(0).setDuration(200).start();
             return;
         }
 
-        //hide submit view
+        // hide submit view
         if (submitView.getTranslationY() > 0) {
             return;
         }
-        submitView.animate().translationY(submitView.getHeight()).setDuration(200).start();
+        submitView.animate().translationY(300).setDuration(200).start();
     }
 
     @Override

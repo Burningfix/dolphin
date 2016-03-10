@@ -3,7 +3,10 @@ package org.dolphin.secret.browser;
 import android.app.Fragment;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.support.annotation.Nullable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -57,6 +60,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         notifyStateChange();
         BrowserManager.getInstance().addImageFileChangeListener(this);
         setHasOptionsMenu(true);
+        Log.d("DDD", "FilePage onCreateView");
         return listView;
     }
 
@@ -138,11 +142,6 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
             return root;
         }
     };
-
-    @Override
-    public void onPrepareOptionsMenu(Menu menu) {
-        super.onPrepareOptionsMenu(menu);
-    }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {

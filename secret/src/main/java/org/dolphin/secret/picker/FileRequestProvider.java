@@ -4,6 +4,8 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.provider.MediaStore;
 
 import org.dolphin.lib.ValueUtil;
@@ -39,15 +41,15 @@ public class FileRequestProvider {
                 MediaStore.MediaColumns.MIME_TYPE,
                 MediaStore.MediaColumns.WIDTH,
                 MediaStore.MediaColumns.HEIGHT};
-        // 条件
-        String selection = MediaStore.Images.Media.MIME_TYPE + "=?";
-        // 条件值(這裡的参数不是图片的格式，而是标准，所有不要改动)
-        String[] selectionArgs = {this.mimeType};
+//        // 条件
+//        String selection = MediaStore.Images.Media.MIME_TYPE + " like ? ";
+//        // 条件值(這裡的参数不是图片的格式，而是标准，所有不要改动)
+//        String[] selectionArgs = {"image"};
         // 排序
         String sortOrder = MediaStore.MediaColumns.DATE_MODIFIED + " desc";
         List<FileEntry> fileEntryList = new LinkedList<FileEntry>();
         // 查询sd卡上的图片
-        Cursor cursor = contentResolver.query(uri, projection, selection, selectionArgs, sortOrder);
+        Cursor cursor = contentResolver.query(uri, projection, null, null, sortOrder);
         try {
             if (cursor != null) {
                 cursor.moveToFirst();
@@ -81,7 +83,7 @@ public class FileRequestProvider {
     }
 
 
-    public static class FileEntry {
+    public static class FileEntry implements Parcelable {
         public String id;
         public String name;
         public String path;
@@ -92,9 +94,55 @@ public class FileRequestProvider {
         public int width;
         public int height;
 
+        protected FileEntry() {
+
+        }
+
+        private FileEntry(Parcel in) {
+            id = in.readString();
+            name = in.readString();
+            path = in.readString();
+            size = in.readLong();
+            lastModifyTime = in.readLong();
+            mimeType = in.readString();
+            isFolder = in.readByte() > 0 ? true : false;
+            width = in.readInt();
+            height = in.readInt();
+        }
+
+        public static final Creator<FileEntry> CREATOR = new Creator<FileEntry>() {
+            @Override
+            public FileEntry createFromParcel(Parcel in) {
+                return new FileEntry(in);
+            }
+
+            @Override
+            public FileEntry[] newArray(int size) {
+                return new FileEntry[size];
+            }
+        };
+
         @Override
         public int hashCode() {
             return id.hashCode();
+        }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeString(id);
+            dest.writeString(name);
+            dest.writeString(path);
+            dest.writeLong(size);
+            dest.writeLong(lastModifyTime);
+            dest.writeString(mimeType);
+            dest.writeByte((byte) (isFolder ? 1 : 0));
+            dest.writeInt(width);
+            dest.writeInt(height);
         }
     }
 }

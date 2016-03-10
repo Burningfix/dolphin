@@ -1,47 +1,25 @@
 package org.dolphin.secret;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.net.Uri;
-import android.provider.MediaStore;
-import android.support.v4.app.FragmentManager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.dolphin.job.tuple.TwoTuple;
-import org.dolphin.lib.IOUtil;
 import org.dolphin.secret.browser.BrowserManager;
 import org.dolphin.secret.browser.FilePage;
 import org.dolphin.secret.browser.ImageFileListPage;
 import org.dolphin.secret.browser.NavigationDrawerFragment;
 import org.dolphin.secret.core.FileDecodeOperator;
 import org.dolphin.secret.core.FileEncodeOperator;
-import org.dolphin.secret.core.FileInfo;
-import org.dolphin.secret.core.FileInfoContentCache;
-import org.dolphin.secret.core.ReadableFileInputStream;
 import org.dolphin.secret.util.ContextUtils;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Calendar;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks {
     public static final String TAG = "MainActivity";
@@ -55,6 +33,7 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
      * Fragment managing the behaviors, interactions and presentation of the navigation drawer.
      */
     private NavigationDrawerFragment mNavigationDrawerFragment;
+    private Fragment currentFragment = null;
 
     private int position = -1;
 
@@ -64,11 +43,6 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
-        FilePage filePage = new FilePage();
-        getFragmentManager().beginTransaction().replace(R.id.container, filePage).commit();
-
 
         mNavigationDrawerFragment = (NavigationDrawerFragment)
                 getSupportFragmentManager().findFragmentById(R.id.navigation_drawer);
@@ -93,42 +67,9 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
         }
     }
 
-//    @Override
-//    public void onNavigationDrawerItemSelected(int position) {
-//        // update the main content by replacing fragments
-//        this.position = position;
-//        FragmentManager fragmentManager = getSupportFragmentManager();
-////        fragmentManager.beginTransaction()
-////                .replace(R.id.container, PlaceholderFragment.newInstance(position + 1))
-////                .commit();
-//        Bundle bundle = new Bundle();
-//        switch (position) {
-//            case 0:
-//                bundle.putInt("type",FileListFragment.VIDEO);
-//                break;
-//            case 1:
-//                bundle.putInt("type",FileListFragment.AUDIO);
-//                break;
-//            case 2:
-//                bundle.putInt("type",FileListFragment.PHOTO);
-//                break;
-//            case 3:
-//                bundle.putInt("type",FileListFragment.DOC);
-//                break;
-//            case 4:
-//                bundle.putInt("type",FileListFragment.BIN);
-//                break;
-//        }
-//        fileListFragment.setArguments(bundle);
-//        fragmentManager.beginTransaction().replace(R.id.container, fileListFragment) .commit();
-//    }
-//
-//    @Override
-//    public boolean onCreateOptionsMenu(Menu menu) {
-//        // Inflate the menu; this adds items to the action bar if it is present.
-//        getMenuInflater().inflate(R.menu.menu_main, menu);
-//        return false;
-//    }
+    public NavigationDrawerFragment getNavigationDrawerFragment(){
+        return mNavigationDrawerFragment;
+    }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -232,7 +173,8 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
 
     @Override
     public void onNavigationDrawerItemSelected(int position) {
-        if(this.position == position) {
+        Log.d("DDD", "MainActivity onNavigationDrawerItemSelected " + position);
+        if (this.position == position) {
             Log.d(TAG, "Select the same position, do nothing!");
             return;
         }
@@ -249,6 +191,7 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
                 fragment = new ImageFileListPage();
                 break;
         }
+        currentFragment = fragment;
         getFragmentManager().beginTransaction().replace(R.id.container, fragment).commit();
         invalidateOptionsMenu();
     }
