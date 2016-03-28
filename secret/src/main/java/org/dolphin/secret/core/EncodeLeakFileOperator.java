@@ -27,7 +27,7 @@ public class EncodeLeakFileOperator implements Operator<List<String>, List<TwoTu
         if (null == input || input.isEmpty()) {
             return null;
         }
-        FileEncodeOperator operator = new FileEncodeOperator();
+        ObscureOperator operator = new ObscureOperator();
         List<TwoTuple<FileInfo, FileInfoContentCache>> res = new ArrayList<TwoTuple<FileInfo, FileInfoContentCache>>();
         for (String fileName : input) {
             try {

@@ -16,6 +16,13 @@ import java.util.List;
 public class TraversalFolderOperator implements Operator<File,
         FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>> {
     public static final String TAG = "TraversalFolderOperator";
+
+    /**
+     * 遍历出目录下所有的文件
+     * @param rootDir 需要遍历的根目录，需要是一个文件夹
+     * @return  按照顺序依次返回该目录下的图片，视频，音频，问加密文件
+     * @throws Throwable
+     */
     @Override
     public FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>> operate(File rootDir) throws Throwable {
         String[] files = rootDir.list();

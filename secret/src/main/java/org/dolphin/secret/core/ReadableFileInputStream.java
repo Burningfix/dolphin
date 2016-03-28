@@ -22,12 +22,16 @@ public class ReadableFileInputStream extends InputStream {
     private RandomAccessFile randomAccessFile;
     private int markLimit = 0;
 
-    public ReadableFileInputStream(File file) throws FileNotFoundException {
+    public ReadableFileInputStream(File file) throws Throwable {
         this.file = file;
         randomAccessFile = new RandomAccessFile(file, "r");
+        this.fileInfo = getFileInfo();
     }
 
     public ReadableFileInputStream(File file, FileInfo fileInfo) throws FileNotFoundException {
+        if (null == fileInfo) {
+            throw new NullPointerException("");
+        }
         this.file = file;
         this.fileInfo = fileInfo;
         randomAccessFile = new RandomAccessFile(file, "r");

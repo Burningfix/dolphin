@@ -4,21 +4,18 @@ import android.util.Log;
 
 import org.dolphin.arch.AndroidMainScheduler;
 import org.dolphin.job.Job;
-import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.FourTuple;
 import org.dolphin.job.tuple.TwoTuple;
 import org.dolphin.secret.core.DeleteFileOperator;
 import org.dolphin.secret.core.EncodeLeakFileOperator;
-import org.dolphin.secret.core.FileEncodeOperator;
+import org.dolphin.secret.core.ObscureOperator;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
-import org.dolphin.secret.core.FileInfoReaderOperator;
 import org.dolphin.secret.core.TraversalFolderOperator;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -99,12 +96,21 @@ public class BrowserManager {
                 .work();
     }
 
-    public synchronized void addFile(String fileName) {
+    /**
+     * 导入新的文件，需要扫描整个目录完成之后才能继续进行, 该文件必须是未加密的文件
+     * <br>
+     *     操作步骤：
+     *     1. 如果在扫描中，则会等待等待扫描结束再添加
+     *     2. 删除已经存在的相同文件，则删除原有的
+     *     3. 加密文件，添加到仓库中
+     * @param fileName
+     */
+    public synchronized void obscureFile(String fileName) {
         if (scanerJob != null) {
             scanerJob.abort();
         }
         scanerJob = new Job(new File(this.rootDir, fileName));
-        scanerJob.then(new FileEncodeOperator())
+        scanerJob.then(new ObscureOperator())
                 .workOn(Schedulers.computation())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
@@ -126,7 +132,7 @@ public class BrowserManager {
                 .work();
     }
 
-    public synchronized void removeFile(FileInfo fileInfo) {
+    public synchronized void deleteFile(FileInfo fileInfo) {
         new Job(fileInfo)
                 .then(new DeleteFileOperator(rootDir))
                 .workOn(Schedulers.computation())
@@ -147,48 +153,6 @@ public class BrowserManager {
             notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
             return;
         }
-    }
-
-    private synchronized void onFileFound(FileInfo fileInfo) {
-        if (null == fileInfo) return;
-        List<FileInfo> files = new ArrayList<>();
-        files.add(fileInfo);
-        if (fileInfo.isPhotoType()) {
-            onImageFileFound(files);
-            return;
-        }
-        if (fileInfo.isVideoType()) {
-            onVideoFileFound(files);
-            return;
-        }
-        if (fileInfo.isAudioType()) {
-            onAudioFileFound(files);
-            return;
-        }
-    }
-
-    private synchronized void onImageFileFound(List<FileInfo> files) {
-        if (null == files || files.isEmpty()) {
-            return;
-        }
-        this.imageFileList.addAll(files);
-        notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
-    }
-
-    private synchronized void onVideoFileFound(List<FileInfo> files) {
-        if (null == files || files.isEmpty()) {
-            return;
-        }
-        this.videoFileList.addAll(files);
-        notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
-    }
-
-    private synchronized void onAudioFileFound(List<FileInfo> files) {
-        if (null == files || files.isEmpty()) {
-            return;
-        }
-        this.audioFileList.addAll(files);
-        notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
     }
 
     private synchronized void onLeakedFile(List<String> leakedFileList) {
@@ -244,19 +208,64 @@ public class BrowserManager {
                 .work();
     }
 
-    private synchronized void onScanFailed(Throwable throwable) {
-        // TODO
-    }
-
-    public List<FileInfo> getImageFileList() {
-        return imageFileList;
-    }
 
     public void stop() {
         if (scanerJob != null) {
             scanerJob.abort();
             scanerJob = null;
         }
+    }
+
+
+    private synchronized void onFileFound(FileInfo fileInfo) {
+        if (null == fileInfo) return;
+        List<FileInfo> files = new ArrayList<>();
+        files.add(fileInfo);
+        if (fileInfo.isPhotoType()) {
+            onImageFileFound(files);
+            return;
+        }
+        if (fileInfo.isVideoType()) {
+            onVideoFileFound(files);
+            return;
+        }
+        if (fileInfo.isAudioType()) {
+            onAudioFileFound(files);
+            return;
+        }
+    }
+
+    private synchronized void onImageFileFound(List<FileInfo> files) {
+        if (null == files || files.isEmpty()) {
+            return;
+        }
+        this.imageFileList.addAll(files);
+        notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
+    }
+
+    private synchronized void onVideoFileFound(List<FileInfo> files) {
+        if (null == files || files.isEmpty()) {
+            return;
+        }
+        this.videoFileList.addAll(files);
+        notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
+    }
+
+    private synchronized void onAudioFileFound(List<FileInfo> files) {
+        if (null == files || files.isEmpty()) {
+            return;
+        }
+        this.audioFileList.addAll(files);
+        notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
+    }
+
+
+    private synchronized void onScanFailed(Throwable throwable) {
+        // TODO
+    }
+
+    public List<FileInfo> getImageFileList() {
+        return imageFileList;
     }
 
 
@@ -315,6 +324,6 @@ public class BrowserManager {
     };
 
     public interface FileChangeListener {
-        public void onFileList(List<FileInfo> files);
+        void onFileList(List<FileInfo> files);
     }
 }

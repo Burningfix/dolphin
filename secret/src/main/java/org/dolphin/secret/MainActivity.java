@@ -7,24 +7,22 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.dolphin.secret.browser.BrowserManager;
-import org.dolphin.secret.browser.FilePage;
 import org.dolphin.secret.browser.ImageFileListPage;
 import org.dolphin.secret.browser.NavigationDrawerFragment;
-import org.dolphin.secret.core.FileDecodeOperator;
-import org.dolphin.secret.core.FileEncodeOperator;
+import org.dolphin.secret.core.DeobscureOperator;
+import org.dolphin.secret.core.ObscureOperator;
 import org.dolphin.secret.util.ContextUtils;
 
 public class MainActivity extends AppCompatActivity implements NavigationDrawerFragment.NavigationDrawerCallbacks {
     public static final String TAG = "MainActivity";
-    public static final FileEncodeOperator fileEncodeOperator = new FileEncodeOperator();
-    public static final FileDecodeOperator fileDecodeOperator = new FileDecodeOperator();
+    public static final ObscureOperator OBSCURE_OPERATOR = new ObscureOperator();
+    public static final DeobscureOperator DEOBSCURE_OPERATOR = new DeobscureOperator();
     TextView tv1, tv2;
     ImageView imageView;
     private BrowserManager browserManager;

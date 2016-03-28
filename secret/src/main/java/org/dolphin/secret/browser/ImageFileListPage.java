@@ -100,7 +100,9 @@ public class ImageFileListPage extends FilePage {
             // 导入成功
             if(null == data) return ;
             List<FileRequestProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
-            if(null == selectedFileList || selectedFileList.isEmpty()) return ;
+            if(null == selectedFileList || selectedFileList.isEmpty()) {
+                return ;
+            }
 
         }
     }
