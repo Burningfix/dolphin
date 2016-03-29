@@ -20,7 +20,7 @@ public class TraversalFolderOperator implements Operator<File,
     /**
      * 遍历出目录下所有的文件
      * @param rootDir 需要遍历的根目录，需要是一个文件夹
-     * @return  按照顺序依次返回该目录下的图片，视频，音频，问加密文件
+     * @return  按照顺序依次返回该目录下的图片，视频，音频，未加密文件
      * @throws Throwable
      */
     @Override

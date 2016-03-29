@@ -2,17 +2,20 @@ package org.dolphin.secret.browser;
 
 import android.util.Log;
 
+import org.apache.commons.io.FileUtils;
 import org.dolphin.arch.AndroidMainScheduler;
 import org.dolphin.job.Job;
+import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.FourTuple;
 import org.dolphin.job.tuple.TwoTuple;
 import org.dolphin.secret.core.DeleteFileOperator;
 import org.dolphin.secret.core.EncodeLeakFileOperator;
-import org.dolphin.secret.core.ObscureOperator;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
+import org.dolphin.secret.core.ObscureOperator;
 import org.dolphin.secret.core.TraversalFolderOperator;
+import org.dolphin.secret.picker.FileRequestProvider;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -55,15 +58,11 @@ public class BrowserManager {
     private final List<FileInfo> audioFileList = new ArrayList<FileInfo>();
     private final List<String> leakedFileList = new ArrayList<String>();
 
-    public void start() {
+    private synchronized void startScan() {
         imageFileList.clear();
         videoFileList.clear();
         audioFileList.clear();
         leakedFileList.clear();
-        scan();
-    }
-
-    private synchronized void scan() {
         if (scanerJob != null) {
             scanerJob.abort();
         }
@@ -99,18 +98,16 @@ public class BrowserManager {
     /**
      * 导入新的文件，需要扫描整个目录完成之后才能继续进行, 该文件必须是未加密的文件
      * <br>
-     *     操作步骤：
-     *     1. 如果在扫描中，则会等待等待扫描结束再添加
-     *     2. 删除已经存在的相同文件，则删除原有的
-     *     3. 加密文件，添加到仓库中
+     * 操作步骤：
+     * 1. 如果在扫描中，则会等待等待扫描结束再添加
+     * 2. 删除已经存在的相同文件，则删除原有的
+     * 3. 加密文件，添加到仓库中
+     *
      * @param fileName
      */
     public synchronized void obscureFile(String fileName) {
-        if (scanerJob != null) {
-            scanerJob.abort();
-        }
-        scanerJob = new Job(new File(this.rootDir, fileName));
-        scanerJob.then(new ObscureOperator())
+        new Job(new File(this.rootDir, fileName))
+                .then(new ObscureOperator())
                 .workOn(Schedulers.computation())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
@@ -214,6 +211,28 @@ public class BrowserManager {
             scanerJob.abort();
             scanerJob = null;
         }
+    }
+
+
+    public void importFiles(final List<FileRequestProvider.FileEntry> fileList, final ImportCallback callback) {
+        for (final FileRequestProvider.FileEntry fileEntry : fileList) {
+            new Job(fileEntry)
+                    .workOn(Schedulers.computation())
+                    .callbackOn(AndroidMainScheduler.INSTANCE)
+                    .then(new Operator<FileRequestProvider.FileEntry, String>(){
+                        @Override
+                        public String operate(FileRequestProvider.FileEntry input) throws Throwable {
+                            FileUtils.moveFileToDirectory(new File(fileEntry.path), rootDir, true);
+                            return null;
+                        }
+                    })
+                    .work();
+
+
+        }
+
+
+        return;
     }
 
 
