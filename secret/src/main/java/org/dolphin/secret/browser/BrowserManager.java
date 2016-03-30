@@ -68,7 +68,7 @@ public class BrowserManager {
         }
         scanerJob = new Job(this.rootDir);
         scanerJob.then(new TraversalFolderOperator())
-                .workOn(Schedulers.computation())
+                .workOn(Schedulers.io())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
                     @Override
@@ -108,7 +108,7 @@ public class BrowserManager {
     public synchronized void obscureFile(String fileName) {
         new Job(new File(this.rootDir, fileName))
                 .then(new ObscureOperator())
-                .workOn(Schedulers.computation())
+                .workOn(Schedulers.io())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
                     @Override
@@ -132,7 +132,7 @@ public class BrowserManager {
     public synchronized void deleteFile(FileInfo fileInfo) {
         new Job(fileInfo)
                 .then(new DeleteFileOperator(rootDir))
-                .workOn(Schedulers.computation())
+                .workOn(Schedulers.io())
                 .work();
         CacheManager.getInstance().remove(fileInfo);
         if (fileInfo.isPhotoType()) {
@@ -169,7 +169,7 @@ public class BrowserManager {
         }
         encodeJob = new Job(leakedFileList);
         encodeJob.then(new EncodeLeakFileOperator(rootDir))
-                .workOn(Schedulers.computation())
+                .workOn(Schedulers.io())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
                     @Override
@@ -216,19 +216,37 @@ public class BrowserManager {
 
     public void importFiles(final List<FileRequestProvider.FileEntry> fileList, final ImportCallback callback) {
         for (final FileRequestProvider.FileEntry fileEntry : fileList) {
+            File originalFile = new File(fileEntry.path);
+            File destFile = new File(rootDir, originalFile.getName());
             new Job(fileEntry)
-                    .workOn(Schedulers.computation())
+                    .workOn(Schedulers.io())
                     .callbackOn(AndroidMainScheduler.INSTANCE)
-                    .then(new Operator<FileRequestProvider.FileEntry, String>(){
+                    .then(new Operator<FileRequestProvider.FileEntry, File>() {
                         @Override
-                        public String operate(FileRequestProvider.FileEntry input) throws Throwable {
-                            FileUtils.moveFileToDirectory(new File(fileEntry.path), rootDir, true);
-                            return null;
+                        public File operate(FileRequestProvider.FileEntry input) throws Throwable {
+
+                            FileUtils.moveFile(originalFile, destFile);
+                            return destFile;
+                        }
+                    })
+                    .then(ObscureOperator.INSTANCE)
+                    .result(new Job.Callback1<TwoTuple<FileInfo, FileInfoContentCache>>() {
+                        @Override
+                        public void call(TwoTuple<FileInfo, FileInfoContentCache> result) {
+                            if (null == result || null == result.value1) {
+                                // do nothing
+                            } else {
+                                callback.onImportSucced(fileEntry.path, result.value1);
+                            }
+                        }
+                    })
+                    .error(new Job.Callback2() {
+                        @Override
+                        public void call(Throwable throwable, Object[] unexpectedResult) {
+                            callback.onImportFailed(fileEntry.path, throwable);
                         }
                     })
                     .work();
-
-
         }
 
 
@@ -251,6 +269,34 @@ public class BrowserManager {
         if (fileInfo.isAudioType()) {
             onAudioFileFound(files);
             return;
+        }
+    }
+
+    synchronized void onFileListFound(List<FileInfo> obscureFileList) {
+        if (null == obscureFileList || obscureFileList.isEmpty()) {
+            return;
+        }
+        final List<FileInfo> images = new ArrayList<FileInfo>();
+        final List<FileInfo> videos = new ArrayList<FileInfo>();
+        final List<FileInfo> audios = new ArrayList<FileInfo>();
+        for (FileInfo fileInfo : obscureFileList) {
+            if (fileInfo.isPhotoType()) {
+                images.add(fileInfo);
+            } else if (fileInfo.isVideoType()) {
+                videos.add(fileInfo);
+            } else if (fileInfo.isAudioType()) {
+                audios.add(fileInfo);
+            }
+        }
+
+        if (!images.isEmpty()) {
+            onImageFileFound(images);
+        }
+        if (!videos.isEmpty()) {
+            onVideoFileFound(videos);
+        }
+        if (!audios.isEmpty()) {
+            onAudioFileFound(audios);
         }
     }
 

@@ -28,6 +28,7 @@ import java.util.Date;
  */
 public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileInfoContentCache>> {
     public static final String TAG = "ObscureOperator";
+    public static final ObscureOperator INSTANCE = new ObscureOperator();
 
     /**
      * 加密文件，并返回加密后的文件信息
