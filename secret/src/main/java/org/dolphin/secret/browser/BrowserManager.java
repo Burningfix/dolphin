@@ -58,7 +58,7 @@ public class BrowserManager {
     private final List<FileInfo> audioFileList = new ArrayList<FileInfo>();
     private final List<String> leakedFileList = new ArrayList<String>();
 
-    private synchronized void startScan() {
+    public synchronized void startScan() {
         imageFileList.clear();
         videoFileList.clear();
         audioFileList.clear();
@@ -216,15 +216,14 @@ public class BrowserManager {
 
     public void importFiles(final List<FileRequestProvider.FileEntry> fileList, final ImportCallback callback) {
         for (final FileRequestProvider.FileEntry fileEntry : fileList) {
-            File originalFile = new File(fileEntry.path);
-            File destFile = new File(rootDir, originalFile.getName());
+            final File originalFile = new File(fileEntry.path);
+            final File destFile = new File(rootDir, originalFile.getName());
             new Job(fileEntry)
                     .workOn(Schedulers.io())
                     .callbackOn(AndroidMainScheduler.INSTANCE)
                     .then(new Operator<FileRequestProvider.FileEntry, File>() {
                         @Override
                         public File operate(FileRequestProvider.FileEntry input) throws Throwable {
-
                             FileUtils.moveFile(originalFile, destFile);
                             return destFile;
                         }

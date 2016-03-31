@@ -5,9 +5,11 @@ import android.content.Intent;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.text.format.DateFormat;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import org.dolphin.lib.ValueUtil;
 import org.dolphin.secret.MainActivity;
@@ -94,7 +96,7 @@ public class ImageFileListPage extends FilePage {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == CATCH_PHOTO_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             if (!ValueUtil.isEmpty(lastCreateFileName)) {
-                BrowserManager.getInstance().addFile(lastCreateFileName);
+                BrowserManager.getInstance().obscureFile(lastCreateFileName);
             }
         }else if(IMPORT_PHOTO_REQUEST_CODE == requestCode && resultCode == Activity.RESULT_OK){
             // 导入成功
@@ -103,7 +105,20 @@ public class ImageFileListPage extends FilePage {
             if(null == selectedFileList || selectedFileList.isEmpty()) {
                 return ;
             }
+            BrowserManager.getInstance().importFiles(selectedFileList, new ImportCallback() {
+                @Override
+                public void onImportSucced(String originalPath, FileInfo obscurePath) {
+                    Toast.makeText(getActivity(), "import file " + originalPath+" success", Toast.LENGTH_SHORT).show();
+                    Log.d("import", "onImportSucced "+originalPath+" To " + obscurePath);
+                    BrowserManager.getInstance().onFileListFound(null);
+                }
 
+                @Override
+                public void onImportFailed(String originalPath, Throwable error) {
+                    Toast.makeText(getActivity(), "import file " + originalPath+" failed", Toast.LENGTH_SHORT).show();
+                    Log.d("import", "onImportFailed "+originalPath+" To " + error);
+                }
+            });
         }
     }
 }

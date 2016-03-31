@@ -21,7 +21,7 @@ public class SecretApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        BrowserManager.getInstance().start();
+        BrowserManager.getInstance().startScan();
     }
 
     @Override
