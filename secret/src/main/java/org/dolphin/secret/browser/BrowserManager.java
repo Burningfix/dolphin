@@ -225,6 +225,7 @@ public class BrowserManager {
                         @Override
                         public File operate(FileRequestProvider.FileEntry input) throws Throwable {
                             FileUtils.moveFile(originalFile, destFile);
+                            Thread.sleep(3000);
                             return destFile;
                         }
                     })
@@ -253,7 +254,7 @@ public class BrowserManager {
     }
 
 
-    private synchronized void onFileFound(FileInfo fileInfo) {
+    synchronized void onFileFound(FileInfo fileInfo) {
         if (null == fileInfo) return;
         List<FileInfo> files = new ArrayList<>();
         files.add(fileInfo);

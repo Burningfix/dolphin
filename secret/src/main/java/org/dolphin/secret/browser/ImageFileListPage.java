@@ -1,6 +1,7 @@
 package org.dolphin.secret.browser;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.provider.MediaStore;
@@ -98,25 +99,49 @@ public class ImageFileListPage extends FilePage {
             if (!ValueUtil.isEmpty(lastCreateFileName)) {
                 BrowserManager.getInstance().obscureFile(lastCreateFileName);
             }
-        }else if(IMPORT_PHOTO_REQUEST_CODE == requestCode && resultCode == Activity.RESULT_OK){
+        } else if (IMPORT_PHOTO_REQUEST_CODE == requestCode && resultCode == Activity.RESULT_OK) {
             // 导入成功
-            if(null == data) return ;
+            if (null == data) return;
             List<FileRequestProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
-            if(null == selectedFileList || selectedFileList.isEmpty()) {
-                return ;
+            if (null == selectedFileList || selectedFileList.isEmpty()) {
+                return;
             }
+            final int count = selectedFileList.size();
+            final ProgressDialog progressDialog = new ProgressDialog(getActivity());
+            progressDialog.setTitle("Progress");
+            progressDialog.setMessage("Progress");
+            progressDialog.setIndeterminate(true);
+            progressDialog.setCancelable(false);
+            progressDialog.setMax(count);
+            progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+            progressDialog.show();
             BrowserManager.getInstance().importFiles(selectedFileList, new ImportCallback() {
+                private final int totalCount = count;
+                private int currFinished = 0;
+
                 @Override
                 public void onImportSucced(String originalPath, FileInfo obscurePath) {
-                    Toast.makeText(getActivity(), "import file " + originalPath+" success", Toast.LENGTH_SHORT).show();
-                    Log.d("import", "onImportSucced "+originalPath+" To " + obscurePath);
-                    BrowserManager.getInstance().onFileListFound(null);
+                    Toast.makeText(getActivity(), "import file " + originalPath + " success", Toast.LENGTH_SHORT).show();
+                    Log.d("import", "onImportSucced " + originalPath + " To " + obscurePath);
+                    BrowserManager.getInstance().onFileFound(obscurePath);
+                    progressDialog.setMessage(originalPath);
+                    ++currFinished;
+                    progressDialog.incrementProgressBy(1);
+                    if (currFinished == totalCount) {
+                        progressDialog.dismiss();
+                    }
                 }
 
                 @Override
                 public void onImportFailed(String originalPath, Throwable error) {
-                    Toast.makeText(getActivity(), "import file " + originalPath+" failed", Toast.LENGTH_SHORT).show();
-                    Log.d("import", "onImportFailed "+originalPath+" To " + error);
+                    Toast.makeText(getActivity(), "import file " + originalPath + " failed", Toast.LENGTH_SHORT).show();
+                    Log.d("import", "onImportFailed " + originalPath + " To " + error);
+                    progressDialog.setMessage(originalPath);
+                    ++currFinished;
+                    progressDialog.incrementProgressBy(1);
+                    if (currFinished == totalCount) {
+                        progressDialog.dismiss();
+                    }
                 }
             });
         }
