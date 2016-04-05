@@ -1,5 +1,6 @@
 package org.dolphin.secret.browser;
 
+import android.media.MediaScannerConnection;
 import android.util.Log;
 
 import org.apache.commons.io.FileUtils;
@@ -9,6 +10,7 @@ import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.FourTuple;
 import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.core.DeleteFileOperator;
 import org.dolphin.secret.core.EncodeLeakFileOperator;
 import org.dolphin.secret.core.FileInfo;
@@ -225,6 +227,8 @@ public class BrowserManager {
                         @Override
                         public File operate(FileRequestProvider.FileEntry input) throws Throwable {
                             FileUtils.moveFile(originalFile, destFile);
+                            MediaScannerConnection.scanFile(SecretApplication.getInstance(),
+                                    new String[]{originalFile.getAbsolutePath()}, null, null);
                             Thread.sleep(3000);
                             return destFile;
                         }
