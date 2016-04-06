@@ -7,24 +7,20 @@ import java.util.regex.Pattern;
 
 /**
  * 提供与文件信息相关的静态工具函数。
- * @author		uestc.Mobius <mobius@toraleap.com>
- * @version	2010.1025
  */
 public class FileInfoUtil {
-
-    private FileInfoUtil() { }
-
     /**
-     * 获取给定文件名的主文件名名部分
-     * @param filename	源文件名
+     * 获取给定文件名的主文件名名部分，例如aaa/aa/123123.binx则返回的是123123
+     *
+     * @param nameOrPath 源文件名或者源文件路径
      * @return 源文件名的主文件名名部分(不含路径及扩展名)
      */
-    public static String mainName(String filename) {
-        int start = filename.lastIndexOf("/");
-        int stop = filename.lastIndexOf(".");
-        if (stop < start) stop = filename.length();
+    public static String mainName(String nameOrPath) {
+        int start = nameOrPath.lastIndexOf("/");
+        int stop = nameOrPath.lastIndexOf(".");
+        if (stop < start) stop = nameOrPath.length();
         if (start >= 0) {
-            return filename.substring(start + 1, stop);
+            return nameOrPath.substring(start + 1, stop);
         } else {
             return "";
         }
@@ -32,50 +28,54 @@ public class FileInfoUtil {
 
     /**
      * 获取给定文件名的扩展名部分
-     * @param filename	源文件名
+     *
+     * @param nameOrPath 源文件名或者路径
      * @return 源文件名的扩展名部分(不含小数点)
      */
-    public static String extension(String filename) {
-        int start = filename.lastIndexOf("/");
-        int stop = filename.lastIndexOf(".");
-        if (stop < start || stop >= filename.length() - 1) return "";
-        else return filename.substring(stop + 1, filename.length());
+    public static String extension(String nameOrPath) {
+        int start = nameOrPath.lastIndexOf("/");
+        int stop = nameOrPath.lastIndexOf(".");
+        if (stop < start || stop >= nameOrPath.length() - 1) return "";
+        else return nameOrPath.substring(stop + 1, nameOrPath.length());
     }
 
     /**
      * 获取给定文件名的 MIME 类型
-     * @param filename	源文件名
+     *
+     * @param nameOrPath 源文件名或者文件路径
      * @return 源文件名的 MIME 类型
      */
-    public static String mimeType(String filename) {
-        String ext = extension(filename);
+    public static String mimeType(String nameOrPath) {
+        String ext = extension(nameOrPath);
         String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
         return (mime == null) ? "*.*" : mime;
     }
 
     /**
      * 获取文件长度的智能可读字符串形式。
-     * @param size	文件字节长度
-     * @return	文件长度的字符串表示
+     *
+     * @param size 文件字节长度
+     * @return 文件长度的字符串表示
      */
-    public static String sizeString(long size) {
+    public static String formatSize(long size) {
         if (size < 1024)
             return String.format("%d B", size);
         else if (size < 1024 * 1024)
-            return String.format("%.2f KB", (double)size / 1024);
+            return String.format("%.2f KB", (double) size / 1024);
         else if (size < 1024 * 1024 * 1024)
-            return String.format("%.2f MB", (double)size / (1024 * 1024));
+            return String.format("%.2f MB", (double) size / (1024 * 1024));
         else if (size < 1024L * 1024 * 1024 * 1024)
-            return String.format("%.2f GB", (double)size / (1024 * 1024 * 1024));
+            return String.format("%.2f GB", (double) size / (1024 * 1024 * 1024));
         else
-            return String.format("%.2f EB", (double)size / (1024L * 1024 * 1024 * 1024));
+            return String.format("%.2f EB", (double) size / (1024L * 1024 * 1024 * 1024));
     }
 
     /**
      * 从文件长度的字符串形式转换为字节数表示。
-     * @param sizeString	文件长度的字符串表示
-     * @return	文件字节长度
-     * @throws ParseException	给定字符串不是支持的形式，解析失败
+     *
+     * @param sizeString 文件长度的字符串表示
+     * @return 文件字节长度
+     * @throws ParseException 给定字符串不是支持的形式，解析失败
      */
     public static long stringToSize(String sizeString) throws ParseException {
         Pattern pattern = Pattern.compile("(-?\\d+\\.?\\d*)([\\w]{0,2})", Pattern.CASE_INSENSITIVE);
@@ -84,15 +84,15 @@ public class FileInfoUtil {
             double baseSize = Double.parseDouble(matcher.group(1));
             String unit = matcher.group(2).toLowerCase();
             if (unit.equals("b") || unit.length() == 0) {
-                return (long)baseSize;
+                return (long) baseSize;
             } else if (unit.equals("k") || unit.equals("kb")) {
-                return (long)(baseSize * 1024);
+                return (long) (baseSize * 1024);
             } else if (unit.equals("m") || unit.equals("mb")) {
-                return (long)(baseSize * (1024 * 1024));
+                return (long) (baseSize * (1024 * 1024));
             } else if (unit.equals("g") || unit.equals("gb")) {
-                return (long)(baseSize * (1024 * 1024 * 1024));
+                return (long) (baseSize * (1024 * 1024 * 1024));
             } else if (unit.equals("e") || unit.equals("eb")) {
-                return (long)(baseSize * (1024L * 1024 * 1024 * 1024));
+                return (long) (baseSize * (1024L * 1024 * 1024 * 1024));
             }
         }
         throw new ParseException(sizeString, 0);
@@ -134,10 +134,11 @@ public class FileInfoUtil {
 //    }
 
     /**
-     * 从时间跨度的字符串形式转换为毫秒数表示。
-     * @param timeString	时间跨度的字符串表示
-     * @return	毫秒数
-     * @throws ParseException	给定字符串不是支持的形式，解析失败
+     * 从时间跨度的字符串形式转换为毫秒数表示。<br>
+     * 输入为123213， 123123d，123123h，123123w，123123m，123123y
+     * @param timeString 时间跨度的字符串表示
+     * @return 毫秒数
+     * @throws ParseException 给定字符串不是支持的形式，解析失败
      */
     public static long timespanToMillis(String timeString) throws ParseException {
         Pattern pattern = Pattern.compile("(-?\\d+\\.?\\d*)([\\w]{0,1})", Pattern.CASE_INSENSITIVE);
@@ -146,15 +147,15 @@ public class FileInfoUtil {
             double baseMillis = Double.parseDouble(matcher.group(1));
             String unit = matcher.group(2).toLowerCase();
             if (unit.equals("d") || unit.length() == 0) {
-                return (long)(baseMillis * 1000 * 3600 * 24);
+                return (long) (baseMillis * 1000 * 3600 * 24);
             } else if (unit.equals("h")) {
-                return (long)(baseMillis * 1000 * 3600);
+                return (long) (baseMillis * 1000 * 3600);
             } else if (unit.equals("w")) {
-                return (long)(baseMillis * 1000 * 3600 * 24 * 7);
+                return (long) (baseMillis * 1000 * 3600 * 24 * 7);
             } else if (unit.equals("m")) {
-                return (long)(baseMillis * 1000 * 3600 * 24 * 30);
+                return (long) (baseMillis * 1000 * 3600 * 24 * 30);
             } else if (unit.equals("y")) {
-                return (long)(baseMillis * 1000 * 3600 * 24 * 360);
+                return (long) (baseMillis * 1000 * 3600 * 24 * 360);
             }
         }
         throw new ParseException(timeString, 0);

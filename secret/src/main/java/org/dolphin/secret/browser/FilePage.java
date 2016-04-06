@@ -132,7 +132,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
             TextView encodeTime = (TextView) root.findViewById(R.id.encode_time);
             imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
             nameView.setText(item.originalFileName);
-            size.setText(FileInfoUtil.sizeString(item.originalFileLength));
+            size.setText(FileInfoUtil.formatSize(item.originalFileLength));
             duration.setText("12:22:22");
             encodeTime.setText(DateUtils.formatDate(item.encodeTime));
             return root;

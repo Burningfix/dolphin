@@ -1,7 +1,7 @@
 package org.dolphin.http.server;
 
 import com.google.gson.annotations.Expose;
-import org.dolphin.lib.KeepAttr;
+import org.dolphin.lib.progaurd.KeepAttr;
 
 /**
  * Created by hanyanan on 2015/11/4.

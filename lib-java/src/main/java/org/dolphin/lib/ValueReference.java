@@ -3,7 +3,7 @@ package org.dolphin.lib;
 /**
  * Created by yananh on 2015/11/14.
  *
- * 用于应用的回掉
+ * 用于应用的回调
  */
 public class ValueReference<T> {
     private T value;

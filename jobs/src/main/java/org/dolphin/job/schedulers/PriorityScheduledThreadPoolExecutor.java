@@ -7,6 +7,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created by hanyanan on 2015/10/21.
+ *
+ * 基于优先级的线程池，具有如下功能<br>
+ * 1. pause/resume功能, {@link PausableThreadPoolExecutor#pause()}, {@link PausableThreadPoolExecutor#resume()};
+ * 2. delay运行，同时支持周期运行，当多个task延时时间相同时，可以具体比较优先级，所以其优先级策略为先
+ * 比较delay时间，在比较task的优先级;
+ *
  */
 public class PriorityScheduledThreadPoolExecutor extends PausableThreadPoolExecutor
         implements ScheduledExecutorService {

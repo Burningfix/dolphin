@@ -16,8 +16,7 @@ import javax.annotation.Nullable;
  * @since 1.0
  */
 public final class Closeables {
-    static final Logger logger
-            = Logger.getLogger(Closeables.class.getName());
+    static final Logger logger = Logger.getLogger(Closeables.class.getName());
 
     private Closeables() {}
 

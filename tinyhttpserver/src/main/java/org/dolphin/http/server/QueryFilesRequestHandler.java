@@ -3,9 +3,9 @@ package org.dolphin.http.server;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.annotations.Expose;
-import org.dolphin.http.Headers;
+
 import org.dolphin.http.MimeType;
-import org.dolphin.lib.KeepAttr;
+import org.dolphin.lib.progaurd.KeepAttr;
 import org.dolphin.lib.SecurityUtil;
 import org.dolphin.lib.binaryresource.BinaryResource;
 import org.dolphin.lib.binaryresource.ByteArrayBinaryResource;

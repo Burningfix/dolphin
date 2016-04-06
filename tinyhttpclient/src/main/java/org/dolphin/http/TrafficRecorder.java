@@ -99,7 +99,7 @@ public interface TrafficRecorder {
 
 
             if (now - lastPrintInTime > printTimeInterval) {
-                System.out.println("应用下载速度: " + FileInfoUtil.sizeString(spotDownSpeed()));
+                System.out.println("应用下载速度: " + FileInfoUtil.formatSize(spotDownSpeed()));
                 lastPrintInTime = now;
             }
         }
