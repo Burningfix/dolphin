@@ -75,6 +75,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     @Override
     public void onFileList(List<FileInfo> files) {
         if (null != files) {
+            fileList.clear();
             fileList.addAll(files);
         }
         notifyStateChange();
