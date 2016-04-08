@@ -1,6 +1,7 @@
 package org.dolphin.secret.browser;
 
 import android.app.Fragment;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -14,6 +15,7 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.dolphin.lib.DateUtils;
 import org.dolphin.lib.FileInfoUtil;
@@ -21,11 +23,13 @@ import org.dolphin.lib.IOUtil;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.ReadableFileInputStream;
+import org.dolphin.secret.picker.FileRequestProvider;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -75,6 +79,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     @Override
     public void onFileList(List<FileInfo> files) {
         if (null != files) {
+            fileList.clear();
             fileList.addAll(files);
         }
         notifyStateChange();
@@ -133,7 +138,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
             imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
             nameView.setText(item.originalFileName);
             size.setText(FileInfoUtil.formatSize(item.originalFileLength));
-            duration.setText("12:22:22");
+//            duration.setText("12:22:22");
             encodeTime.setText(DateUtils.formatDate(item.encodeTime));
             return root;
         }
@@ -147,5 +152,49 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    protected void importFileEntryList(List<FileRequestProvider.FileEntry> selectedFileList) {
+        if (null == selectedFileList || selectedFileList.isEmpty()) {
+            return;
+        }
+        final int count = selectedFileList.size();
+        final ProgressDialog progressDialog = new ProgressDialog(getActivity());
+        progressDialog.setTitle("Progress");
+        progressDialog.setMessage("Progress");
+        progressDialog.setIndeterminate(true);
+        progressDialog.setCancelable(false);
+        progressDialog.setMax(count);
+        progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        progressDialog.show();
+        BrowserManager.getInstance().importFiles(selectedFileList, new ImportCallback() {
+            private final int totalCount = count;
+            private int currFinished = 0;
+
+            @Override
+            public void onImportSucced(String originalPath, FileInfo obscurePath) {
+                Toast.makeText(getActivity(), "import file " + originalPath + " success", Toast.LENGTH_SHORT).show();
+                Log.d("import", "onImportSucced " + originalPath + " To " + obscurePath);
+                BrowserManager.getInstance().onFileFound(obscurePath);
+                progressDialog.setMessage(originalPath);
+                ++currFinished;
+                progressDialog.incrementProgressBy(1);
+                if (currFinished == totalCount) {
+                    progressDialog.dismiss();
+                }
+            }
+
+            @Override
+            public void onImportFailed(String originalPath, Throwable error) {
+                Toast.makeText(getActivity(), "import file " + originalPath + " failed", Toast.LENGTH_SHORT).show();
+                Log.d("import", "onImportFailed " + originalPath + " To " + error);
+                progressDialog.setMessage(originalPath);
+                ++currFinished;
+                progressDialog.incrementProgressBy(1);
+                if (currFinished == totalCount) {
+                    progressDialog.dismiss();
+                }
+            }
+        });
     }
 }

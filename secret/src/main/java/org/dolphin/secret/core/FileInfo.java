@@ -19,6 +19,23 @@ public class FileInfo {
     public long encodeTime;
     public byte[] extraTag;
 
+    @Override
+    public int hashCode() {
+        return originalFileName.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if(o == this) {
+            return true;
+        }
+
+        if(!FileInfo.class.isInstance(o)){
+            FileInfo other = (FileInfo)o;
+        }
+        return super.equals(o);
+    }
+
     public boolean isVideoType() {
         if (null == originalMimeType) return false;
         if (originalMimeType.startsWith("video")) {
