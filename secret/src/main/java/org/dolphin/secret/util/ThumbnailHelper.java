@@ -1,9 +1,11 @@
 package org.dolphin.secret.util;
 
 import android.graphics.Bitmap;
+import android.media.ThumbnailUtils;
 import android.provider.MediaStore;
 
-import org.dolphin.lib.IOUtil;
+import org.dolphin.http.MimeType;
+import org.dolphin.lib.MimeTypeMap;
 import org.dolphin.lib.ValueReference;
 
 /**
@@ -33,40 +35,55 @@ public class ThumbnailHelper {
      */
     public static Bitmap getThumbnail(String path, int width, int height, float lowTolerance, float topTolerance) {
         BitmapSizeRange sizeRange = calculateBitmapSizeRange(width, height, lowTolerance, topTolerance);
+        /*
+        * step1. 尝试从MediaStore中得到缓存的thumbnail
+        * */
+        Bitmap bitmap = getThumbnailFromMediaStore(path, sizeRange);
+        if (null != bitmap) return bitmap;
+
+        /*
+        * step2. 如果是图片，则尝试从EXIF中得到thumbnail
+        * */
+        MimeType mimeType = MimeType.createFromFileName(path);
+        if(mimeType.getMimeType().startsWith("image")){ // MediaFile.getFileType(filePath);
+            MediaStore.Images.Thumbnails.getThumbnail()
+        }
+
+        /*
+        * step3. 解析文件，得到thumbnail
+        * */
+        return null;
+    }
+
+
+    public static Bitmap getThumbnailFromMediaStore(String filePath, int kind, Float scale) {
+        Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(
+                f1z getContentResolver(), selectedImageUri,
+                MediaStore.Images.Thumbnails.MINI_KIND,
+                (BitmapFactory.Options) null);
+
+        return null;
+    }
+
+    /**
+     * 尝试从MediaStore中尝试得到指定的thumbnail，如果没有，则返回null
+     *
+     * @param filePath  原始文件的绝度路径
+     * @param sizeRange 期望输出的长宽范围
+     * @return 如果符合条件，则返回指定bitmap，否则返回null
+     */
+    public static Bitmap getThumbnailFromMediaStore(String filePath, BitmapSizeRange sizeRange) {
         final ValueReference<Boolean> allowed = new ValueReference<Boolean>();
         final ValueReference<Integer> kind = new ValueReference<Integer>();
         final ValueReference<Float> scale = new ValueReference<Float>();
         allowMediaStoreThumbnail(sizeRange, allowed, kind, scale);
-        if(allowed.getValue()) {
-            Bitmap bitmap = getThumbnailFromMediaStore(path, kind.getValue(), scale.getValue());
+        if (allowed.getValue()) {
+            Bitmap bitmap = getThumbnailFromMediaStore(filePath, kind.getValue(), scale.getValue());
             if (null != bitmap) {
                 return bitmap;
             }
-            bitmap.recycle();
+            BitmapUtils.recycle(bitmap);
         }
-
-
-
-
-
-        return null;
-    }
-
-    public static Bitmap getThumbnailFromMediaStore(String filePath, int kind) {
-        Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(
-                f1z getContentResolver(), selectedImageUri,
-                MediaStore.Images.Thumbnails.MINI_KIND,
-                (BitmapFactory.Options) null);
-
-        return null;
-    }
-
-    public static Bitmap getThumbnailFromMediaStore(String filePath, int kind, float scale) {
-        Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(
-                f1z getContentResolver(), selectedImageUri,
-                MediaStore.Images.Thumbnails.MINI_KIND,
-                (BitmapFactory.Options) null);
-
         return null;
     }
 
