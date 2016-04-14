@@ -1,19 +1,16 @@
 package org.dolphin.secret.util;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.media.MediaMetadataRetriever;
-import android.media.ThumbnailUtils;
 import android.provider.MediaStore;
 import android.util.Log;
 
 import org.dolphin.http.MimeType;
-import org.dolphin.lib.IOUtil;
 import org.dolphin.lib.ValueReference;
 
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
 import java.io.IOException;
 
 /**
@@ -45,7 +42,7 @@ public class ThumbnailHelper {
      *                     1则表示可以是任意大小
      * @return
      */
-    public static Bitmap getThumbnail(String path, int width, int height, float lowTolerance, float topTolerance) {
+    public static Bitmap getThumbnail(Context context, String path, int width, int height, float lowTolerance, float topTolerance) {
         final BitmapSizeRange sizeRange = calculateBitmapSizeRange(width, height, lowTolerance, topTolerance);
         /*
         * step1. 尝试从MediaStore中得到缓存的thumbnail
@@ -68,7 +65,7 @@ public class ThumbnailHelper {
         * step3. 解析文件，得到thumbnail
         * */
         if (mimeType.getMimeType().startsWith("image")) {
-            return decodeImageFile(path, width, height, null);
+            return BitmapUtils.decodeImageFile(path, width, height, null);
         } else if (mimeType.getMimeType().startsWith("video")) {
             return createVideoThumbnail(path, width, height);
         } else if (mimeType.getMimeType().startsWith("audio")) {
@@ -77,13 +74,12 @@ public class ThumbnailHelper {
         return null;
     }
 
-
-    public static Bitmap getThumbnailFromMediaStore(String filePath, int kind, Float scale) {
+    // MediaStore.Images.Thumbnails.MINI_KIND
+    public static Bitmap getThumbnailFromMediaStore(Context context, String filePath, int kind) {
         Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(
-                f1z getContentResolver(), selectedImageUri,
+                context.getContentResolver(), selectedImageUri,
                 MediaStore.Images.Thumbnails.MINI_KIND,
                 (BitmapFactory.Options) null);
-
         return null;
     }
 
@@ -118,8 +114,8 @@ public class ThumbnailHelper {
      * @param outKind    如果支持从MediaStore获取，则返回指定kind（micro或者MINI）
      * @param outScale   如果支持从MediaStore中获取，返回指定的scale因子, 如果为null，则表示不需要进行scale
      */
-    private static void allowMediaStoreThumbnail(BitmapSizeRange range, ValueReference<Boolean> outAllowed,
-                                                 ValueReference<Integer> outKind, ValueReference<Float> outScale) {
+    public static void allowMediaStoreThumbnail(BitmapSizeRange range, ValueReference<Boolean> outAllowed,
+                                                ValueReference<Integer> outKind, ValueReference<Float> outScale) {
         //  MINI_KIND: 512 x 384 thumbnail
         //  MICRO_KIND: 96 x 96 thumbnail
         // step 1. 判断是否支持，即MINI模式不能低于期望的最小值
@@ -137,7 +133,7 @@ public class ThumbnailHelper {
             if (96 <= range.maxWidth && 96 <= range.maxHeight) {
                 outScale.setValue(null);
             } else {
-                outScale.setValue(Float.valueOf(calculateZoomScale(96, 96, range.expectWidth, range.expectHeight)));
+                outScale.setValue(Float.valueOf(BitmapUtils.calculateZoomScale(96, 96, range.expectWidth, range.expectHeight)));
             }
             return;
         }
@@ -149,10 +145,11 @@ public class ThumbnailHelper {
             if (512 <= range.maxWidth && 384 <= range.maxHeight) {
                 outScale.setValue(null);
             } else {
-                outScale.setValue(Float.valueOf(calculateZoomScale(512, 384, range.expectWidth, range.expectHeight)));
+                outScale.setValue(Float.valueOf(BitmapUtils.calculateZoomScale(512, 384, range.expectWidth, range.expectHeight)));
             }
             return;
         }
+
         outAllowed.setValue(Boolean.FALSE);
         outScale.setValue(null);
         outKind.setValue(null);
@@ -227,41 +224,17 @@ public class ThumbnailHelper {
     }
 
     /**
-     * 按照期望的大小得到当前图片的bitmap
-     *
-     * @param filePath
-     * @param expectWidth
-     * @param expectHeight
-     * @param options
-     * @return
+     * 尝试从Jpeg文件中得到EXIF的缩略图，会尝试改编成指定的大小
+     * @param filePath 原始的Jpeg路径
+     * @param width 指定输出的宽度
+     * @param height 指定输出的高度
      */
-    public static Bitmap decodeImageFile(String filePath, int expectWidth, int expectHeight, BitmapFactory.Options options) {
-        if (null == options) {
-            options = new BitmapFactory.Options();
+    public static Bitmap createThumbnailFromEXIF(String filePath, int width, int height, BitmapFactory.Options options) {
+        Bitmap bitmap = createThumbnailFromEXIF(filePath, options);
+        if (null == bitmap) {
+            return null;
         }
-        options.inSampleSize = 1;
-        options.inJustDecodeBounds = true;
-        FileInputStream stream = null;
-        try {
-            stream = new FileInputStream(filePath);
-            FileDescriptor fd = stream.getFD();
-            BitmapFactory.decodeFileDescriptor(fd, null, options);
-            if (BitmapUtils.checkOptions(options)) {
-                return null;
-            }
-            options.inSampleSize = calculateInSampleBySize(options.outWidth, options.outHeight,
-                    expectWidth, expectHeight);
-            options.inJustDecodeBounds = false;
-            options.inDither = false;
-            return BitmapFactory.decodeFileDescriptor(fd, null, options);
-        } catch (IOException ex) {
-            Log.e(TAG, "", ex);
-        } catch (OutOfMemoryError oom) {
-            Log.e(TAG, "Unable to decode file " + filePath + ". OutOfMemoryError.", oom);
-        } finally {
-            IOUtil.closeQuietly(stream);
-        }
-        return null;
+        return BitmapUtils.extractThumbnail(bitmap, width, height);
     }
 
     public static Bitmap createVideoThumbnail(String filePath) {
@@ -287,12 +260,11 @@ public class ThumbnailHelper {
     }
 
     public static Bitmap createVideoThumbnail(String filePath, int width, int height) {
-        Bitmap bitmap = createVideoThumbnail(String filePath);
+        Bitmap bitmap = createVideoThumbnail(filePath);
         if (null == bitmap) {
             return null;
         }
-
-        return ThumbnailUtils.extractThumbnail(bitmap, width, height);
+        return BitmapUtils.extractThumbnail(bitmap, width, height);
     }
 
     /**
@@ -303,7 +275,8 @@ public class ThumbnailHelper {
      * @param lowTolerance 允许的下限误差比例
      * @param topTolerance 允许的上限误差比例
      */
-    private static BitmapSizeRange calculateBitmapSizeRange(int expectWidth, int expectHeight, float lowTolerance, float topTolerance) {
+    private static BitmapSizeRange calculateBitmapSizeRange(int expectWidth, int expectHeight,
+                                                            float lowTolerance, float topTolerance) {
         lowTolerance = Math.max(0.0F, Math.min(1.0F, lowTolerance));
         topTolerance = Math.max(0.0F, Math.min(1.0F, topTolerance));
         BitmapSizeRange range = new BitmapSizeRange();
@@ -314,53 +287,6 @@ public class ThumbnailHelper {
         range.maxWidth = Math.round(expectWidth * (1 + topTolerance));
         range.maxHeight = Math.round(expectHeight * (1 + topTolerance));
         return range;
-    }
-
-    /**
-     * 根据高宽计算采样, 查找最接近期望的采样率
-     *
-     * @param originalWidth
-     * @param originalHeight
-     * @param maxOutWidth
-     * @param maxOutHeight
-     * @return
-     */
-    public static int calculateInSampleBySize(int originalWidth, int originalHeight, int maxOutWidth, int maxOutHeight) {
-        int inSample = 1;
-        while (originalWidth > maxOutWidth || originalHeight > maxOutHeight) {
-            inSample *= 2;
-            originalWidth /= 2;
-            originalHeight /= 2;
-        }
-        return inSample;
-    }
-
-    /**
-     * 计算缩放比例，保证缩放后的长度和高度都不会超过期望的大小，图片必须保留宽高等比例缩放
-     *
-     * @param originalWidth  original width
-     * @param originalHeight original height
-     * @param expectWidth    期望的宽度
-     * @param expectHeight   期望的长度
-     */
-    public static float calculateShrinkScale(int originalWidth, int originalHeight, int expectWidth, int expectHeight) {
-        float hScale = expectWidth / (float) originalWidth;
-        float vScale = expectHeight / (float) originalHeight;
-        return Math.min(hScale, vScale);
-    }
-
-    /**
-     * 计算缩放比例，采用缩放系数比较大的那个
-     *
-     * @param originalWidth  original width
-     * @param originalHeight original height
-     * @param expectWidth    期望的宽度
-     * @param expectHeight   期望的长度
-     */
-    public static float calculateZoomScale(int originalWidth, int originalHeight, int expectWidth, int expectHeight) {
-        float hScale = expectWidth / (float) originalWidth;
-        float vScale = expectHeight / (float) originalHeight;
-        return Math.max(hScale, vScale);
     }
 
     private static class BitmapSizeRange {
