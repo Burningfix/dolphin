@@ -12,6 +12,8 @@ import org.dolphin.http.MimeType;
 import org.dolphin.lib.ValueReference;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created q    by yananh on 2016/4/7.
@@ -75,7 +77,7 @@ public class ThumbnailHelper {
     }
 
     // MediaStore.Images.Thumbnails.MINI_KIND
-    public static Bitmap getThumbnailFromMediaStore(Context context, String filePath, int kind) {
+    public static Bitmap getThumbnailFromMediaStore(Context context, String filePath, Integer kind, Float scale) {
         Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(
                 context.getContentResolver(), selectedImageUri,
                 MediaStore.Images.Thumbnails.MINI_KIND,
@@ -156,6 +158,91 @@ public class ThumbnailHelper {
     }
 
     /**
+     * 根据原始大小和输出的大小，计算采样率和scale系数
+     *
+     * @param originalWidth  original width
+     * @param originalHeight original height
+     * @param width          target width
+     * @param height         target height
+     * @param outInSample    in sample
+     * @param outScale       out scale factor
+     */
+    public static void calculateInSampleAndScale(int originalWidth, int originalHeight, int width, int height,
+                                                 ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
+        if (width == originalWidth && originalHeight == height) {
+            outInSample.setValue(null);
+            outScale.setValue(null);
+            return;
+        }
+        if (width >= originalWidth || height >= originalHeight) {
+            outInSample.setValue(Integer.valueOf(1));
+            outScale.setValue(BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, width, height));
+            return;
+        }
+        int ow = originalWidth;
+        int oh = originalHeight;
+        int inSample = 1;
+        do {
+            inSample *= 2;
+            ow /= 2;
+            oh /= 2;
+        } while (ow >= width && oh >= height);
+        inSample = inSample / 2 <= 1 ? 1 : inSample / 2;
+        ow = originalWidth / inSample;
+        oh = originalHeight / inSample;
+
+        outInSample.setValue(Integer.valueOf(inSample));
+        if (MathUtils.equals(ow, width) && MathUtils.equals(oh, height)) {
+            outScale.setValue(null);
+            return;
+        }
+
+        outScale.setValue(BitmapUtils.calculateShrinkScale(ow, oh, width, height));
+    }
+
+
+    /**
+     * 计算采样频率，首先使用采样率，如果只修改采样率就能满足范围，则只是可以不scale，否则会使用采样率和scale配合
+     *
+     * @param originalWidth  original width
+     * @param originalHeight original height
+     * @param sizeRange      期望的范围
+     * @param outInSample
+     * @param outScale
+     */
+    public static void calculateInSampleAndScale(int originalWidth, int originalHeight, BitmapSizeRange sizeRange,
+                                                 ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
+        if (sizeRange.validate(originalWidth, originalHeight)) {
+            outInSample.setValue(null);
+            outScale.setValue(null);
+            return;
+        }
+
+        if (originalWidth <= sizeRange.minWidth || originalHeight >= sizeRange.minHeight) {
+            outInSample.setValue(null);
+            outScale.setValue(BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, sizeRange.expectWidth, sizeRange.expectHeight));
+            return;
+        }
+        float topScale = BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, sizeRange.maxWidth, sizeRange.maxHeight);
+        float scale = BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, sizeRange.expectWidth, sizeRange.expectHeight);
+        float lowScale = BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, sizeRange.minWidth, sizeRange.minHeight);
+        int sample = 1;
+        final List<Integer> validateSamples = new ArrayList<Integer>();
+        while (sample <= topScale) {
+            if (sample >= lowScale && sample <= topScale) {
+                validateSamples.add(Integer.valueOf(sample));
+            }
+            sample *= 2;
+        }
+        if (validateSamples.isEmpty()) {
+            outInSample.setValue(null);
+            outScale.setValue(Float.valueOf(scale));
+        }
+
+
+    }
+
+    /**
      * Creates a bitmap by either downsampling from the thumbnail in EXIF or the full image.
      * The functions returns a SizedThumbnailBitmap,
      * which contains a downsampled bitmap and the thumbnail data in EXIF if exists.
@@ -225,9 +312,10 @@ public class ThumbnailHelper {
 
     /**
      * 尝试从Jpeg文件中得到EXIF的缩略图，会尝试改编成指定的大小
+     *
      * @param filePath 原始的Jpeg路径
-     * @param width 指定输出的宽度
-     * @param height 指定输出的高度
+     * @param width    指定输出的宽度
+     * @param height   指定输出的高度
      */
     public static Bitmap createThumbnailFromEXIF(String filePath, int width, int height, BitmapFactory.Options options) {
         Bitmap bitmap = createThumbnailFromEXIF(filePath, options);
@@ -296,5 +384,13 @@ public class ThumbnailHelper {
         private int minHeight;
         private int maxWidth;
         private int maxHeight;
+
+        private boolean validate(int width, int height) {
+            if (width >= minWidth && width <= maxWidth
+                    && height >= minHeight && height <= maxHeight) {
+                return true;
+            }
+            return false;
+        }
     }
 }
