@@ -171,7 +171,6 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
 
     @Override
     public void onNavigationDrawerItemSelected(int position) {
-        Log.d("DDD", "MainActivity onNavigationDrawerItemSelected " + position);
         if (this.position == position) {
             Log.d(TAG, "Select the same position, do nothing!");
             return;

@@ -240,6 +240,7 @@ public class BrowserManager {
                             if (null == result || null == result.value1) {
                                 // do nothing
                             } else {
+                                CacheManager.getInstance().putCache(result.value1, result.value2);
                                 callback.onImportSucced(fileEntry.path, result.value1);
                             }
                         }

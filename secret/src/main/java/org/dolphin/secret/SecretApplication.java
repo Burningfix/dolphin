@@ -16,8 +16,6 @@ public class SecretApplication extends Application {
         return instance;
     }
 
-
-
     @Override
     public void onCreate() {
         super.onCreate();

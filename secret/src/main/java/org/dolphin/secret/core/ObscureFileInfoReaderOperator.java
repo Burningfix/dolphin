@@ -13,8 +13,8 @@ import java.io.RandomAccessFile;
 /**
  * Created by hanyanan on 2016/1/15.
  */
-public class FileInfoReaderOperator implements Operator<File, FileInfo> {
-    public static final FileInfoReaderOperator DEFAULT = new FileInfoReaderOperator();
+public class ObscureFileInfoReaderOperator implements Operator<File, FileInfo> {
+    public static final ObscureFileInfoReaderOperator DEFAULT = new ObscureFileInfoReaderOperator();
 
     @Override
     public FileInfo operate(File input) throws Throwable {
@@ -37,7 +37,7 @@ public class FileInfoReaderOperator implements Operator<File, FileInfo> {
                 if (thumbnailSize > 0) {
                     fileInfo.thumbnailRange = new FileInfo.Range();
                     fileInfo.thumbnailRange.count = thumbnailSize;
-                    fileInfo.thumbnailRange.offset = currPosition;
+                    fileInfo.thumbnailRange.offset = currPosition + 4;
                     randomAccessFile.skipBytes(thumbnailSize);
                 }
                 fileInfo.encodeTime = FileConstants.readLong(randomAccessFile, -1);
@@ -109,9 +109,9 @@ public class FileInfoReaderOperator implements Operator<File, FileInfo> {
 
     /**
      * 解析如下字段：
-     * 原始文件修改时间(long) 8字节
-     * 原始文件类型(char)     32字节
-     * 移动的块大小(byte, 1024 * 2 * X)   4字节
+     * 原始文件修改时间(long)                     8字节
+     * 原始文件类型(char)                         32字节
+     * 移动的块大小(byte, value = 1024 * 2 * X)   4字节
      *
      * @param randomAccessFile
      * @param outFileInfo

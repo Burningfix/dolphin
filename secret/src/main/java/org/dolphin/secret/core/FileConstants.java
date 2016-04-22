@@ -7,8 +7,6 @@ import android.util.Log;
 import org.dolphin.http.MimeType;
 import org.dolphin.lib.ByteUtil;
 import org.dolphin.lib.IOUtil;
-import org.dolphin.lib.Preconditions;
-import org.dolphin.lib.ValueUtil;
 import org.dolphin.secret.browser.CacheManager;
 
 import java.io.File;
@@ -42,9 +40,9 @@ import java.util.Random;
  * ****************************|*******************************************|************************<br>
  * 218ud()_(09)0               | 乱码，移动的块大小-上面的头部大小         | (1024 * 2 * X-上面的大小)字节<br>
  * ****************************|*******************************************|************************<br>
- * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。<br>
- * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。<br>
- * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。<br>
+ * .................................................................................................<br>
+ * .................................................................................................<br>
+ * .................................................................................................<br>
  * ****************************|*******************************************|************************<br>
  * 加密后的末尾                | 有移动的块大小决定大小                    | 1024 * 2 * X(加密版本版本为1)<br>
  * ****************************|*******************************************|************************<br>
@@ -60,7 +58,7 @@ import java.util.Random;
  * ****************************|*******************************************|************************<br>
  * <br>
  * <br>
- * 2：全局加密，加密整个文件，适用于小文件和一些文本文件<br>
+ * 加密版本类型2：全局加密，加密整个文件，适用于小文件和一些文本文件<br>
  * ****************************|*******************************************|************************<br>
  * SECRET CALCULATOR           | 文件的格式(char)                          | 32个字节<br>
  * ****************************|*******************************************|************************<br>
@@ -119,7 +117,7 @@ public class FileConstants {
         return ENCODE_VERSION;
     }
 
-    // 随机填充字符， 16字节
+    // 指定长度的随机填充字符
     public static byte[] getRandomBoundByte(int size) {
         byte[] res = new byte[size];
         RANDOM.nextBytes(res);
@@ -147,34 +145,46 @@ public class FileConstants {
         return data;
     }
 
-    public static FileInfoContentCache createContentCache(File file, FileInfo fileInfo) throws IOException {
-        FileInfoContentCache cache = new FileInfoContentCache();
+    public static FileInfoContentCache fillCacheBody(File file, FileInfo fileInfo) throws IOException {
+        return fillCacheBody(file, fileInfo, null);
+    }
+
+    public static FileInfoContentCache fillCacheBody(File file, FileInfo fileInfo, FileInfoContentCache cache) throws IOException {
+        if (null == cache) {
+            cache = new FileInfoContentCache();
+        }
         if (fileInfo.encodeVersion == 1) {
             FileInfo.Range headRange = fileInfo.originalFileHeaderRange;
             FileInfo.Range footRange = fileInfo.originalFileFooterRange;
             RandomAccessFile randomAccessFile = null;
             try {
-                randomAccessFile = new RandomAccessFile(file, "r");
-                randomAccessFile.seek(footRange.offset);
-                byte[] readedContent = new byte[footRange.count];
-                randomAccessFile.readFully(readedContent);
-                cache.footBodyContent = FileConstants.decode(readedContent);
+                if (cache.footBodyContent == null) {
+                    randomAccessFile = new RandomAccessFile(file, "r");
+                    randomAccessFile.seek(footRange.offset);
+                    byte[] readedContent = new byte[footRange.count];
+                    randomAccessFile.readFully(readedContent);
+                    cache.footBodyContent = FileConstants.decode(readedContent);
+                }
 
-                randomAccessFile.seek(headRange.offset);
-                byte[] readedHeadContent = new byte[headRange.count];
-                randomAccessFile.readFully(readedHeadContent);
-                cache.headBodyContent = FileConstants.decode(readedHeadContent);
+                if (null == cache.headBodyContent) {
+                    randomAccessFile.seek(headRange.offset);
+                    byte[] readedHeadContent = new byte[headRange.count];
+                    randomAccessFile.readFully(readedHeadContent);
+                    cache.headBodyContent = FileConstants.decode(readedHeadContent);
+                }
             } finally {
                 IOUtil.safeClose(randomAccessFile);
             }
         } else {
             RandomAccessFile randomAccessFile = null;
             try {
-                randomAccessFile = new RandomAccessFile(file, "r");
-                randomAccessFile.seek(file.length() - fileInfo.originalFileLength);
-                byte[] body = new byte[(int) fileInfo.originalFileLength];
-                randomAccessFile.readFully(body);
-                cache.headBodyContent = FileConstants.decode(body);
+                if (null == cache.headBodyContent) {
+                    randomAccessFile = new RandomAccessFile(file, "r");
+                    randomAccessFile.seek(file.length() - fileInfo.originalFileLength);
+                    byte[] body = new byte[(int) fileInfo.originalFileLength];
+                    randomAccessFile.readFully(body);
+                    cache.headBodyContent = FileConstants.decode(body);
+                }
             } finally {
                 IOUtil.safeClose(randomAccessFile);
             }
@@ -189,7 +199,8 @@ public class FileConstants {
         }
         FileInfoContentCache cache = CacheManager.getInstance().getCache(fileInfo);
         if (null == cache) {
-            cache = createContentCache(file, fileInfo);
+            cache = new FileInfoContentCache();
+            CacheManager.getInstance().putCache(fileInfo, cache);
         }
         if (null != cache.thumbnail) {
             return cache.thumbnail;

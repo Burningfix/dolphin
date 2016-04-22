@@ -18,8 +18,8 @@ public class DeobscureOperator implements Operator<File, FileInfo> {
         FileInfo fileInfo = null;
         RandomAccessFile randomAccessFile = null;
         try {
-            FileInfoReaderOperator fileInfoReaderOperator = FileInfoReaderOperator.DEFAULT;
-            fileInfo = fileInfoReaderOperator.operate(input);
+            ObscureFileInfoReaderOperator obscureFileInfoReaderOperator = ObscureFileInfoReaderOperator.DEFAULT;
+            fileInfo = obscureFileInfoReaderOperator.operate(input);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
             throw throwable;

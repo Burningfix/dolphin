@@ -33,14 +33,14 @@ public class TraversalFolderOperator implements Operator<File,
         List<FileInfo> videos = new ArrayList<FileInfo>();
         List<FileInfo> audios = new ArrayList<FileInfo>();
         List<String> leaks = new ArrayList<String>();
-        FileInfoReaderOperator fileInfoReaderOperator = FileInfoReaderOperator.DEFAULT;
+        ObscureFileInfoReaderOperator obscureFileInfoReaderOperator = ObscureFileInfoReaderOperator.DEFAULT;
         for (String name : originalFileNames) {
             try {
                 File file = new File(rootDir, name);
                 if (!file.exists() || !file.isFile() || file.isHidden() || file.isDirectory()) {
                     continue;
                 }
-                FileInfo fileInfo = fileInfoReaderOperator.operate(file);
+                FileInfo fileInfo = obscureFileInfoReaderOperator.operate(file);
                 Log.d(TAG, "Found File " + fileInfo.toString());
                 if (fileInfo.isPhotoType()) {
                     images.add(fileInfo);

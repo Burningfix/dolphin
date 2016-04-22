@@ -194,7 +194,7 @@ public class ReadableFileInputStream extends InputStream {
         if (null == contentCache) {
             contentCache = CacheManager.getInstance().getCache(getFileInfo());
             if (null == contentCache) {
-                contentCache = FileConstants.createContentCache(file, getFileInfo());
+                contentCache = FileConstants.fillCacheBody(file, getFileInfo(), contentCache);
                 CacheManager.getInstance().putCache(getFileInfo(), contentCache);
             }
         }
@@ -204,7 +204,7 @@ public class ReadableFileInputStream extends InputStream {
 
     private FileInfo getFileInfo() throws Throwable {
         if (null == fileInfo) {
-            FileInfoReaderOperator operator = FileInfoReaderOperator.DEFAULT;
+            ObscureFileInfoReaderOperator operator = ObscureFileInfoReaderOperator.DEFAULT;
             fileInfo = operator.operate(file);
         }
         return fileInfo;

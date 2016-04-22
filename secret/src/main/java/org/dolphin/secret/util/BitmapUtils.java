@@ -70,7 +70,6 @@ public class BitmapUtils {
             options.inDither = false;
             res = BitmapFactory.decodeFileDescriptor(fd, null, options);
 
-
             if (null != scales.getValue()) {
                 Matrix matrix = new Matrix();
                 matrix.setScale(scales.getValue().floatValue(), scales.getValue().floatValue());
@@ -230,6 +229,28 @@ public class BitmapUtils {
         outScale.setValue(null);
     }
 
+    public static Bitmap calculate(byte[] source, ValueReference<Integer> sample, ValueReference<Float> scales,
+                                   BitmapFactory.Options options) {
+        if (null == options) {
+            options = new BitmapFactory.Options();
+        }
+        options.inJustDecodeBounds = false;
+        options.inDither = false;
+        Bitmap res = null;
+        if (null != sample && sample.getValue() != null) {
+            options.inSampleSize = sample.getValue().intValue();
+        }
+        res = BitmapFactory.decodeByteArray(source, 0, source.length, options);
+
+        if (null != scales && null != scales.getValue()) {
+            Matrix matrix = new Matrix();
+            matrix.setScale(scales.getValue().floatValue(), scales.getValue().floatValue());
+            Bitmap res1 = Bitmap.createBitmap(res, 0, 0, res.getWidth(), res.getHeight(), matrix, true);
+            recycle(res);
+            res = res1;
+        }
+        return res;
+    }
 
     public static Bitmap extractThumbnail(Bitmap source, int width, int height) {
         return ThumbnailUtils.extractThumbnail(source, width, height);

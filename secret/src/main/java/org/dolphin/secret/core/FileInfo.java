@@ -26,14 +26,15 @@ public class FileInfo {
 
     @Override
     public boolean equals(Object o) {
-        if(o == this) {
+        if (o == this) {
             return true;
         }
 
-        if(!FileInfo.class.isInstance(o)){
-            FileInfo other = (FileInfo)o;
+        if (!FileInfo.class.isInstance(o)) {
+            return false;
         }
-        return super.equals(o);
+        FileInfo other = (FileInfo) o;
+        return this.originalFileName.equals(other.originalFileName);
     }
 
     public boolean isVideoType() {

@@ -29,7 +29,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -130,7 +129,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         public View getView(int position, View convertView, ViewGroup parent) {
             FileInfo item = (FileInfo) getItem(position);
             View root = View.inflate(FilePage.this.getActivity(), R.layout.file_item, null);
-            ThumbnailImageVIew imageVIew = (ThumbnailImageVIew) root.findViewById(R.id.thumbnail);
+            ThumbnailImageView imageVIew = (ThumbnailImageView) root.findViewById(R.id.thumbnail);
             TextView nameView = (TextView) root.findViewById(R.id.name);
             TextView size = (TextView) root.findViewById(R.id.size);
             TextView duration = (TextView) root.findViewById(R.id.duration);

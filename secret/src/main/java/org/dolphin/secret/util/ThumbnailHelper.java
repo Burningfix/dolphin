@@ -5,17 +5,17 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.media.MediaMetadataRetriever;
+import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 
-import org.dolphin.secret.util.BitmapUtils.BitmapSizeRange;
-
 import org.dolphin.http.MimeType;
 import org.dolphin.lib.ValueReference;
+import org.dolphin.secret.util.BitmapUtils.BitmapSizeRange;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+
 
 /**
  * Created q    by yananh on 2016/4/7.
@@ -48,11 +48,16 @@ public class ThumbnailHelper {
      */
     public static Bitmap getThumbnail(Context context, String path, int width, int height, float lowTolerance, float topTolerance) {
         final BitmapSizeRange sizeRange = calculateBitmapSizeRange(width, height, lowTolerance, topTolerance);
+        Bitmap bitmap = null;
         /*
         * step1. 尝试从MediaStore中得到缓存的thumbnail
         * */
-        Bitmap bitmap = getThumbnailFromMediaStore(path, sizeRange);
-        if (null != bitmap) return bitmap;
+        if (null != context) {
+            bitmap = getThumbnailFromMediaStore(context, path, sizeRange);
+            if (null != bitmap) {
+                return bitmap;
+            }
+        }
 
         /*
         * step2. 如果是Jpeg图片，则尝试从EXIF中得到thumbnail
@@ -78,12 +83,18 @@ public class ThumbnailHelper {
         return null;
     }
 
+    public static Bitmap getThumbnail(String path, int width, int height) {
+        return getThumbnail(null, path, width, height, 0.2F, 0.2F);
+    }
+
     // MediaStore.Images.Thumbnails.MINI_KIND
+
     public static Bitmap getThumbnailFromMediaStore(Context context, String filePath, Integer kind, Float scale) {
-        Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(
-                context.getContentResolver(), selectedImageUri,
-                MediaStore.Images.Thumbnails.MINI_KIND,
-                (BitmapFactory.Options) null);
+//        Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(
+//                context.getContentResolver(), Uri.fromFile(new File(filePath)),
+//                MediaStore.Images.Thumbnails.MINI_KIND,
+//                (BitmapFactory.Options) null);
+//        MediaStore.Video.Thumbnails.getThumbnail()
         return null;
     }
 
@@ -94,13 +105,13 @@ public class ThumbnailHelper {
      * @param sizeRange 期望输出的长宽范围
      * @return 如果符合条件，则返回指定bitmap，否则返回null
      */
-    public static Bitmap getThumbnailFromMediaStore(String filePath, BitmapSizeRange sizeRange) {
+    public static Bitmap getThumbnailFromMediaStore(Context context,String filePath, BitmapSizeRange sizeRange) {
         final ValueReference<Boolean> allowed = new ValueReference<Boolean>();
         final ValueReference<Integer> kind = new ValueReference<Integer>();
         final ValueReference<Float> scale = new ValueReference<Float>();
         allowMediaStoreThumbnail(sizeRange, allowed, kind, scale);
         if (allowed.getValue()) {
-            Bitmap bitmap = getThumbnailFromMediaStore(filePath, kind.getValue(), scale.getValue());
+            Bitmap bitmap = getThumbnailFromMediaStore(context, filePath, kind.getValue(), scale.getValue());
             if (null != bitmap) {
                 return bitmap;
             }
@@ -181,14 +192,15 @@ public class ThumbnailHelper {
             exifOptions.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(thumbData, 0, thumbData.length, exifOptions);
             if (exifOptions.outWidth < sizeRange.minWidth || exifOptions.outHeight < sizeRange.minHeight) {
+                // 无法完全满足指定的大小
                 return null;
             }
 
-            if (exifOptions.outWidth <= sizeRange.maxWidth && exifOptions.outHeight <= sizeRange.maxHeight) {
-                exifOptions.inJustDecodeBounds = false;
-                exifOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;
-                return BitmapFactory.decodeByteArray(thumbData, 0, thumbData.length, exifOptions);
-            }
+            ValueReference<Integer> outInSample = new ValueReference<Integer>();
+            ValueReference<Float> outScale = new ValueReference<Float>();
+            BitmapUtils.calculateInSampleAndScale(exifOptions.outWidth, exifOptions.outHeight, sizeRange,
+                    outInSample, outScale);
+            return BitmapUtils.calculate(thumbData, outInSample, outScale, null);
         }
         return null;
     }

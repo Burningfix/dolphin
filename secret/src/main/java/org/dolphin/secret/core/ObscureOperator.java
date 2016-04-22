@@ -23,8 +23,80 @@ import java.util.Date;
 
 /**
  * Created by hanyanan on 2016/1/15.
- *
  * 混淆指定的文件
+ * 加密算法版本号1（1默认）：局部加密，只是加密头部和尾部，适用于大文件格式：
+ * ****************************|*******************************************|************************<br>
+ * SECRET CALCULATOR           | 文件的格式(char)                          | 32个字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 1                           | 程序的版本号(int)                         | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 1                           | 加密算法的版本号(int)                     | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * ~!@#$%^&                    | 随即填充字符(char)                        | 16字符<br>
+ * ****************************|*******************************************|************************<br>
+ * 34343434                    | 原始文件长度(long)                        | 8字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 12343455                    | 原始文件名长度(int)                       | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 原始文件名                  | 原始文件名(char)                          | N字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 12312312323123              | 原始文件修改时间(long)                    | 8字节<br>
+ * ****************************|*******************************************|************************<br>
+ * mimeType                    | 原始文件类型(char)                        | 32字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 12334345                    | 移动的块大小(byte, 1024 * 2 * X)          | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 218ud()_(09)0               | 乱码，移动的块大小-上面的头部大小         | (移动的块大小-上面的大小)字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。<br>
+ * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。<br>
+ * 。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。。<br>
+ * ****************************|*******************************************|************************<br>
+ * 加密后的末尾                | 有移动的块大小决定大小                    | 1024 * 2 * X(加密版本版本为1)<br>
+ * ****************************|*******************************************|************************<br>
+ * 加密后的头部                | 有移动的块大小决定大小                    | 1024 * 2 * X(加密版本版本为1)<br>
+ * ****************************|*******************************************|************************<br>
+ * width:1234, height:234      | 文件的扩展信息(byte[])                    | 1024<br>
+ * ****************************|*******************************************|************************<br>
+ * 123123123123                | 文件加密时间戳(long)                      | 8字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 文件的thumbnail             | thumbnail(byte[])                         | N字节<br>
+ * ****************************|*******************************************|************************<br>
+ * thumbnail大小               | thumbnail大小(int)                        | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * <br>
+ * <br>
+ * 2：全局加密，加密整个文件，适用于小文件和一些文本文件<br>
+ * ****************************|*******************************************|************************<br>
+ * SECRET CALCULATOR           | 文件的格式(char)                          | 32个字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 1                           | 程序的版本号(int)                         | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 2                           | 加密算法的版本号(int)                     | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * ~!@#$%^&                    | 随即填充字符(char)                        | 16字符<br>
+ * ****************************|*******************************************|************************<br>
+ * 34343434                    | 原始文件长度(long)                        | 8字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 12343455                    | 原始文件名长度(int)                       | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 原始文件名                  | 原始文件名(char)                          | N字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 12312312323123              | 原始文件修改时间(long)                    | 8字节<br>
+ * ****************************|*******************************************|************************<br>
+ * mimeType                    | 原始文件类型(char)                        | 32字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 12334345                    | 移动的块大小(byte, 1024 * 2 * X)          | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 12123                       | thumbnail大小                             | 4字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 432442144                   | thumbnail                                 |N字节<br>
+ * ****************************|*******************************************|************************<br>
+ * 123123123123                | 文件加密时间戳(long)                      | 8字节<br>
+ * ****************************|*******************************************|************************<br>
+ * width:1234, height:234      | 文件的扩展信息(byte[])                    | 1024<br>
+ * ****************************|*******************************************|************************<br>
+ * ......................................(加密后的文件).............................................<br>
  */
 public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileInfoContentCache>> {
     public static final String TAG = "ObscureOperator";
@@ -38,15 +110,14 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * @throws Throwable
      */
     public TwoTuple<FileInfo, FileInfoContentCache> operate(File input) throws Throwable {
-        boolean success = false;
+        boolean success;
         FileInfoContentCache cache = new FileInfoContentCache();
         FileInfo baseFileInfo = createFileInfo(input);
-        int transferSize = calculateTransferSize(baseFileInfo);
+        int transferSize = calculateTransferSize(baseFileInfo); // 2048 * N
         baseFileInfo.transferSize = transferSize;
         baseFileInfo.encodeTime = FileConstants.getCurrentTime();
-        long originalFileLength = input.length();
         try {
-            if (originalFileLength > baseFileInfo.transferSize * 4 && originalFileLength > 64 * 1024) { //大文件模式，混淆局部
+            if (shouldEncodeBigMode(input, transferSize)) { //大文件模式，混淆局部
                 success = proguardLargeFile(input, baseFileInfo, cache);
             } else { // 全局加密，将信息保存在头部，实际的信息保存在尾部
                 success = proguardSmallFile(input, baseFileInfo, cache);
@@ -73,6 +144,11 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
             Log.d(TAG, "Encode file " + baseFileInfo);
         }
         return new TwoTuple<FileInfo, FileInfoContentCache>(baseFileInfo, cache);
+    }
+
+    public static boolean shouldEncodeBigMode(File input, int transferSize) {
+        long originalFileLength = input.length();
+        return (originalFileLength > transferSize * 4 && originalFileLength > 128 * 1024);
     }
 
     /**
@@ -107,7 +183,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
             outputStream.write(ByteUtil.longToBytes(fileInfo.originalModifyTimeStamp)); // 原始文件修改时间
             outputStream.write(FileConstants.getMimeType(fileInfo.originalFileName)); // 原始文件类型
             outputStream.write(ByteUtil.intToBytes(fileInfo.transferSize)); // transferSize
-            thumbnailRangeOffset = outputStream.size();
+
             if (null == cache.thumbnail) {
                 outputStream.write(ByteUtil.intToBytes(0)); // thumbnail大小
             } else {
@@ -115,6 +191,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
                 cache.thumbnail.compress(Bitmap.CompressFormat.PNG, 100, bitmapOutputStream);
                 byte[] bm = bitmapOutputStream.toByteArray();
                 outputStream.write(ByteUtil.intToBytes(bm.length)); // thumbnail大小
+                thumbnailRangeOffset = outputStream.size();
                 outputStream.write(bm); // thumbnail大小
                 thumbnailRangeCount = bm.length;
             }
@@ -151,14 +228,14 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
     /**
      * 混淆大文件，一般只是混淆头部和尾部，encodeversion为1
      */
-    private static boolean proguardLargeFile(File originalFile, FileInfo fileInfo, FileInfoContentCache cache) throws Throwable {
+    private static boolean proguardLargeFile(File originalFile, FileInfo fileInfo, FileInfoContentCache outCache) throws Throwable {
         RandomAccessFile randomAccessFile = null;
         boolean success = false;
         boolean modified = false;
         byte[] originalHeadBuffer = null;
         byte[] originalFootBuffer = null;
         int transferSize = fileInfo.transferSize;
-        cache.thumbnail = createBitmap(originalFile, fileInfo);
+        outCache.thumbnail = createBitmap(originalFile, fileInfo);
         try {
             randomAccessFile = new RandomAccessFile(originalFile, "rw");
             byte[] dom = new byte[32];
@@ -171,12 +248,12 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
             randomAccessFile.seek(fileInfo.originalFileLength - transferSize);
             randomAccessFile.readFully(originalFootBuffer);
             randomAccessFile.seek(0);
+            outCache.footBodyContent = originalFootBuffer;
+            outCache.headBodyContent = originalHeadBuffer;
             modified = true;
             writeProguardHeader(randomAccessFile, fileInfo, transferSize);
-            proguardOriginalTail(randomAccessFile, fileInfo, originalHeadBuffer, originalFootBuffer);
-            writeProguardFooter(randomAccessFile, originalFile, fileInfo, cache);
-            cache.footBodyContent = originalFootBuffer;
-            cache.headBodyContent = originalHeadBuffer;
+            obscureOriginalTailAndHeader(randomAccessFile, fileInfo, originalHeadBuffer, originalFootBuffer);
+            writeProguardFooter(randomAccessFile, originalFile, fileInfo, outCache);
             success = true;
         } finally {
             if (!success && modified) {
@@ -276,11 +353,11 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
     }
 
     /**
-     * 对原始的头部信息和尾部信息加密，尾部的[originalLength - transferSize, originalLength)机密后重新写入，
+     * 对原始的头部信息和尾部信息加密，尾部的[originalLength - transferSize, originalLength)加密后重新写入，
      * 将头部[0-transferSize)的内容加密后[originalLength, originalLength+transferSize)
      */
-    private static void proguardOriginalTail(RandomAccessFile randomAccessFile, FileInfo fileInfo,
-                                             byte[] originalHeadData, byte[] originalFootData) throws IOException {
+    private static void obscureOriginalTailAndHeader(RandomAccessFile randomAccessFile, FileInfo fileInfo,
+                                                     byte[] originalHeadData, byte[] originalFootData) throws IOException {
         Preconditions.checkNotNulls(originalHeadData, originalFootData);
         Preconditions.checkArgument(originalHeadData.length > 0);
         Preconditions.checkArgument(originalFootData.length > 0);
@@ -307,8 +384,8 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * @param file
      * @param fileInfo
      */
-    private static void writeProguardFooter(RandomAccessFile randomAccessFile, File file, FileInfo fileInfo,
-                                            FileInfoContentCache cache) throws IOException {
+    private static void writeProguardFooter(RandomAccessFile randomAccessFile, File file,
+                                            FileInfo fileInfo, FileInfoContentCache cache) throws IOException {
         randomAccessFile.seek(fileInfo.originalFileLength + fileInfo.transferSize);
         fileInfo.extraTag = getExtraMessage(file, fileInfo);// 额外的信息，1024字节
         randomAccessFile.write(fileInfo.extraTag);
@@ -357,7 +434,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
     }
 
     /**
-     * 从fileInfo中计算出需要混淆的头部大小
+     * 从fileInfo中计算出需要混淆的头部大小,计算方式为基本的长度+文件名称序列化后的大小
      *
      * @param fileInfo 需要计算的文件信息集合
      * @return
