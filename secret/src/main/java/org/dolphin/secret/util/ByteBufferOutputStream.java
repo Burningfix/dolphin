@@ -8,8 +8,15 @@ import java.util.List;
 /**
  * Created by yananh on 2016/1/16.
  */
-public class FlexByteArrayOutputStream extends OutputStream {
+public class ByteBufferOutputStream extends OutputStream {
     public static final int BLOCK_SIZE = 1024;
+    public static final int MAX_BLOCK_COUNT = 1024;
+
+
+
+
+
+
     private final List<byte[]> data = new LinkedList<byte[]>();
     private int nextOffset = 0;
     private int size = 0;

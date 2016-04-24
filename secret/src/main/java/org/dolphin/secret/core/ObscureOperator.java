@@ -148,7 +148,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
 
     public static boolean shouldEncodeBigMode(File input, int transferSize) {
         long originalFileLength = input.length();
-        return (originalFileLength > transferSize * 4 && originalFileLength > 128 * 1024);
+        return (originalFileLength > transferSize * 4 && originalFileLength > 16 * 1024);
     }
 
     /**
