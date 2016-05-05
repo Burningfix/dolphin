@@ -8,7 +8,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.MediaStore;
 
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.util.ValueUtil;
 
 import java.util.LinkedList;
 import java.util.List;

@@ -1,5 +1,7 @@
-package org.dolphin.lib;
+package org.dolphin.lib.util;
 
+
+import org.dolphin.lib.MimeTypeMap;
 
 import java.text.ParseException;
 import java.util.regex.Matcher;

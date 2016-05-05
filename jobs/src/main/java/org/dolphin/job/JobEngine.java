@@ -4,7 +4,7 @@ import org.dolphin.job.operator.UntilOperator;
 import org.dolphin.job.schedulers.Scheduler;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.*;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 
 import java.io.Closeable;
 import java.util.Iterator;

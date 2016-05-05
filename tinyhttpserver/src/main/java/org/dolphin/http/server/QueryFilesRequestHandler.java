@@ -6,7 +6,7 @@ import com.google.gson.annotations.Expose;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.lib.progaurd.KeepAttr;
-import org.dolphin.lib.SecurityUtil;
+import org.dolphin.lib.util.SecurityUtil;
 import org.dolphin.lib.binaryresource.BinaryResource;
 import org.dolphin.lib.binaryresource.ByteArrayBinaryResource;
 import org.dolphin.lib.binaryresource.FileBinaryResource;

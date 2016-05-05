@@ -6,7 +6,7 @@ import android.content.ContextWrapper;
 import android.os.Handler;
 import android.util.Log;
 
-import org.dolphin.lib.ReflectUtil;
+import org.dolphin.lib.util.ReflectUtil;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;

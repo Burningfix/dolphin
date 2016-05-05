@@ -8,8 +8,8 @@ import org.dolphin.job.Operator;
 import org.dolphin.job.HttpJobs;
 import org.dolphin.job.operator.*;
 import org.dolphin.job.Log;
-import org.dolphin.lib.FileInfoUtil;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.util.FileInfoUtil;
+import org.dolphin.lib.util.ValueUtil;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -29,7 +29,7 @@ public class HttpMemoryLeakTester {
             public Object operate(Object input) throws Throwable {
                 final Runtime run = Runtime.getRuntime();
                 long total = run.totalMemory() - run.freeMemory();
-                System.out.println("已分配内存 = " + FileInfoUtil.sizeString(total));
+                System.out.println("已分配内存 = " + FileInfoUtil.formatSize(total));
                 return input;
             }
         });

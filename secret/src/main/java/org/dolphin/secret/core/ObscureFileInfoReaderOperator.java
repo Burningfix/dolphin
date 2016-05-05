@@ -1,8 +1,8 @@
 package org.dolphin.secret.core;
 
 import org.dolphin.job.Operator;
-import org.dolphin.lib.ByteUtil;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.ByteUtil;
+import org.dolphin.lib.util.IOUtil;
 import org.dolphin.lib.Preconditions;
 import org.dolphin.secret.util.UnsupportEncode;
 

@@ -6,9 +6,9 @@ import org.dolphin.http.HttpGetLoader;
 import org.dolphin.http.HttpRequest;
 import org.dolphin.http.HttpResponse;
 import org.dolphin.job.util.Log;
-import org.dolphin.lib.IOUtil;
-import org.dolphin.lib.SecurityUtil;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.util.IOUtil;
+import org.dolphin.lib.util.SecurityUtil;
+import org.dolphin.lib.util.ValueUtil;
 
 import java.io.File;
 import java.io.FileOutputStream;

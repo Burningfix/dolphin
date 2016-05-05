@@ -1,4 +1,4 @@
-package org.dolphin.lib;
+package org.dolphin.lib.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

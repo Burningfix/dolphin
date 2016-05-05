@@ -4,7 +4,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.dolphin.lib.FileInfoUtil;
+import org.dolphin.lib.util.FileInfoUtil;
 
 /**
  * Created by dolphin on 2015/5/11.

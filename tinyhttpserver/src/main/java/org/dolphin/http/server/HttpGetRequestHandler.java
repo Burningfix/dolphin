@@ -1,7 +1,7 @@
 package org.dolphin.http.server;
 
-import org.dolphin.lib.IOUtil;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.util.IOUtil;
+import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.lib.binaryresource.BinaryResource;
 import org.dolphin.lib.binaryresource.FileBinaryResource;
 

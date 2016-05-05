@@ -67,7 +67,7 @@ public class Log {
 
     public static void printLog(PrintStream printStream, String level, String tag, String msg) {
         if (null != printStream) {
-            String logTime = DateUtils.getCurrentTime();
+            String logTime = org.dolphin.lib.util.DateUtils.getCurrentTime();
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.append("Thread-").append(Thread.currentThread().getId())
                     .append(' ')

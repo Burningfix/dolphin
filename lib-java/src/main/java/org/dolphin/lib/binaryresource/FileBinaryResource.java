@@ -1,6 +1,6 @@
 package org.dolphin.lib.binaryresource;
 
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 import org.dolphin.lib.Preconditions;
 
 import java.io.File;

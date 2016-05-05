@@ -2,7 +2,7 @@ package org.dolphin.secret.core;
 
 import android.util.Log;
 
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 import org.dolphin.secret.browser.CacheManager;
 
 import java.io.File;

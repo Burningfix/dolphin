@@ -2,7 +2,7 @@ package org.dolphin.job.operator;
 
 import org.dolphin.http.HttpResponse;
 import org.dolphin.job.Operator;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 
 import java.io.InputStream;
 

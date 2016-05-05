@@ -22,7 +22,7 @@ import org.dolphin.hotpatch.apk.ApkPlugin;
 import org.dolphin.hotpatch.apk.ApkPluginDataChangeObserver;
 import org.dolphin.hotpatch.apk.ApkPluginInterface;
 import org.dolphin.job.tuple.TwoTuple;
-import org.dolphin.lib.ReflectUtil;
+import org.dolphin.lib.util.ReflectUtil;
 
 import java.io.File;
 import java.lang.ref.WeakReference;

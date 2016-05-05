@@ -8,14 +8,14 @@ import org.dolphin.http.HttpRequest;
 import org.dolphin.job.Job;
 import org.dolphin.job.Observer;
 import org.dolphin.job.Operator;
-import org.dolphin.job.http.HttpJobs;
+import org.dolphin.job.HttpJobs;
 import org.dolphin.job.operator.HttpPerformOperator;
 import org.dolphin.job.operator.HttpResponseToBytes;
 import org.dolphin.job.operator.SwallowExceptionOperator;
 import org.dolphin.job.schedulers.Scheduler;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.util.Log;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 
 import java.io.File;
 import java.lang.ref.WeakReference;

@@ -1,6 +1,6 @@
 package org.dolphin.http;
 
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 
 import java.io.Closeable;
 import java.io.IOException;

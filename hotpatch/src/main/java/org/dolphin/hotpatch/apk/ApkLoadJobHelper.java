@@ -10,7 +10,7 @@ import org.dolphin.job.operator.HttpPerformOperator;
 import org.dolphin.job.operator.HttpResponseToBytes;
 import org.dolphin.job.operator.SwallowExceptionOperator;
 import org.dolphin.job.schedulers.Schedulers;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 
 import java.io.File;
 import java.io.IOException;

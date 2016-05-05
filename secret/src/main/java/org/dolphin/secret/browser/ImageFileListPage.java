@@ -1,18 +1,15 @@
 package org.dolphin.secret.browser;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.text.format.DateFormat;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.widget.Toast;
 
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.MainActivity;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;

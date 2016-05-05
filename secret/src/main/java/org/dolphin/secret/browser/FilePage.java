@@ -17,9 +17,9 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.dolphin.lib.DateUtils;
-import org.dolphin.lib.FileInfoUtil;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.DateUtils;
+import org.dolphin.lib.util.FileInfoUtil;
+import org.dolphin.lib.util.IOUtil;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.ReadableFileInputStream;

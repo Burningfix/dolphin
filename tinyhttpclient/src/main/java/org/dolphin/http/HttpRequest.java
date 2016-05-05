@@ -1,8 +1,8 @@
 package org.dolphin.http;
 
 
-import org.dolphin.lib.SecurityUtil;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.util.SecurityUtil;
+import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.lib.binaryresource.BinaryResource;
 
 import java.io.Closeable;
@@ -10,11 +10,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 import javax.annotation.Nullable;

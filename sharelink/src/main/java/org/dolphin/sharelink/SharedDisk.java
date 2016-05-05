@@ -6,16 +6,15 @@ import org.dolphin.http.HttpRequest;
 import org.dolphin.http.server.FileBean;
 import org.dolphin.http.server.Main;
 import org.dolphin.http.server.QueryFilesRequestHandler;
+import org.dolphin.job.HttpJobs;
 import org.dolphin.job.Job;
-import org.dolphin.job.Observer;
+import org.dolphin.job.Log;
 import org.dolphin.job.Operator;
-import org.dolphin.job.http.HttpJobs;
 import org.dolphin.job.operator.BytesToStringOperator;
 import org.dolphin.job.operator.HttpPerformOperator;
 import org.dolphin.job.operator.HttpResponseToBytes;
 import org.dolphin.job.schedulers.Schedulers;
-import org.dolphin.job.util.Log;
-import org.dolphin.lib.ValueUtil;
+import org.dolphin.lib.util.ValueUtil;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -51,7 +50,7 @@ public class SharedDisk {
         return sb.toString();
     }
 
-    public Job queryFileList(String mimeType, Observer<Void, List<FileBean>> queryObserver) {
+    public Job queryFileList(String mimeType, Job.Callback1<List<FileBean>> queryObserver) {
         String url = parseQueryUrl();
         Log.d(TAG, "Load Url " + url);
         final HttpRequest request = HttpJobs.create(url);
@@ -89,9 +88,9 @@ public class SharedDisk {
                         return res;
                     }
                 })
-                .observer(queryObserver)
+                .result(queryObserver)
                 .workOn(Schedulers.computation())
-                .observerOn(AndroidMainThreadScheduler.INSTANCE)
+                .callbackOn(AndroidMainThreadScheduler.INSTANCE)
                 .work();
         return job;
     }

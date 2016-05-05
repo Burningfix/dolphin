@@ -5,14 +5,11 @@ import com.google.gson.Gson;
 import org.dolphin.hotpatch.apk.GlobalConfigBean;
 import org.dolphin.http.server.HttpGetRequestHandler;
 import org.dolphin.http.server.HttpGetServer;
-import org.dolphin.lib.IOUtil;
-import org.dolphin.lib.SecurityUtil;
 import org.dolphin.lib.binaryresource.BinaryResource;
 import org.dolphin.lib.binaryresource.ByteArrayBinaryResource;
 import org.dolphin.lib.binaryresource.FileBinaryResource;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Map;
 
 /**

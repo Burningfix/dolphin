@@ -1,7 +1,6 @@
 package org.dolphin.http;
 
-import org.dolphin.lib.IOUtil;
-import org.dolphin.lib.binaryresource.BinaryResource;
+import org.dolphin.lib.util.IOUtil;
 import org.dolphin.lib.binaryresource.ByteArrayBinaryResource;
 
 import java.io.InputStream;

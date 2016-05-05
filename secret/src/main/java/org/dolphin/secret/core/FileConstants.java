@@ -5,8 +5,8 @@ import android.graphics.BitmapFactory;
 import android.util.Log;
 
 import org.dolphin.http.MimeType;
-import org.dolphin.lib.ByteUtil;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.ByteUtil;
+import org.dolphin.lib.util.IOUtil;
 import org.dolphin.secret.browser.CacheManager;
 
 import java.io.File;

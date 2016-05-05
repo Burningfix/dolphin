@@ -2,8 +2,6 @@ package org.dolphin.hotpatch.dex;
 
 import com.google.gson.Gson;
 
-import org.dolphin.lib.ValueUtil;
-
 /**
  * Created by hanyanan on 2015/11/12.
  */

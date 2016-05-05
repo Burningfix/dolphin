@@ -1,9 +1,7 @@
 package org.dolphin.http;
 
 
-import org.dolphin.lib.IOUtil;
-import org.dolphin.lib.ListUtil;
-import org.dolphin.lib.Preconditions;
+import org.dolphin.lib.util.ListUtil;
 import org.dolphin.lib.binaryresource.BinaryResource;
 
 import java.util.LinkedList;
@@ -11,8 +9,6 @@ import java.util.List;
 
 import static org.dolphin.lib.Preconditions.checkNotNull;
 import static org.dolphin.lib.Preconditions.checkArgument;
-
-import javax.annotation.Nullable;
 
 
 /**

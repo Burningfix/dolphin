@@ -2,7 +2,7 @@ package org.dolphin.job.operator;
 
 import org.dolphin.job.tuple.ThreeTuple;
 import org.dolphin.job.tuple.TwoTuple;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 import java.io.InputStream;
 import java.io.OutputStream;
 

@@ -12,7 +12,7 @@ import org.dolphin.job.Job;
 import org.dolphin.job.Observer;
 import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
-import org.dolphin.lib.IOUtil;
+import org.dolphin.lib.util.IOUtil;
 import org.dolphin.lib.ValueReference;
 
 import java.io.File;

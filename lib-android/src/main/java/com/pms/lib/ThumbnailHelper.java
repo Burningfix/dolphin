@@ -1,19 +1,17 @@
-package org.dolphin.secret.util;
+package com.pms.lib;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.media.MediaMetadataRetriever;
-import android.net.Uri;
 import android.provider.MediaStore;
 import android.util.Log;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.lib.ValueReference;
-import org.dolphin.secret.util.BitmapUtils.BitmapSizeRange;
+import com.pms.lib.BitmapUtils.BitmapSizeRange;
 
-import java.io.File;
 import java.io.IOException;
 
 

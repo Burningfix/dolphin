@@ -2,8 +2,9 @@ package org.dolphin.sharelink;
 
 import android.content.Intent;
 import android.net.Uri;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -11,15 +12,10 @@ import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-
 import org.dolphin.http.server.FileBean;
 import org.dolphin.http.server.Main;
 import org.dolphin.job.Job;
-import org.dolphin.job.Observer;
-import org.dolphin.job.util.Log;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -27,7 +23,7 @@ public class MainActivity extends AppCompatActivity {
     private ListView listView;
     private TextView tv;
     FileAdapter fileAdapter;
-    private SharedDiskManager sharedDiskManager;
+//    private SharedDiskManager sharedDiskManager;
     private SharedDisk currSharedDisk = null;
 
     @Override
@@ -46,16 +42,16 @@ public class MainActivity extends AppCompatActivity {
 //        sharedDiskManager = SharedDiskManager.instance();
 //        sharedDiskManager.addObserver(sharedDiskChangedObserver);
 //        sharedDiskManager.start();
-        SharedDisk disk = new SharedDisk("192.168.1.105", "" + Main.PORT);
+        SharedDisk disk = new SharedDisk("192.168.1.107", "" + Main.PORT);
         visite(disk);
         listView.setOnItemClickListener(onItemClickListener);
     }
 
-    private Observer<List<SharedDisk>, List<SharedDisk>> sharedDiskChangedObserver = new Observer.SimpleObserver<List<SharedDisk>, List<SharedDisk>>() {
+    private Job.Callback1<List<SharedDisk>> sharedDiskChangedObserver = new Job.Callback1<List<SharedDisk>>() {
         @Override
-        public void onNext(Job job, List<SharedDisk> next) {
-            if (null == currSharedDisk && next.size() > 0) {
-                currSharedDisk = next.get(0);
+        public void call(List<SharedDisk> result) {
+            if (null == currSharedDisk && result.size() > 0) {
+                currSharedDisk = result.get(0);
                 visite(currSharedDisk);
             }
         }
@@ -66,9 +62,9 @@ public class MainActivity extends AppCompatActivity {
         sharedDisk.queryFileList("video", fileListQueryObservre);
     }
 
-    private Observer<Void, List<FileBean>> fileListQueryObservre = new Observer.SimpleObserver<Void, List<FileBean>>() {
+    private Job.Callback1<List<FileBean>> fileListQueryObservre = new Job.Callback1<List<FileBean>>() {
         @Override
-        public void onCompleted(Job job, List<FileBean> result) {
+        public void call(List<FileBean> result) {
             fileAdapter.setFiles(result.toArray(new FileBean[0]));
             fileAdapter.notifyDataSetChanged();
         }
