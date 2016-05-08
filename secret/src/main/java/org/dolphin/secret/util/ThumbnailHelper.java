@@ -1,4 +1,4 @@
-package com.pms.lib;
+package org.dolphin.secret.util;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -10,7 +10,7 @@ import android.util.Log;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.lib.ValueReference;
-import com.pms.lib.BitmapUtils.BitmapSizeRange;
+import org.dolphin.secret.util.BitmapUtils.BitmapSizeRange;
 
 import java.io.IOException;
 

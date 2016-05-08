@@ -1,8 +1,6 @@
 package org.dolphin.http;
 
 import org.dolphin.lib.util.ValueUtil;
-import org.dolphin.lib.exception.AbortException;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;

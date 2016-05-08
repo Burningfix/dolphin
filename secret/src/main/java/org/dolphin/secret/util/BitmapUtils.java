@@ -1,4 +1,4 @@
-package com.pms.lib;
+package org.dolphin.secret.util;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;

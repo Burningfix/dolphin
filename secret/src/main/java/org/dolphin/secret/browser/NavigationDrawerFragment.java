@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
@@ -118,13 +117,14 @@ public class NavigationDrawerFragment extends Fragment {
 
     int[] contentId = new int[]{
             R.string.video,
-            R.string.audio,
             R.string.photo,
+            R.string.audio,
+
     };
     int[] drawableId = new int[]{
             R.drawable.video,
-            R.drawable.audio,
             R.drawable.image,
+            R.drawable.audio,
     };
 
     int[] colorId = new int[]{

@@ -37,7 +37,7 @@ import java.util.List;
  */
 public class FilePage extends Fragment implements BrowserManager.FileChangeListener, AdapterView.OnItemClickListener {
     protected final int CATCH_PHOTO_REQUEST_CODE = 1234;
-    protected final int VIDEO_REQUEST_CODE = 1235;
+    protected final int CATCH_VIDEO_REQUEST_CODE = 1235;
     protected final int AUDIO_REQUEST_CODE = 1236;
     protected final int IMPORT_PHOTO_REQUEST_CODE = 1344;
 
@@ -55,12 +55,15 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         listView = new ListView(inflater.getContext());
         listView.setAdapter(listAdapter);
         listView.setOnItemClickListener(this);
+
+        setHasOptionsMenu(true);
+        return listView;
+    }
+
+    protected void init() {
         this.fileList.addAll(BrowserManager.getInstance().getImageFileList());
         notifyStateChange();
         BrowserManager.getInstance().addImageFileChangeListener(this);
-        setHasOptionsMenu(true);
-        Log.d("DDD", "FilePage onCreateView");
-        return listView;
     }
 
     private State state = State.Normal;

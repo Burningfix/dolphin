@@ -3,9 +3,9 @@ package org.dolphin.secret;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.DialogInterface;
+import android.os.Bundle;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.MenuItem;
 import android.widget.ImageView;
@@ -15,6 +15,7 @@ import android.widget.Toast;
 import org.dolphin.secret.browser.BrowserManager;
 import org.dolphin.secret.browser.ImageFileListPage;
 import org.dolphin.secret.browser.NavigationDrawerFragment;
+import org.dolphin.secret.browser.VideoFileListPage;
 import org.dolphin.secret.core.DeobscureOperator;
 import org.dolphin.secret.core.ObscureOperator;
 import org.dolphin.secret.util.ContextUtils;
@@ -182,7 +183,7 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
                 fragment = new ImageFileListPage();
                 break;
             case 1:
-                fragment = new ImageFileListPage();
+                fragment = new VideoFileListPage();
                 break;
             case 2:
                 fragment = new ImageFileListPage();
