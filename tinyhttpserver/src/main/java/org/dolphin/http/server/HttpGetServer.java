@@ -1,13 +1,20 @@
 package org.dolphin.http.server;
 
+import org.dolphin.lib.binaryresource.BinaryResource;
+import org.dolphin.lib.binaryresource.ByteArrayBinaryResource;
 import org.dolphin.lib.util.DateUtils;
 import org.dolphin.lib.util.IOUtil;
 import org.dolphin.lib.util.ValueUtil;
-import org.dolphin.lib.binaryresource.BinaryResource;
-import org.dolphin.lib.binaryresource.ByteArrayBinaryResource;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -201,6 +208,7 @@ public class HttpGetServer {
                                     OutputStream outputStream) throws IOException {
         StringBuilder sb = new StringBuilder();
         int code = responseCode;
+        HttpLog.d(TAG, "Response [HTTP/1.1 " + responseCode + " " + TinyHttpHelper.getHttpDesc(code) + "]");
         sb.append("HTTP/1.1 ").append(responseCode).append(" ")
                 .append(TinyHttpHelper.getHttpDesc(code))
                 .append(LINE_DIVIDER);
@@ -210,8 +218,10 @@ public class HttpGetServer {
 //			}else{
             sb.append(entry.getKey()).append(": ").append(entry.getValue()).append(LINE_DIVIDER);
 //			}
+            HttpLog.d(TAG, "Response [" + entry.getKey() + ": " + entry.getValue() + "]");
         }
         sb.append("Connection: close").append(LINE_DIVIDER);
+        HttpLog.d(TAG, "Response [Connection: close]");
         sb.append("Date: " + DateUtils.getCurrentTime()).append(LINE_DIVIDER);
         sb.append(LINE_DIVIDER);
         outputStream.write(sb.toString().getBytes());
@@ -249,7 +259,7 @@ public class HttpGetServer {
                 String protocol = requestHeader.remove(PROTOCOL_KEY); // Http/1.1
                 String fullUrl = requestHeader.remove(RAW_PATH_KEY); // /n/b/c?m=rddata&v=index_data&rn1=17&callback=bdNewsJsonCallBack&ra=0.6327211381867528
                 socket.shutdownInput();
-                HttpLog.d(TAG, "[" + method + " " + fullUrl + " " + protocol + "]");
+                HttpLog.d(TAG, "Request [" + method + " " + fullUrl + " " + protocol + "]");
                 if (!"GET".equalsIgnoreCase(method)) {
                     sendResponse(new ByteArrayBinaryResource("just support Get Method!"), 400, ERROR_HEADER, outStream);
                     return;
@@ -282,7 +292,7 @@ public class HttpGetServer {
     public static void printHeader(Map<String, String> headers) {
         if (null == headers) return;
         for (Map.Entry<String, String> entry : headers.entrySet()) {
-            HttpLog.d(TAG, "[" + entry.getKey() + ":" + entry.getValue() + "]");
+            HttpLog.d(TAG, "Request [" + entry.getKey() + ":" + entry.getValue() + "]");
         }
     }
 

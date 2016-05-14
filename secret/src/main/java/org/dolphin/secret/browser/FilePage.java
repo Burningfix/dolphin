@@ -40,14 +40,14 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     protected final int CATCH_VIDEO_REQUEST_CODE = 1235;
     protected final int AUDIO_REQUEST_CODE = 1236;
     protected final int IMPORT_PHOTO_REQUEST_CODE = 1344;
-
+    protected final int IMPORT_VIDEO_REQUEST_CODE = 1345;
 
     public enum State {
         Normal,
         Selectable,
     }
 
-    private final List<FileInfo> fileList = new LinkedList<FileInfo>();
+    protected final List<FileInfo> fileList = new LinkedList<FileInfo>();
 
     @Nullable
     @Override
@@ -55,14 +55,18 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         listView = new ListView(inflater.getContext());
         listView.setAdapter(listAdapter);
         listView.setOnItemClickListener(this);
-
+        this.fileList.addAll(getFileList());
+        notifyStateChange();
+        addListener();
         setHasOptionsMenu(true);
         return listView;
     }
 
-    protected void init() {
-        this.fileList.addAll(BrowserManager.getInstance().getImageFileList());
-        notifyStateChange();
+    protected List<FileInfo> getFileList() {
+        return BrowserManager.getInstance().getImageFileList();
+    }
+
+    protected void addListener() {
         BrowserManager.getInstance().addImageFileChangeListener(this);
     }
 

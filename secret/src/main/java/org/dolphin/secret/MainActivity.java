@@ -180,10 +180,10 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
         Fragment fragment = null;
         switch (position) {
             case 0:
-                fragment = new ImageFileListPage();
+                fragment = new VideoFileListPage();
                 break;
             case 1:
-                fragment = new VideoFileListPage();
+                fragment = new ImageFileListPage();
                 break;
             case 2:
                 fragment = new ImageFileListPage();

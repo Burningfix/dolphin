@@ -12,8 +12,11 @@ import android.view.MenuItem;
 import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.MainActivity;
 import org.dolphin.secret.R;
+import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.http.HttpContainer;
 import org.dolphin.secret.picker.FileRequestProvider;
+import org.dolphin.secret.play.VideoPlayerActivity;
 
 import java.io.File;
 import java.util.Calendar;
@@ -24,11 +27,15 @@ import java.util.Locale;
  * Created by hanyanan on 2016/2/11.
  */
 public class VideoFileListPage extends FilePage {
-    protected void init() {
-        this.fileList.addAll(BrowserManager.getInstance().getImageFileList());
-        notifyStateChange();
-        BrowserManager.getInstance().addImageFileChangeListener(this);
+
+    protected List<FileInfo> getFileList() {
+        return BrowserManager.getInstance().getVideoFileList();
     }
+
+    protected void addListener() {
+        BrowserManager.getInstance().addVideoFileChangeListener(this);
+    }
+
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -49,7 +56,7 @@ public class VideoFileListPage extends FilePage {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_import) {
-
+            importVideo();
             return true;
         } else if (id == R.id.action_camera) {
             // 拍摄图片
@@ -61,19 +68,20 @@ public class VideoFileListPage extends FilePage {
     }
 
     protected void onItemClicked(FileInfo fileInfo) {
-        // TODO
+        Intent videoPlaybackActivity = new Intent(getActivity(), VideoPlayerActivity.class);
+        String id = HttpContainer.getInstance().deliveryId(fileInfo);
+        String path = SecretApplication.getInstance().getHttpServer().wrapObscurePath(id);
+        videoPlaybackActivity.putExtra("path", path);
+        startActivity(videoPlaybackActivity);
     }
 
     private String lastCreateFileName = null;
 
     private void catchVideo() {
-        Intent intent = new Intent();
-        // 指定开启系统相机的Action
-        intent.setAction(MediaStore.INTENT_ACTION_VIDEO_CAMERA);
-        intent.addCategory(Intent.CATEGORY_DEFAULT);
+        Intent takeVideoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        takeVideoIntent.addCategory(Intent.CATEGORY_DEFAULT);
         // 根据文件地址创建文件
         new DateFormat();
-
         String name = DateFormat.format("yyyyMMdd_hhmmss", Calendar.getInstance(Locale.getDefault())) + ".mp4";
         File file = new File(BrowserManager.sRootDir, name);
         if (file.exists()) {
@@ -83,16 +91,18 @@ public class VideoFileListPage extends FilePage {
         // 把文件地址转换成Uri格式
         Uri uri = Uri.fromFile(file);
         // 设置系统相机拍摄照片完成后图片文件的存放地址
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-        startActivityForResult(intent, CATCH_PHOTO_REQUEST_CODE);
+        takeVideoIntent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+        if (takeVideoIntent.resolveActivity(getActivity().getPackageManager()) != null) {
+            startActivityForResult(takeVideoIntent, CATCH_VIDEO_REQUEST_CODE);
+        }
     }
 
-    private void importAlbum() {
+    private void importVideo() {
         Intent pickIntent = new Intent();
-        pickIntent.setType("image/*");
+        pickIntent.setType("video/*");
         pickIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
         pickIntent.setAction("android.intent.action.PICK");
-        startActivityForResult(Intent.createChooser(pickIntent, "Select Picture"), IMPORT_PHOTO_REQUEST_CODE);
+        startActivityForResult(Intent.createChooser(pickIntent, "Select Picture"), IMPORT_VIDEO_REQUEST_CODE);
     }
 
     @Override
@@ -102,9 +112,16 @@ public class VideoFileListPage extends FilePage {
             if (!ValueUtil.isEmpty(lastCreateFileName)) {
                 BrowserManager.getInstance().obscureFile(lastCreateFileName);
             }
-        } else if (IMPORT_PHOTO_REQUEST_CODE == requestCode && resultCode == Activity.RESULT_OK) {
+        } else if (IMPORT_VIDEO_REQUEST_CODE == requestCode && resultCode == Activity.RESULT_OK) {
             // 导入成功
-            if (null == data) return;
+            if (null == data) {
+                return;
+            }
+
+            Uri videoUri = data.getData();
+            String path = videoUri.getPath();
+
+
             List<FileRequestProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
             importFileEntryList(selectedFileList);
         }

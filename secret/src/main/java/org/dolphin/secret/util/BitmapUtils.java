@@ -6,8 +6,8 @@ import android.graphics.Matrix;
 import android.media.ThumbnailUtils;
 import android.util.Log;
 
-import org.dolphin.lib.util.IOUtil;
 import org.dolphin.lib.ValueReference;
+import org.dolphin.lib.util.IOUtil;
 
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -20,9 +20,34 @@ import java.util.List;
  */
 public class BitmapUtils {
     public static final String TAG = "BitmapUtils";
+    public static final BitmapUtils DEFAULT = new BitmapUtils();
+
+    /**
+     * 在缩放的时候，是否采用小值，{@code true}scale时选取宽高大的比例，否则选取宽高小的比例
+     */
+    private final boolean zoomImage = false;
+    /**
+     * 计算大小时是按照宽高计算还是采用消耗内存大小计算，{@code true}按照宽高大小计算缩放比例
+     */
+    private final boolean resizeBySize = false;
+
+    /**
+     * 是否尝试从MediaStore中得到缩略图,{@code true} 会尝试从系统缓存中得到，否则，不会从系统缓存中得到
+     */
+    private final boolean tryExtraFromMediaStore = false;
+
+    private final float 
+
+    private BitmapUtils(boolean zoomImage, boolean resizeBySize) {
+        this.zoomImage = zoomImage;
+        this.resizeBySize = resizeBySize;
+    }
+
 
     public static void recycle(Bitmap bitmap) {
-        if (null == bitmap || bitmap.isRecycled()) return;
+        if (null == bitmap || bitmap.isRecycled()) {
+            return;
+        }
         bitmap.recycle();
     }
 
@@ -47,7 +72,6 @@ public class BitmapUtils {
         if (null == options) {
             options = new BitmapFactory.Options();
         }
-        Bitmap res = null;
         options.inSampleSize = 1;
         options.inJustDecodeBounds = true;
         FileInputStream stream = null;
@@ -58,21 +82,21 @@ public class BitmapUtils {
             if (BitmapUtils.checkOptions(options)) {
                 return null;
             }
-            final ValueReference<Integer> inSample = new ValueReference<Integer>();
-            final ValueReference<Float> scales = new ValueReference<Float>();
-            calculateInSampleAndScale(options.outWidth, options.outHeight, expectWidth, expectHeight, inSample, scales);
-            if (null != inSample.getValue()) {
-                options.inSampleSize = inSample.getValue().intValue();
+            final ValueReference<Integer> sampleRef = new ValueReference<Integer>();
+            final ValueReference<Float> scaleRef = new ValueReference<Float>();
+            calculateSampleAndScale(options.outWidth, options.outHeight, expectWidth, expectHeight, sampleRef, scaleRef);
+            if (null != sampleRef.getValue()) {
+                options.inSampleSize = sampleRef.getValue();
             } else {
                 options.inSampleSize = 1;
             }
             options.inJustDecodeBounds = false;
             options.inDither = false;
-            res = BitmapFactory.decodeFileDescriptor(fd, null, options);
+            Bitmap res = BitmapFactory.decodeFile(filePath, options);
 
-            if (null != scales.getValue()) {
+            if (null != scaleRef.getValue()) {
                 Matrix matrix = new Matrix();
-                matrix.setScale(scales.getValue().floatValue(), scales.getValue().floatValue());
+                matrix.setScale(scales.getValue(), scales.getValue());
                 Bitmap res1 = Bitmap.createBitmap(res, 0, 0, res.getWidth(), res.getHeight(), matrix, true);
                 recycle(res);
                 res = res1;
@@ -99,7 +123,7 @@ public class BitmapUtils {
      * @param maxOutHeight
      * @return
      */
-    public static int calculateInSampleBySize(int originalWidth, int originalHeight, int maxOutWidth, int maxOutHeight) {
+    public static int calculateSampleBySize(int originalWidth, int originalHeight, int maxOutWidth, int maxOutHeight) {
         int inSample = 1;
         while (originalWidth > maxOutWidth || originalHeight > maxOutHeight) {
             inSample *= 2;
@@ -110,7 +134,7 @@ public class BitmapUtils {
     }
 
 
-    public static int calculateInSampleByCount() {
+    public static int calculateSampleByCount() {
         return 1;
     }
 
@@ -142,7 +166,6 @@ public class BitmapUtils {
         return Math.max(hScale, vScale);
     }
 
-
     /**
      * 根据原始大小和输出的大小，计算采样率和scale系数
      *
@@ -153,8 +176,8 @@ public class BitmapUtils {
      * @param outInSample    in sample
      * @param outScale       out scale factor
      */
-    public static void calculateInSampleAndScale(int originalWidth, int originalHeight, int width, int height,
-                                                 ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
+    public static void calculateSampleAndScale(int originalWidth, int originalHeight, int width, int height,
+                                               ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
         if (width == originalWidth && originalHeight == height) {
             outInSample.setValue(Integer.valueOf(1));
             outScale.setValue(null);
@@ -196,8 +219,8 @@ public class BitmapUtils {
      * @param outInSample
      * @param outScale
      */
-    public static void calculateInSampleAndScale(int originalWidth, int originalHeight, BitmapSizeRange sizeRange,
-                                                 ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
+    public static void calculateSampleAndScale(int originalWidth, int originalHeight, BitmapSizeRange sizeRange,
+                                               ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
         if (sizeRange.validate(originalWidth, originalHeight)) {
             outInSample.setValue(Integer.valueOf(1));
             outScale.setValue(null);
@@ -229,22 +252,20 @@ public class BitmapUtils {
         outScale.setValue(null);
     }
 
-    public static Bitmap calculate(byte[] source, ValueReference<Integer> sample, ValueReference<Float> scales,
-                                   BitmapFactory.Options options) {
+    public static Bitmap decode(byte[] source, Integer sample, Float scales, BitmapFactory.Options options) {
         if (null == options) {
             options = new BitmapFactory.Options();
         }
         options.inJustDecodeBounds = false;
         options.inDither = false;
-        Bitmap res = null;
-        if (null != sample && sample.getValue() != null) {
-            options.inSampleSize = sample.getValue().intValue();
+        if (null != sample) {
+            options.inSampleSize = sample;
         }
-        res = BitmapFactory.decodeByteArray(source, 0, source.length, options);
+        Bitmap res = BitmapFactory.decodeByteArray(source, 0, source.length, options);
 
-        if (null != scales && null != scales.getValue()) {
+        if (null != scales && null != scales) {
             Matrix matrix = new Matrix();
-            matrix.setScale(scales.getValue().floatValue(), scales.getValue().floatValue());
+            matrix.setScale(scales, scales);
             Bitmap res1 = Bitmap.createBitmap(res, 0, 0, res.getWidth(), res.getHeight(), matrix, true);
             recycle(res);
             res = res1;

@@ -74,6 +74,8 @@ public class HttpGetRequestHandler implements HttpRequestHandler {
                 String contentRange = "bytes " + range[0] + "-" + range[1] + "/" + resourceMostSize;
                 responseHeaders.put("Content-Range", contentRange);
                 responseHeaders.put("Content-Length", String.valueOf(transportSize));
+
+
                 HttpLog.d("Handler", "Get path " + path + "Content-Range["+contentRange+"]");
                 return out;
             }

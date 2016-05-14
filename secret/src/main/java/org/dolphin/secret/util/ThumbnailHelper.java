@@ -198,7 +198,7 @@ public class ThumbnailHelper {
             ValueReference<Float> outScale = new ValueReference<Float>();
             BitmapUtils.calculateInSampleAndScale(exifOptions.outWidth, exifOptions.outHeight, sizeRange,
                     outInSample, outScale);
-            return BitmapUtils.calculate(thumbData, outInSample, outScale, null);
+            return BitmapUtils.decode(thumbData, outInSample, outScale, null);
         }
         return null;
     }

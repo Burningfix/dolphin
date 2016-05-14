@@ -15,6 +15,7 @@ import java.io.RandomAccessFile;
  * Created by hanyanan on 2016/1/15.
  */
 public class ReadableFileInputStream extends InputStream {
+    public static final String TAG = "ReadableFileInputStream";
     private final File file;
     private FileInfo fileInfo = null;
     private long nextReadIndex = 0;
@@ -88,7 +89,7 @@ public class ReadableFileInputStream extends InputStream {
 
     @Override
     public int read(byte[] buffer, int byteOffset, int byteCount) throws IOException {
-        Log.d("InputStream", "byteOffset " + byteCount + "\tbyteCount " + byteCount);
+        Log.d(TAG, "Current index " + nextReadIndex + " , byteCount " + byteCount);
         int result = 0;
         try {
             FileInfo fileInfo = getFileInfo();
@@ -151,7 +152,7 @@ public class ReadableFileInputStream extends InputStream {
 
     @Override
     public void mark(int readlimit) {
-        Log.d("InputStream", "mark " + readlimit);
+        Log.d(TAG, "mark " + readlimit);
         markLimit = readlimit;
     }
 
@@ -164,12 +165,12 @@ public class ReadableFileInputStream extends InputStream {
     public synchronized void reset() throws IOException {
         nextReadIndex = markLimit;
         randomAccessFile.seek(nextReadIndex);
-        Log.d("InputStream", "reset " + nextReadIndex);
+        Log.d(TAG, "reset " + nextReadIndex);
     }
 
     @Override
     public long skip(long byteCount) throws IOException {
-        Log.d("InputStream", "skip " + byteCount);
+        Log.d(TAG, "skip " + byteCount);
         try {
             FileInfo fileInfo = getFileInfo();
             long max = fileInfo.originalFileLength - nextReadIndex;
@@ -193,7 +194,7 @@ public class ReadableFileInputStream extends InputStream {
     private FileInfoContentCache getContentCache() throws Throwable {
         if (null == contentCache) {
             contentCache = CacheManager.getInstance().getCache(getFileInfo());
-            if (null == contentCache) {
+            if (null == contentCache || null == contentCache.footBodyContent || null == contentCache.headBodyContent) {
                 contentCache = FileConstants.fillCacheBody(file, getFileInfo(), contentCache);
                 CacheManager.getInstance().putCache(getFileInfo(), contentCache);
             }

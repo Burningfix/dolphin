@@ -335,7 +335,11 @@ public class BrowserManager {
     }
 
     public List<FileInfo> getImageFileList() {
-        return imageFileList;
+        return new ArrayList<FileInfo>(imageFileList);
+    }
+
+    public List<FileInfo> getVideoFileList() {
+        return new ArrayList<FileInfo>(videoFileList);
     }
 
 
