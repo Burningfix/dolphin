@@ -22,27 +22,6 @@ public class BitmapUtils {
     public static final String TAG = "BitmapUtils";
     public static final BitmapUtils DEFAULT = new BitmapUtils();
 
-    /**
-     * 在缩放的时候，是否采用小值，{@code true}scale时选取宽高大的比例，否则选取宽高小的比例
-     */
-    private final boolean zoomImage = false;
-    /**
-     * 计算大小时是按照宽高计算还是采用消耗内存大小计算，{@code true}按照宽高大小计算缩放比例
-     */
-    private final boolean resizeBySize = false;
-
-    /**
-     * 是否尝试从MediaStore中得到缩略图,{@code true} 会尝试从系统缓存中得到，否则，不会从系统缓存中得到
-     */
-    private final boolean tryExtraFromMediaStore = false;
-
-    private final float 
-
-    private BitmapUtils(boolean zoomImage, boolean resizeBySize) {
-        this.zoomImage = zoomImage;
-        this.resizeBySize = resizeBySize;
-    }
-
 
     public static void recycle(Bitmap bitmap) {
         if (null == bitmap || bitmap.isRecycled()) {
@@ -59,6 +38,7 @@ public class BitmapUtils {
         return true;
     }
 
+
     /**
      * 按照期望的大小得到当前图片的bitmap
      *
@@ -68,13 +48,16 @@ public class BitmapUtils {
      * @param options
      * @return
      */
-    public static Bitmap decodeImageFile(String filePath, int expectWidth, int expectHeight, BitmapFactory.Options options) {
+    public static Bitmap decodeImageFile(String filePath, int expectWidth, int expectHeight,
+                                         BitmapFactory.Options options, boolean zoomScale,
+                                         boolean enableCalculateSample, boolean calculateSampleBySize) {
         if (null == options) {
             options = new BitmapFactory.Options();
         }
         options.inSampleSize = 1;
         options.inJustDecodeBounds = true;
         FileInputStream stream = null;
+        Bitmap res = null;
         try {
             stream = new FileInputStream(filePath);
             FileDescriptor fd = stream.getFD();
@@ -82,7 +65,27 @@ public class BitmapUtils {
             if (BitmapUtils.checkOptions(options)) {
                 return null;
             }
-            final ValueReference<Integer> sampleRef = new ValueReference<Integer>();
+            final int originalWidth = options.outWidth;
+            final int originalHeight = options.outHeight;
+            //step1. 原始图片太小，直接返回原始图片
+            if (originalWidth <= expectWidth || originalHeight <= expectHeight) {
+                res = BitmapFactory.decodeFile(filePath, options);
+                return res;
+            }
+
+
+            if (enableCalculateSample) {
+                final ValueReference<Integer> sampleRef = new ValueReference<Integer>();
+                int sample = 1;
+                if (calculateSampleBySize) {
+                    sample = calculateSampleBySize(originalWidth, originalHeight, expectWidth, expectHeight);
+                } else {
+                    sample = calculateSampleByCount(originalWidth, originalHeight, expectWidth, expectHeight);
+                }
+                res = Bitmap.createBitmap()
+            }
+
+
             final ValueReference<Float> scaleRef = new ValueReference<Float>();
             calculateSampleAndScale(options.outWidth, options.outHeight, expectWidth, expectHeight, sampleRef, scaleRef);
             if (null != sampleRef.getValue()) {
@@ -115,28 +118,32 @@ public class BitmapUtils {
 
 
     /**
-     * 根据高宽计算采样, 查找最接近期望的采样率
+     * 根据高宽计算采样,  输出的不得低于制定的大小
      *
      * @param originalWidth
      * @param originalHeight
-     * @param maxOutWidth
-     * @param maxOutHeight
+     * @param minOutWidth    输出的宽度的下限
+     * @param minOutHeight   输出的高度的下限
      * @return
      */
-    public static int calculateSampleBySize(int originalWidth, int originalHeight, int maxOutWidth, int maxOutHeight) {
+    public static int calculateSampleBySize(int originalWidth, int originalHeight, int minOutWidth, int minOutHeight) {
+        int ow = originalWidth;
+        int oh = originalHeight;
         int inSample = 1;
-        while (originalWidth > maxOutWidth || originalHeight > maxOutHeight) {
+        do {
             inSample *= 2;
-            originalWidth /= 2;
-            originalHeight /= 2;
-        }
+            ow /= 2;
+            oh /= 2;
+        } while (ow >= minOutWidth && oh >= minOutHeight);
+        inSample = inSample / 2 <= 1 ? 1 : inSample / 2;
         return inSample;
     }
 
 
-    public static int calculateSampleByCount() {
+    public static int calculateSampleByCount(int originalWidth, int originalHeight, int maxOutWidth, int maxOutHeight) {
         return 1;
     }
+
 
     /**
      * 计算缩放比例，保证缩放后的长度和高度都不会超过期望的大小，图片必须保留宽高等比例缩放
@@ -166,6 +173,44 @@ public class BitmapUtils {
         return Math.max(hScale, vScale);
     }
 
+    public static float calculateScale(int originalWidth, int originalHeight, int expectWidth, int expectHeight, boolean zoomScale) {
+        if (zoomScale) {
+            return calculateZoomScale(originalWidth, originalHeight, expectWidth, expectHeight);
+        }
+        return calculateShrinkScale(originalWidth, originalHeight, expectWidth, expectHeight);
+    }
+
+
+    private static class BaseThumbnailUtils {
+        /**
+         * 在缩放的时候，是否采用小值，{@code true}scale时选取宽高大的比例，否则选取宽高小的比例
+         */
+        protected boolean zoomImage = false;
+        /**
+         * 计算大小时是按照宽高计算还是采用消耗内存大小计算，{@code true}按照宽高大小计算缩放比例, 否则按照内存消耗计算
+         */
+        protected boolean calculateSampleBySize = false;
+
+        /**
+         * 是否尝试从MediaStore中得到缩略图, 如果为{@code true} 会尝试从系统缓存中得到，否则，不会从系统缓存中得到
+         */
+        protected boolean tryExtraFromMediaStore = false;
+
+
+        private BaseThumbnailUtils(boolean zoomImage, boolean calculateSampleBySize, boolean tryExtraFromMediaStore) {
+            this.zoomImage = zoomImage;
+            this.calculateSampleBySize = calculateSampleBySize;
+            this.tryExtraFromMediaStore = tryExtraFromMediaStore;
+        }
+
+
+    }
+
+    private static class ImageThumbnailUtils {
+
+    }
+
+
     /**
      * 根据原始大小和输出的大小，计算采样率和scale系数
      *
@@ -177,6 +222,7 @@ public class BitmapUtils {
      * @param outScale       out scale factor
      */
     public static void calculateSampleAndScale(int originalWidth, int originalHeight, int width, int height,
+                                               boolean zoomImage, Boolean calculateSampleBySize,
                                                ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
         if (width == originalWidth && originalHeight == height) {
             outInSample.setValue(Integer.valueOf(1));
@@ -185,28 +231,30 @@ public class BitmapUtils {
         }
         if (width >= originalWidth || height >= originalHeight) {
             outInSample.setValue(Integer.valueOf(1));
-            outScale.setValue(BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, width, height));
-            return;
-        }
-        int ow = originalWidth;
-        int oh = originalHeight;
-        int inSample = 1;
-        do {
-            inSample *= 2;
-            ow /= 2;
-            oh /= 2;
-        } while (ow >= width && oh >= height);
-        inSample = inSample / 2 <= 1 ? 1 : inSample / 2;
-        ow = originalWidth / inSample;
-        oh = originalHeight / inSample;
+            if (zoomImage) {
+                outScale.setValue(calculateScale(originalWidth, originalHeight, width, height, zoomImage));
+                return;
+            }
+            int ow = originalWidth;
+            int oh = originalHeight;
+            int inSample = 1;
+            do {
+                inSample *= 2;
+                ow /= 2;
+                oh /= 2;
+            } while (ow >= width && oh >= height);
+            inSample = inSample / 2 <= 1 ? 1 : inSample / 2;
+            ow = originalWidth / inSample;
+            oh = originalHeight / inSample;
 
-        outInSample.setValue(Integer.valueOf(inSample));
-        if (MathUtils.equals(ow, width) && MathUtils.equals(oh, height)) {
-            outScale.setValue(null);
-            return;
-        }
+            outInSample.setValue(Integer.valueOf(inSample));
+            if (MathUtils.equals(ow, width) && MathUtils.equals(oh, height)) {
+                outScale.setValue(null);
+                return;
+            }
 
-        outScale.setValue(BitmapUtils.calculateShrinkScale(ow, oh, width, height));
+            outScale.setValue(BitmapUtils.calculateShrinkScale(ow, oh, width, height));
+        }
     }
 
 
@@ -219,6 +267,7 @@ public class BitmapUtils {
      * @param outInSample
      * @param outScale
      */
+
     public static void calculateSampleAndScale(int originalWidth, int originalHeight, BitmapSizeRange sizeRange,
                                                ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
         if (sizeRange.validate(originalWidth, originalHeight)) {
