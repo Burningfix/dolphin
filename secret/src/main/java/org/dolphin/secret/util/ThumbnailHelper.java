@@ -146,7 +146,7 @@ public class ThumbnailHelper {
             if (96 <= range.maxWidth && 96 <= range.maxHeight) {
                 outScale.setValue(null);
             } else {
-                outScale.setValue(Float.valueOf(BitmapUtils.calculateZoomScale(96, 96, range.expectWidth, range.expectHeight)));
+                outScale.setValue(Float.valueOf(BitmapUtils.calculateScale(96, 96, range.expectWidth, range.expectHeight)));
             }
             return;
         }
@@ -158,7 +158,7 @@ public class ThumbnailHelper {
             if (512 <= range.maxWidth && 384 <= range.maxHeight) {
                 outScale.setValue(null);
             } else {
-                outScale.setValue(Float.valueOf(BitmapUtils.calculateZoomScale(512, 384, range.expectWidth, range.expectHeight)));
+                outScale.setValue(Float.valueOf(BitmapUtils.calculateScale(512, 384, range.expectWidth, range.expectHeight)));
             }
             return;
         }

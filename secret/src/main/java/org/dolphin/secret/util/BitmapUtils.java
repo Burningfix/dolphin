@@ -14,21 +14,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by hanyanan on 2016/4/12.
  */
 public class BitmapUtils {
     public static final String TAG = "BitmapUtils";
-    public static final BitmapUtils DEFAULT = new BitmapUtils();
-
-
-    public static void recycle(Bitmap bitmap) {
-        if (null == bitmap || bitmap.isRecycled()) {
-            return;
-        }
-        bitmap.recycle();
-    }
 
     public static boolean checkOptions(BitmapFactory.Options options) {
         if (null == options || options.mCancel
@@ -38,6 +31,136 @@ public class BitmapUtils {
         return true;
     }
 
+    public static void recycle(Bitmap bitmap) {
+        if (null == bitmap || bitmap.isRecycled()) {
+            return;
+        }
+        bitmap.recycle();
+    }
+
+    /**
+     * 计算缩放比例，保证缩放后的长度和高度都不会超过期望的大小，图片必须保留宽高等比例缩放
+     *
+     * @param originalWidth  original width
+     * @param originalHeight original height
+     * @param expectWidth    期望的宽度
+     * @param expectHeight   期望的长度
+     */
+    public static float calculateShrinkScale(int originalWidth, int originalHeight, int expectWidth, int expectHeight) {
+        float hScale = expectWidth / (float) originalWidth;
+        float vScale = expectHeight / (float) originalHeight;
+        return Math.min(hScale, vScale);
+    }
+
+    /**
+     * 计算缩放比例，采用缩放系数比较大的那个
+     *
+     * @param originalWidth  original width
+     * @param originalHeight original height
+     * @param expectWidth    期望的宽度
+     * @param expectHeight   期望的长度
+     */
+    public static float calculateZoomScale(int originalWidth, int originalHeight, int expectWidth, int expectHeight) {
+        float hScale = expectWidth / (float) originalWidth;
+        float vScale = expectHeight / (float) originalHeight;
+        return Math.max(hScale, vScale);
+    }
+
+    public static float calculateScale(int originalWidth, int originalHeight,
+                                       int expectWidth, int expectHeight, boolean zoomScale) {
+        return zoomScale ? calculateZoomScale(originalWidth, originalHeight, expectWidth, expectHeight)
+                : calculateShrinkScale(originalWidth, originalHeight, expectWidth, expectHeight);
+    }
+
+    /**
+     * 根据高宽计算采样,  输出的不得低于制定的大小
+     *
+     * @param originalWidth
+     * @param originalHeight
+     * @param minOutWidth    输出的宽度的下限
+     * @param minOutHeight   输出的高度的下限
+     * @return
+     */
+    public static int calculateInSampleBySize(int originalWidth, int originalHeight, int minOutWidth, int minOutHeight) {
+        int ow = originalWidth;
+        int oh = originalHeight;
+        int inSample = 1;
+        do {
+            inSample *= 2;
+            ow /= 2;
+            oh /= 2;
+        } while (ow >= minOutWidth && oh >= minOutHeight);
+        inSample = inSample / 2 <= 1 ? 1 : inSample / 2;
+        return inSample;
+    }
+
+    public static int calculateInSampleByCount(int originalWidth, int originalHeight, int maxOutWidth, int maxOutHeight) {
+        return 1;
+    }
+
+    public static Bitmap extractBitmap(Bitmap source, int width, int height) {
+        return ThumbnailUtils.extractThumbnail(source, width, height);
+    }
+
+    public static Bitmap extractBitmap(Bitmap source, float scale) {
+        if (null == source) {
+            return null;
+        }
+        Bitmap dest = Bitmap.createScaledBitmap(source, (int) (source.getWidth() * scale),
+                (int) (source.getHeight() * scale), false);
+        recycle(source);
+        return dest;
+    }
+
+    public static Bitmap decodeBitmap(byte[] data, int expectWidth, int expectHeight,
+                                      BitmapFactory.Options options) {
+        return decodeBitmap(data, expectWidth, expectHeight, options, true, true);
+    }
+
+    public static Bitmap decodeBitmap(byte[] data, int expectWidth, int expectHeight,
+                                      BitmapFactory.Options options,
+                                      boolean supportInSample, boolean zoomScale) {
+        if (null == data || data.length <= 0) {
+            return null;
+        }
+        Bitmap res = null;
+        if (null == options) {
+            options = new BitmapFactory.Options();
+        }
+        options.inSampleSize = 1;
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeByteArray(data, 0, data.length, options);
+        if (!checkOptions(options)) {
+            return null;
+        }
+        int originalWidth = options.outWidth;
+        int originalHeight = options.outHeight;
+        options.inJustDecodeBounds = false;
+        // case 1. 长宽都小于目标值，返回当前bitmap
+        if (originalWidth <= expectWidth && originalHeight <= expectHeight) {
+            return BitmapFactory.decodeByteArray(data, 0, data.length, options);
+        }
+        // case 2. 宽高至少有一个小于目标值，根据scale采取措施
+        if (originalWidth <= expectWidth || originalHeight <= expectHeight) {
+            res = BitmapFactory.decodeByteArray(data, 0, data.length, options);
+            if (null == res) {
+                return null;
+            }
+            return extractBitmap(res, calculateScale(originalWidth, originalHeight,
+                    expectWidth, expectHeight, zoomScale));
+        }
+        // case 3. 宽高都大于目标值
+        options.inSampleSize = supportInSample ?
+                calculateInSampleBySize(originalWidth, originalHeight, expectWidth, expectHeight) : 1;
+        res = BitmapFactory.decodeByteArray(data, 0, data.length, options);
+        if (res == null || res.getWidth() <= 0 || res.getHeight() <= 0) {
+            recycle(res);
+            return null;
+        }
+
+        return extractBitmap(res,
+                calculateScale(res.getWidth(), res.getHeight(), expectWidth, expectHeight, zoomScale));
+    }
 
     /**
      * 按照期望的大小得到当前图片的bitmap
@@ -117,93 +240,64 @@ public class BitmapUtils {
     }
 
 
-    /**
-     * 根据高宽计算采样,  输出的不得低于制定的大小
-     *
-     * @param originalWidth
-     * @param originalHeight
-     * @param minOutWidth    输出的宽度的下限
-     * @param minOutHeight   输出的高度的下限
-     * @return
-     */
-    public static int calculateSampleBySize(int originalWidth, int originalHeight, int minOutWidth, int minOutHeight) {
-        int ow = originalWidth;
-        int oh = originalHeight;
-        int inSample = 1;
-        do {
-            inSample *= 2;
-            ow /= 2;
-            oh /= 2;
-        } while (ow >= minOutWidth && oh >= minOutHeight);
-        inSample = inSample / 2 <= 1 ? 1 : inSample / 2;
-        return inSample;
-    }
-
-
-    public static int calculateSampleByCount(int originalWidth, int originalHeight, int maxOutWidth, int maxOutHeight) {
-        return 1;
-    }
-
-
-    /**
-     * 计算缩放比例，保证缩放后的长度和高度都不会超过期望的大小，图片必须保留宽高等比例缩放
-     *
-     * @param originalWidth  original width
-     * @param originalHeight original height
-     * @param expectWidth    期望的宽度
-     * @param expectHeight   期望的长度
-     */
-    public static float calculateShrinkScale(int originalWidth, int originalHeight, int expectWidth, int expectHeight) {
-        float hScale = expectWidth / (float) originalWidth;
-        float vScale = expectHeight / (float) originalHeight;
-        return Math.min(hScale, vScale);
-    }
-
-    /**
-     * 计算缩放比例，采用缩放系数比较大的那个
-     *
-     * @param originalWidth  original width
-     * @param originalHeight original height
-     * @param expectWidth    期望的宽度
-     * @param expectHeight   期望的长度
-     */
-    public static float calculateZoomScale(int originalWidth, int originalHeight, int expectWidth, int expectHeight) {
-        float hScale = expectWidth / (float) originalWidth;
-        float vScale = expectHeight / (float) originalHeight;
-        return Math.max(hScale, vScale);
-    }
-
-    public static float calculateScale(int originalWidth, int originalHeight, int expectWidth, int expectHeight, boolean zoomScale) {
-        if (zoomScale) {
-            return calculateZoomScale(originalWidth, originalHeight, expectWidth, expectHeight);
-        }
-        return calculateShrinkScale(originalWidth, originalHeight, expectWidth, expectHeight);
-    }
-
-
-    private static class BaseThumbnailUtils {
+    private abstract static class BaseThumbnailUtils {
+        private static final Map<Object, Long> FILE_ID_MAP = new ConcurrentHashMap<>();
         /**
          * 在缩放的时候，是否采用小值，{@code true}scale时选取宽高大的比例，否则选取宽高小的比例
          */
-        protected boolean zoomImage = false;
-        /**
-         * 计算大小时是按照宽高计算还是采用消耗内存大小计算，{@code true}按照宽高大小计算缩放比例, 否则按照内存消耗计算
-         */
-        protected boolean calculateSampleBySize = false;
+        private boolean zoomImage = false;
 
         /**
          * 是否尝试从MediaStore中得到缩略图, 如果为{@code true} 会尝试从系统缓存中得到，否则，不会从系统缓存中得到
          */
-        protected boolean tryExtraFromMediaStore = false;
+        private boolean tryExtraFromMediaStore = false;
 
+        /**
+         * 是否尝试从文件tag中得到缩略图， 尤其是对于jpeg对应exif
+         */
+        private boolean tryExtractFromTag = false;
 
-        private BaseThumbnailUtils(boolean zoomImage, boolean calculateSampleBySize, boolean tryExtraFromMediaStore) {
+        private BaseThumbnailUtils(boolean zoomImage, boolean tryExtraFromMediaStore) {
             this.zoomImage = zoomImage;
-            this.calculateSampleBySize = calculateSampleBySize;
             this.tryExtraFromMediaStore = tryExtraFromMediaStore;
         }
 
+        protected boolean isZoomImage() {
+            return this.zoomImage;
+        }
 
+        protected boolean isTryExtraFromMediaStore() {
+            return this.tryExtraFromMediaStore;
+        }
+
+        protected boolean isTryExtractFromTag() {
+            return this.tryExtractFromTag;
+        }
+
+        public abstract byte[] extraThumbnailFromMediaStore(String path);
+
+        public abstract byte[] extraThumbnailFromFileTag(String path);
+
+        public abstract Bitmap extraThumbnailFromMediaRetriever(String path);
+
+        public Bitmap decodeThumbnail(String filePath, int expectWidth, int expectHeight,
+                                      BitmapFactory.Options options) {
+            Bitmap res = null;
+
+            // step 1. 从MediaStore中获取
+            if (isTryExtraFromMediaStore()) {
+                byte[] data = extraThumbnailFromMediaStore(filePath);
+                res = decodeImageFile()
+
+            }
+
+            { // step 2. 从文件tag中读取thumbnail，例如jpeg支持的exif
+
+            }
+
+            // step 3. 从文件中获取
+            return res;
+        }
     }
 
     private static class ImageThumbnailUtils {
@@ -320,10 +414,6 @@ public class BitmapUtils {
             res = res1;
         }
         return res;
-    }
-
-    public static Bitmap extractThumbnail(Bitmap source, int width, int height) {
-        return ThumbnailUtils.extractThumbnail(source, width, height);
     }
 
     static class BitmapSizeRange {
