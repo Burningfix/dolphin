@@ -1,9 +1,12 @@
 package org.dolphin.secret.util;
 
+import android.content.ContentResolver;
 import android.content.Context;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.media.MediaMetadataRetriever;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.provider.MediaStore;
@@ -13,7 +16,6 @@ import android.util.Log;
 import org.dolphin.lib.ValueReference;
 import org.dolphin.lib.util.IOUtil;
 
-import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -129,7 +131,6 @@ public class BitmapUtils {
         return decodeBitmap(data, expectWidth, expectHeight, options, true, true);
     }
 
-
     public static Bitmap decodeBitmap(byte[] data, int expectWidth, int expectHeight,
                                       BitmapFactory.Options options,
                                       boolean supportInSample, boolean zoomScale) {
@@ -220,6 +221,33 @@ public class BitmapUtils {
                 calculateScale(res.getWidth(), res.getHeight(), expectWidth, expectHeight, zoomScale));
     }
 
+    public static Bitmap createBitmap(Bitmap source, int expectWidth, int expectHeight,
+                                      BitmapFactory.Options options,
+                                      boolean supportInSample, boolean zoomScale) {
+
+        return null;
+    }
+
+    public static Bitmap extractFromMediaMetadataRetriever(String filePath) {
+        Bitmap bitmap = null;
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(filePath);
+            bitmap = retriever.getFrameAtTime(-1);
+            return bitmap;
+        } catch (IllegalArgumentException ex) {
+            // Assume this is a corrupt video file
+        } catch (RuntimeException ex) {
+            // Assume this is a corrupt video file.
+        } finally {
+            try {
+                retriever.release();
+            } catch (RuntimeException ex) {
+                // Ignore failures while cleaning up.
+            }
+        }
+        return null;
+    }
 
     private abstract static class BaseThumbnailUtils {
         private static final Map<Object, Long> FILE_ID_MAP = new ConcurrentHashMap<>();
@@ -228,19 +256,8 @@ public class BitmapUtils {
          */
         private boolean zoomImage = false;
 
-        /**
-         * 是否尝试从MediaStore中得到缩略图, 如果为{@code true} 会尝试从系统缓存中得到，否则，不会从系统缓存中得到
-         */
-        private boolean tryExtraFromMediaStore = false;
-
-        /**
-         * 是否尝试从文件tag中得到缩略图， 尤其是对于jpeg对应exif
-         */
-        private boolean tryExtractFromTag = false;
-
-        private BaseThumbnailUtils(boolean zoomImage, boolean tryExtraFromMediaStore) {
+        private BaseThumbnailUtils(boolean zoomImage) {
             this.zoomImage = zoomImage;
-            this.tryExtraFromMediaStore = tryExtraFromMediaStore;
         }
 
         protected abstract Context getContext();
@@ -249,12 +266,12 @@ public class BitmapUtils {
             return this.zoomImage;
         }
 
-        protected boolean isTryExtraFromMediaStore() {
-            return this.tryExtraFromMediaStore;
+        protected Uri getExternalUri() {
+            return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         }
 
-        protected boolean isTryExtractFromTag() {
-            return this.tryExtractFromTag;
+        protected Uri getThumbnailUri() {
+            return MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI;
         }
 
         public byte[] extraThumbnailFromMediaStore(String path, int expectWidth, int expectHeight) {
@@ -271,28 +288,41 @@ public class BitmapUtils {
             } else {
                 kind = MediaStore.Images.Thumbnails.MINI_KIND;
             }
-            Uri uri = Uri.fromFile(new File(path));
 
-            String[] projection = {MediaStore.Images.Thumbnails._ID, MediaStore.Images.Thumbnails.DATA};
-
-            MediaStore.
-
-                    MediaStore.Images.Thumbnails.getThumbnail(
-                    getContentResolver(), selectedImageUri,
-                    MediaStore.Images.Thumbnails.MINI_KIND,
-                    (BitmapFactory.Options) null);
-
+            ContentResolver resolver = getContext().getContentResolver();
+            String[] projection = new String[]{"_data", "_id", "width", "height"};
+            String whereClause = "_data = '" + path + "'";
+            Cursor cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
+            Integer id = null;
+            int width = 0, height = 0;
+            if (null != cursor && cursor.moveToFirst()) {
+                id = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID));
+                width = cursor.getInt(cursor.getColumnIndex("width"));
+                height = cursor.getInt(cursor.getColumnIndex("height"));
+            }
+            if (null != cursor) {
+                cursor.close();
+            }
+            if (null == id || (width < expectWidth && height < expectHeight)) {
+                return null;
+            }
+            projection = new String[]{"_data"};
+            whereClause = "_id = '" + id + "'";
+            cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
+            try {
+                if (null != cursor && cursor.moveToFirst()) {
+                    return cursor.getBlob(cursor.getColumnIndex("_data"));
+                }
+            } finally {
+                if (null != cursor) {
+                    cursor.close();
+                }
+            }
+//            Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(resolver, id, kind, options);
             return null;
         }
 
         public abstract byte[] extraThumbnailFromFileTag(String path);
-
-        public Bitmap extraThumbnailFromMediaRetriever(String path, int expectWidth,
-                                                       int expectHeight, BitmapFactory.Options options) {
-
-
-            return null;
-        }
 
         public abstract Bitmap decodeFile(String filePath, int expectWidth, int expectHeight,
                                           BitmapFactory.Options options);
@@ -305,8 +335,8 @@ public class BitmapUtils {
             }
             options.inSampleSize = 1;
             // step 1. 从MediaStore中获取
-            if (isTryExtraFromMediaStore()) {
-                byte[] data = extraThumbnailFromMediaStore(filePath);
+            {
+                byte[] data = extraThumbnailFromMediaStore(filePath, expectWidth, expectHeight);
                 res = decodeBitmap(data, expectWidth, expectHeight, options, true, isZoomImage());
                 if (checkBitmap(res)) {
                     return res;
@@ -315,7 +345,7 @@ public class BitmapUtils {
             }
 
             // step 2. 从文件tag中读取thumbnail，例如jpeg支持的exif
-            if (isTryExtractFromTag()) {
+            {
                 byte[] data = extraThumbnailFromFileTag(filePath);
                 res = decodeBitmap(data, expectWidth, expectHeight, options, true, isZoomImage());
                 if (checkBitmap(res)) {
@@ -324,20 +354,14 @@ public class BitmapUtils {
                 recycle(res);
             }
 
-            // step 3. 从MediaRetriever中获取Thumbnail
-            res = extraThumbnailFromMediaRetriever(filePath);
-            if (checkBitmap(res)) {
-                return res;
-            }
-            recycle(res);
-
-            // step 4. 直接decode文件，尝试从文件中读取
+            // step 3. 直接decode文件，尝试从文件中读取
             res = decodeFile(filePath, expectWidth, expectHeight, options);
-            if (checkBitmap(res)) {
-                return res;
+            if (!checkBitmap(res)) {
+                recycle(res);
+                return null;
             }
-            recycle(res);
-            return null;
+
+            return res;
         }
 
 
@@ -359,35 +383,6 @@ public class BitmapUtils {
         }
     }
 
-    public static Bitmap getImageThumbnail(Context context, ContentResolver cr, String Imagepath) {
-        ContentResolver testcr = context.getContentResolver();
-        String[] projection = { MediaStore.Images.Media.DATA, MediaStore.Images.Media._ID, };
-        String whereClause = MediaStore.Images.Media.DATA + " = '" + Imagepath + "'";
-        Cursor cursor = testcr.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, whereClause,
-                null, null);
-        int _id = 0;
-        String imagePath = "";
-        if (cursor == null || cursor.getCount() == 0) {
-            return null;
-        }
-        if (cursor.moveToFirst()) {
-
-            int _idColumn = cursor.getColumnIndex(MediaStore.Images.Media._ID);
-            int _dataColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATA);
-
-            do {
-                _id = cursor.getInt(_idColumn);
-                imagePath = cursor.getString(_dataColumn);
-            } while (cursor.moveToNext());
-        }
-        cursor.close();
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inDither = false;
-        options.inPreferredConfig = Bitmap.Config.RGB_565;
-        Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(cr, _id, Images.Thumbnails.MINI_KIND,
-                options);
-        return bitmap;
-    }
 
     /**
      * 按照期望的大小得到当前图片的bitmap
