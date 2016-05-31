@@ -251,10 +251,17 @@ public class BitmapUtils {
 
     private abstract static class BaseThumbnailUtils {
         private static final Map<Object, Long> FILE_ID_MAP = new ConcurrentHashMap<>();
+        public static final float DIFFERENCE_FACTOR = 0.5F;
+
         /**
          * 在缩放的时候，是否采用小值，{@code true}scale时选取宽高大的比例，否则选取宽高小的比例
          */
         private boolean zoomImage = false;
+
+        /**
+         * 解析的thumbnail的上限的因子
+         */
+        private final float upperLimitFactor;
 
         private BaseThumbnailUtils(boolean zoomImage) {
             this.zoomImage = zoomImage;
@@ -356,12 +363,11 @@ public class BitmapUtils {
 
             // step 3. 直接decode文件，尝试从文件中读取
             res = decodeFile(filePath, expectWidth, expectHeight, options);
-            if (!checkBitmap(res)) {
-                recycle(res);
-                return null;
+            if (checkBitmap(res)) {
+                return res;
             }
-
-            return res;
+            recycle(res);
+            return null;
         }
 
 
