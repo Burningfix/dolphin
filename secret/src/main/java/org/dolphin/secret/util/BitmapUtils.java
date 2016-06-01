@@ -259,12 +259,19 @@ public class BitmapUtils {
         private boolean zoomImage = false;
 
         /**
-         * 解析的thumbnail的上限的因子
+         * 解析的thumbnail的上限的因子, 上限为<b>[expectValue, expectValue + expectValue * upperLimitFactor]</b>
          */
         private final float upperLimitFactor;
 
+        /**
+         * 解析thumbnail的下限因子，下限为<b>[expectValue-expectValue*lowerLimitFactor, expectValue]</b>
+         */
+        private final float lowerLimitFactor;
+
         private BaseThumbnailUtils(boolean zoomImage) {
             this.zoomImage = zoomImage;
+            this.upperLimitFactor = 1;
+            this.lowerLimitFactor = 0;
         }
 
         protected abstract Context getContext();
@@ -281,61 +288,73 @@ public class BitmapUtils {
             return MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI;
         }
 
-        public byte[] extraThumbnailFromMediaStore(String path, int expectWidth, int expectHeight) {
+        public Bitmap extractThumbnailFromMediaStore(String path, SizeRange range) {
             // MINI_KIND: 512 x 384
             // MICRO_KIND: 96 x 96
-            int kind = MediaStore.Images.Thumbnails.MICRO_KIND;
-            if (expectWidth > 512 && expectHeight > 384) {
+            if (!range.inRange(512, 384)) {
                 // out of range
                 return null;
             }
 
-            if (expectWidth <= 96 && expectHeight <= 96) {
+            int kind = MediaStore.Images.Thumbnails.MICRO_KIND;
+            if (range.inRange(96, 96)) {
                 kind = MediaStore.Images.Thumbnails.MICRO_KIND;
             } else {
                 kind = MediaStore.Images.Thumbnails.MINI_KIND;
             }
 
-            ContentResolver resolver = getContext().getContentResolver();
-            String[] projection = new String[]{"_data", "_id", "width", "height"};
-            String whereClause = "_data = '" + path + "'";
-            Cursor cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
-            Integer id = null;
-            int width = 0, height = 0;
-            if (null != cursor && cursor.moveToFirst()) {
-                id = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID));
-                width = cursor.getInt(cursor.getColumnIndex("width"));
-                height = cursor.getInt(cursor.getColumnIndex("height"));
+            Bitmap res = extraThumbnailFromMediaStore(path, kind);
+            if (checkBitmap(res)) {
+                Bitmap res1 = extractBitmap(res, range.expectWidth, range.expectHeight);
+                recycle(res);
+                return res1;
             }
-            if (null != cursor) {
-                cursor.close();
-            }
-            if (null == id || (width < expectWidth && height < expectHeight)) {
-                return null;
-            }
-            projection = new String[]{"_data"};
-            whereClause = "_id = '" + id + "'";
-            cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
-            try {
-                if (null != cursor && cursor.moveToFirst()) {
-                    return cursor.getBlob(cursor.getColumnIndex("_data"));
-                }
-            } finally {
-                if (null != cursor) {
-                    cursor.close();
-                }
-            }
-//            Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(resolver, id, kind, options);
+            recycle(res);
             return null;
+//            ContentResolver resolver = getContext().getContentResolver();
+//            String[] projection = new String[]{"_data", "_id", "width", "height"};
+//            String whereClause = "_data = '" + path + "'";
+//            Cursor cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
+//            Integer id = null;
+//            int width = 0, height = 0;
+//            if (null != cursor && cursor.moveToFirst()) {
+//                id = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID));
+//                width = cursor.getInt(cursor.getColumnIndex("width"));
+//                height = cursor.getInt(cursor.getColumnIndex("height"));
+//            }
+//            if (null != cursor) {
+//                cursor.close();
+//            }
+//            if (null == id || (width < expectWidth && height < expectHeight)) {
+//                return null;
+//            }
+//            projection = new String[]{"_data"};
+//            whereClause = "_id = '" + id + "'";
+//            cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
+//            try {
+//                if (null != cursor && cursor.moveToFirst()) {
+//                    return cursor.getBlob(cursor.getColumnIndex("_data"));
+//                }
+//            } finally {
+//                if (null != cursor) {
+//                    cursor.close();
+//                }
+//            }
+////            Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(resolver, id, kind, options);
+//            return null;
         }
 
-        public abstract byte[] extraThumbnailFromFileTag(String path);
+        public abstract Bitmap extractThumbnailFromMediaStore(String path, int kine);
+
+        public abstract byte[] extractThumbnailFromFileTag(String path);
 
         public abstract Bitmap decodeFile(String filePath, int expectWidth, int expectHeight,
                                           BitmapFactory.Options options);
 
+
         public Bitmap extraThumbnail(String filePath, int expectWidth, int expectHeight,
                                      BitmapFactory.Options options) {
+            SizeRange range = computeSizeRange(expectWidth, expectHeight, upperLimitFactor, lowerLimitFactor);
             Bitmap res = null;
             if (null == options) {
                 options = new BitmapFactory.Options();
@@ -343,7 +362,7 @@ public class BitmapUtils {
             options.inSampleSize = 1;
             // step 1. 从MediaStore中获取
             {
-                byte[] data = extraThumbnailFromMediaStore(filePath, expectWidth, expectHeight);
+                byte[] data = extractThumbnailFromMediaStore(filePath, range);
                 res = decodeBitmap(data, expectWidth, expectHeight, options, true, isZoomImage());
                 if (checkBitmap(res)) {
                     return res;
@@ -353,7 +372,7 @@ public class BitmapUtils {
 
             // step 2. 从文件tag中读取thumbnail，例如jpeg支持的exif
             {
-                byte[] data = extraThumbnailFromFileTag(filePath);
+                byte[] data = extractThumbnailFromFileTag(filePath);
                 res = decodeBitmap(data, expectWidth, expectHeight, options, true, isZoomImage());
                 if (checkBitmap(res)) {
                     return res;
@@ -370,8 +389,26 @@ public class BitmapUtils {
             return null;
         }
 
+        protected static Bitmap processBitmap(Bitmap source, SizeRange range) {
 
-        private static class BitmapSizeRange {
+        }
+
+        protected static int computeInSample(int originalWidth, int originalHeight, SizeRange range) {
+            return BitmapUtils.calculateInSampleBySize(originalWidth, originalHeight, range.minWidth, range.minHeight);
+        }
+
+        protected static SizeRange computeSizeRange(int width, int height, float upperLimitFactor, float lowerLimitFactor) {
+            SizeRange range = new SizeRange();
+            range.expectWidth = width;
+            range.expectHeight = height;
+            range.maxWidth = (int) (width + width * upperLimitFactor);
+            range.maxHeight = (int) (height + height * upperLimitFactor);
+            range.minWidth = (int) (width - width * lowerLimitFactor);
+            range.minHeight = (int) (height - height * lowerLimitFactor);
+            return range;
+        }
+
+        protected static class SizeRange {
             int expectWidth;
             int expectHeight;
             int minWidth;
@@ -379,7 +416,7 @@ public class BitmapUtils {
             int maxWidth;
             int maxHeight;
 
-            boolean inRange(int width, int height) {
+            protected boolean inRange(int width, int height) {
                 if (width >= minWidth && width <= maxWidth
                         && height >= minHeight && height <= maxHeight) {
                     return true;
