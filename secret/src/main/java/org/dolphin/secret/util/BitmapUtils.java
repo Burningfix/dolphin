@@ -1,8 +1,6 @@
 package org.dolphin.secret.util;
 
-import android.content.ContentResolver;
 import android.content.Context;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -40,6 +38,13 @@ public class BitmapUtils {
 
     public static boolean checkBitmap(Bitmap bitmap) {
         if (null == bitmap || bitmap.isRecycled() || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean checkData(byte[] data) {
+        if (null == data || data.length <= 0) {
             return false;
         }
         return true;
@@ -113,6 +118,9 @@ public class BitmapUtils {
     }
 
     public static Bitmap extractBitmap(Bitmap source, int width, int height) {
+        if (!checkBitmap(source)) {
+            return null;
+        }
         return ThumbnailUtils.extractThumbnail(source, width, height);
     }
 
@@ -221,13 +229,6 @@ public class BitmapUtils {
                 calculateScale(res.getWidth(), res.getHeight(), expectWidth, expectHeight, zoomScale));
     }
 
-    public static Bitmap createBitmap(Bitmap source, int expectWidth, int expectHeight,
-                                      BitmapFactory.Options options,
-                                      boolean supportInSample, boolean zoomScale) {
-
-        return null;
-    }
-
     public static Bitmap extractFromMediaMetadataRetriever(String filePath) {
         Bitmap bitmap = null;
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
@@ -251,8 +252,6 @@ public class BitmapUtils {
 
     private abstract static class BaseThumbnailUtils {
         private static final Map<Object, Long> FILE_ID_MAP = new ConcurrentHashMap<>();
-        public static final float DIFFERENCE_FACTOR = 0.5F;
-
         /**
          * 在缩放的时候，是否采用小值，{@code true}scale时选取宽高大的比例，否则选取宽高小的比例
          */
@@ -288,7 +287,7 @@ public class BitmapUtils {
             return MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI;
         }
 
-        public Bitmap extractThumbnailFromMediaStore(String path, SizeRange range) {
+        public Bitmap extractThumbnailFromMediaStore(final String path, final SizeRange range) {
             // MINI_KIND: 512 x 384
             // MICRO_KIND: 96 x 96
             if (!range.inRange(512, 384)) {
@@ -346,14 +345,25 @@ public class BitmapUtils {
 
         public abstract Bitmap extractThumbnailFromMediaStore(String path, int kine);
 
-        public abstract byte[] extractThumbnailFromFileTag(String path);
+        public abstract Bitmap extractThumbnailFromFileTag(String path, SizeRange range);
 
         public abstract Bitmap decodeFile(String filePath, int expectWidth, int expectHeight,
                                           BitmapFactory.Options options);
 
-
-        public Bitmap extraThumbnail(String filePath, int expectWidth, int expectHeight,
-                                     BitmapFactory.Options options) {
+        /**
+         * 尝试得到指定文件的thumbnail，尝试的渠道有三种：
+         * 1. MediaStore的database， byte stream from database (MICRO_KIND)(96 x 96)
+         * 2. 从file的tag中获取， 比如jpeg的exif中获取
+         * 3. 解析整个文件，得到指定的thumbnail
+         *
+         * @param filePath
+         * @param expectWidth
+         * @param expectHeight
+         * @param options
+         * @return
+         */
+        public Bitmap extractThumbnail(String filePath, int expectWidth, int expectHeight,
+                                       BitmapFactory.Options options) {
             SizeRange range = computeSizeRange(expectWidth, expectHeight, upperLimitFactor, lowerLimitFactor);
             Bitmap res = null;
             if (null == options) {
@@ -362,8 +372,7 @@ public class BitmapUtils {
             options.inSampleSize = 1;
             // step 1. 从MediaStore中获取
             {
-                byte[] data = extractThumbnailFromMediaStore(filePath, range);
-                res = decodeBitmap(data, expectWidth, expectHeight, options, true, isZoomImage());
+                res = extractThumbnailFromMediaStore(filePath, range);
                 if (checkBitmap(res)) {
                     return res;
                 }
@@ -372,8 +381,7 @@ public class BitmapUtils {
 
             // step 2. 从文件tag中读取thumbnail，例如jpeg支持的exif
             {
-                byte[] data = extractThumbnailFromFileTag(filePath);
-                res = decodeBitmap(data, expectWidth, expectHeight, options, true, isZoomImage());
+                res = extractThumbnailFromFileTag(filePath, range);
                 if (checkBitmap(res)) {
                     return res;
                 }
@@ -390,14 +398,116 @@ public class BitmapUtils {
         }
 
         protected static Bitmap processBitmap(Bitmap source, SizeRange range) {
+            if (!checkBitmap(source)) {
+                return null;
+            }
+            int width = source.getWidth();
+            int height = source.getHeight();
+            if (range.withInInternal(width, height)) {
+                // 1. 宽高都命中区域
+                return source;
+            }
 
+            // 2. 宽高都没有命中之都小于目标期望值, 返回当前source
+            if (width < range.minWidth && height < range.minHeight) {
+                return source;
+            }
+
+            // 3. 宽高都没有命中之都大于目标期望值
+            if (width > range.maxWidth && height > range.maxHeight) {
+                float factor = computeScale(width, height, range, true);
+                if (MathUtils.equals(factor, 1.0F, 0.1F)) {
+                    // 不需要做压缩，没必要
+                    return source;
+                }
+                Bitmap res = BitmapUtils.extractBitmap(source, factor);
+                if (res != source) {
+                    recycle(source);
+                }
+                return res;
+            }
+
+            // 4. 宽高有一个命中，另一个没有命中
+            // 4.1 一个在区间，另一个小于最小值
+            if (width < range.minWidth || height < range.minHeight) {
+                return source;
+            }
+            // 4.2 一个在区间，另一个大于最大值
+            {
+                if(){
+
+                }
+            }
+
+            Bitmap res = BitmapUtils.extractBitmap(source, range.expectWidth, range.expectHeight);
+            if (res != source) {
+                recycle(source);
+            }
+            return res;
+        }
+
+        protected static Bitmap processBitmap(byte[] data, int offset, int size, SizeRange range) {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            options.inSampleSize = 1;
+            BitmapFactory.decodeByteArray(data, offset, size, options);
+            if (!checkOptions(options)) {
+                return null;
+            }
+            final int width = options.outWidth;
+            final int height = options.outHeight;
+            options.inJustDecodeBounds = false;
+            // 1. 宽高都命中区域
+            if (range.withInInternal(width, height)) {
+                return BitmapFactory.decodeByteArray(data, offset, size, options);
+            }
+
+            // 2. 宽高都没有命中之都小于目标期望值, 返回当前全部
+            if (width < range.minWidth && height < range.minHeight) {
+                return BitmapFactory.decodeByteArray(data, offset, size, options);
+            }
+
+            // 3. 宽高都没有命中之都大于目标期望值
+            if (width > range.maxWidth && height > range.maxHeight) {
+                options.inSampleSize = computeInSample(width, height, range);
+                Bitmap res = BitmapFactory.decodeByteArray(data, offset, size, options);
+                if (!checkBitmap(res)) {
+                    recycle(res);
+                    return null;
+                }
+                return processBitmap(res, range);
+            }
+
+            // 4. 宽高有一个命中，另一个没有命中
+            // 4.1 一个在区间，另一个小于最小值
+            if (width < range.minWidth || height < range.minHeight) {
+                return BitmapFactory.decodeByteArray(data, offset, size, options);
+            }
+
+            // 4.2 一个在区间，另一个大于最大值
+            {
+                options.inSampleSize = computeInSample(width, height, range);
+                Bitmap res = BitmapFactory.decodeByteArray(data, offset, size, options);
+                if (!checkBitmap(res)) {
+                    recycle(res);
+                    return null;
+                }
+                return processBitmap(res, range);
+            }
         }
 
         protected static int computeInSample(int originalWidth, int originalHeight, SizeRange range) {
             return BitmapUtils.calculateInSampleBySize(originalWidth, originalHeight, range.minWidth, range.minHeight);
         }
 
-        protected static SizeRange computeSizeRange(int width, int height, float upperLimitFactor, float lowerLimitFactor) {
+        protected static float computeScale(int originalWidth, int originalHeight, SizeRange range) {
+
+
+
+
+        }
+
+        protected SizeRange computeSizeRange(int width, int height, float upperLimitFactor, float lowerLimitFactor) {
             SizeRange range = new SizeRange();
             range.expectWidth = width;
             range.expectHeight = height;
@@ -408,15 +518,15 @@ public class BitmapUtils {
             return range;
         }
 
-        protected static class SizeRange {
-            int expectWidth;
-            int expectHeight;
-            int minWidth;
-            int minHeight;
-            int maxWidth;
-            int maxHeight;
+        protected final static class SizeRange {
+            protected int expectWidth;
+            protected int expectHeight;
+            protected int minWidth;
+            protected int minHeight;
+            protected int maxWidth;
+            protected int maxHeight;
 
-            protected boolean inRange(int width, int height) {
+            protected boolean withInInternal(int width, int height) {
                 if (width >= minWidth && width <= maxWidth
                         && height >= minHeight && height <= maxHeight) {
                     return true;
