@@ -1,24 +1,17 @@
 package org.dolphin.secret.util;
 
+import android.content.ContentResolver;
 import android.content.Context;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.media.MediaMetadataRetriever;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.text.TextUtils;
-import android.util.Log;
 
-import org.dolphin.lib.ValueReference;
-import org.dolphin.lib.util.IOUtil;
-
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -267,13 +260,15 @@ public class BitmapUtils {
          */
         private final float lowerLimitFactor;
 
-        private BaseThumbnailUtils(boolean zoomImage) {
+        protected BaseThumbnailUtils(boolean zoomImage, float upperLimitFactor, float lowerLimitFactor) {
             this.zoomImage = zoomImage;
-            this.upperLimitFactor = 1;
-            this.lowerLimitFactor = 0;
+            this.upperLimitFactor = upperLimitFactor;
+            this.lowerLimitFactor = lowerLimitFactor;
         }
 
-        protected abstract Context getContext();
+        protected Context getContext() {
+            return null;
+        }
 
         protected boolean isZoomImage() {
             return this.zoomImage;
@@ -290,60 +285,44 @@ public class BitmapUtils {
         public Bitmap extractThumbnailFromMediaStore(final String path, final SizeRange range) {
             // MINI_KIND: 512 x 384
             // MICRO_KIND: 96 x 96
-            if (!range.inRange(512, 384)) {
-                // out of range
+            // 数据库中只有MICRO_KIND模式
+            if (!range.withInInternal(86, 96)) {
                 return null;
             }
 
-            int kind = MediaStore.Images.Thumbnails.MICRO_KIND;
-            if (range.inRange(96, 96)) {
-                kind = MediaStore.Images.Thumbnails.MICRO_KIND;
-            } else {
-                kind = MediaStore.Images.Thumbnails.MINI_KIND;
-            }
+            ContentResolver resolver = getContext().getContentResolver();
+            String[] projection = new String[]{"_data", "_id", "width", "height"};
+            String whereClause = "_data = '" + path + "'";
+            Cursor cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
+            Integer id = null;
+            if (null != cursor && cursor.moveToFirst()) {
+                id = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID));
 
-            Bitmap res = extraThumbnailFromMediaStore(path, kind);
-            if (checkBitmap(res)) {
-                Bitmap res1 = extractBitmap(res, range.expectWidth, range.expectHeight);
-                recycle(res);
-                return res1;
             }
-            recycle(res);
+            if (null != cursor) {
+                cursor.close();
+            }
+            if (null == id) {
+                return null;
+            }
+            projection = new String[]{"_data"};
+            whereClause = "_id = '" + id + "'";
+            cursor = resolver.query(getThumbnailUri(), projection, whereClause, null, null);
+            try {
+                if (null != cursor && cursor.moveToFirst()) {
+                    byte[] data = cursor.getBlob(cursor.getColumnIndex("_data"));
+                    if (null == data || data.length <= 0) {
+                        return null;
+                    }
+                    return BitmapFactory.decodeByteArray(data, 0, data.length);
+                }
+            } finally {
+                if (null != cursor) {
+                    cursor.close();
+                }
+            }
             return null;
-//            ContentResolver resolver = getContext().getContentResolver();
-//            String[] projection = new String[]{"_data", "_id", "width", "height"};
-//            String whereClause = "_data = '" + path + "'";
-//            Cursor cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
-//            Integer id = null;
-//            int width = 0, height = 0;
-//            if (null != cursor && cursor.moveToFirst()) {
-//                id = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID));
-//                width = cursor.getInt(cursor.getColumnIndex("width"));
-//                height = cursor.getInt(cursor.getColumnIndex("height"));
-//            }
-//            if (null != cursor) {
-//                cursor.close();
-//            }
-//            if (null == id || (width < expectWidth && height < expectHeight)) {
-//                return null;
-//            }
-//            projection = new String[]{"_data"};
-//            whereClause = "_id = '" + id + "'";
-//            cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
-//            try {
-//                if (null != cursor && cursor.moveToFirst()) {
-//                    return cursor.getBlob(cursor.getColumnIndex("_data"));
-//                }
-//            } finally {
-//                if (null != cursor) {
-//                    cursor.close();
-//                }
-//            }
-////            Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(resolver, id, kind, options);
-//            return null;
         }
-
-        public abstract Bitmap extractThumbnailFromMediaStore(String path, int kine);
 
         public abstract Bitmap extractThumbnailFromFileTag(String path, SizeRange range);
 
@@ -397,102 +376,101 @@ public class BitmapUtils {
             return null;
         }
 
-        protected static Bitmap processBitmap(Bitmap source, SizeRange range) {
-            if (!checkBitmap(source)) {
-                return null;
-            }
-            int width = source.getWidth();
-            int height = source.getHeight();
-            if (range.withInInternal(width, height)) {
-                // 1. 宽高都命中区域
-                return source;
-            }
-
-            // 2. 宽高都没有命中之都小于目标期望值, 返回当前source
-            if (width < range.minWidth && height < range.minHeight) {
-                return source;
-            }
-
-            // 3. 宽高都没有命中之都大于目标期望值
-            if (width > range.maxWidth && height > range.maxHeight) {
-                float factor = computeScale(width, height, range, true);
-                if (MathUtils.equals(factor, 1.0F, 0.1F)) {
-                    // 不需要做压缩，没必要
-                    return source;
-                }
-                Bitmap res = BitmapUtils.extractBitmap(source, factor);
-                if (res != source) {
-                    recycle(source);
-                }
-                return res;
-            }
-
-            // 4. 宽高有一个命中，另一个没有命中
-            // 4.1 一个在区间，另一个小于最小值
-            if (width < range.minWidth || height < range.minHeight) {
-                return source;
-            }
-            // 4.2 一个在区间，另一个大于最大值
-            {
-                if(){
-
-                }
-            }
-
-            Bitmap res = BitmapUtils.extractBitmap(source, range.expectWidth, range.expectHeight);
-            if (res != source) {
-                recycle(source);
-            }
-            return res;
-        }
-
-        protected static Bitmap processBitmap(byte[] data, int offset, int size, SizeRange range) {
+        public static Bitmap resize(byte[] data, int offset, int length, SizeRange range) {
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             options.inSampleSize = 1;
-            BitmapFactory.decodeByteArray(data, offset, size, options);
+            BitmapFactory.decodeByteArray(data, offset, length, options);
             if (!checkOptions(options)) {
                 return null;
             }
             final int width = options.outWidth;
             final int height = options.outHeight;
             options.inJustDecodeBounds = false;
-            // 1. 宽高都命中区域
-            if (range.withInInternal(width, height)) {
-                return BitmapFactory.decodeByteArray(data, offset, size, options);
+            options.inSampleSize = computeInSample(width, height, range);
+            Bitmap res = BitmapFactory.decodeByteArray(data, offset, length, options);
+            if (!checkBitmap(res)) {
+                return null;
             }
 
-            // 2. 宽高都没有命中之都小于目标期望值, 返回当前全部
-            if (width < range.minWidth && height < range.minHeight) {
-                return BitmapFactory.decodeByteArray(data, offset, size, options);
+            return resize(res, range, options);
+        }
+
+        public static Bitmap resize(Bitmap source, SizeRange range, BitmapFactory.Options options) {
+            if (!checkBitmap(source)) {
+                return source;
+            }
+            if (null == options) {
+                options = new BitmapFactory.Options();
             }
 
-            // 3. 宽高都没有命中之都大于目标期望值
-            if (width > range.maxWidth && height > range.maxHeight) {
-                options.inSampleSize = computeInSample(width, height, range);
-                Bitmap res = BitmapFactory.decodeByteArray(data, offset, size, options);
-                if (!checkBitmap(res)) {
-                    recycle(res);
-                    return null;
+            float scale = computeScale(source.getWidth(), source.getHeight(), range, true);
+            if (MathUtils.equals(scale, 1.0F, 0.1F)) {
+                return source;
+            }
+
+            Bitmap res = BitmapUtils.extractBitmap(source, scale);
+            if (res == source) {
+                return res;
+            }
+            recycle(source);
+            return res;
+        }
+
+        public static Bitmap resize(File imageFile, SizeRange range) {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            options.inSampleSize = 1;
+            BitmapFactory.decodeFile(imageFile.getAbsolutePath(), options);
+            if (!checkOptions(options)) {
+                return null;
+            }
+            options.inJustDecodeBounds = false;
+            options.inSampleSize = computeInSample(options.outWidth, options.outHeight, range);
+            Bitmap res = BitmapFactory.decodeFile(imageFile.getAbsolutePath(), options);
+            if (!checkBitmap(res)) {
+                return null;
+            }
+
+            return resize(res, range, options);
+        }
+
+        protected static float computeScale(int originalWidth, int originalHeight, final SizeRange range, final boolean zoom) {
+            if (originalWidth <= 0 || originalHeight <= 0) {
+                return 0.0F;
+            }
+
+            if (range.withInInternal(originalWidth, originalHeight)) {
+                // 1. 宽高都命中区域,  不用scale
+                return 1.0F;
+            }
+
+            // 2. 宽高都没有命中之都小于目标期望值, 返回当前source, 不用scale
+            if (originalWidth < range.minWidth && originalHeight < range.minHeight) {
+                return 1.0F;
+            }
+
+            // 3. 宽高都没有命中之都大于目标期望值, 需要scale
+            if (originalWidth > range.maxWidth && originalHeight > range.maxHeight) {
+                float ws = range.expectWidth / (float) originalWidth;
+                float hs = range.expectHeight / (float) originalHeight;
+                if (zoom) {
+                    return ws > hs ? ws : hs;
                 }
-                return processBitmap(res, range);
+                return ws <= hs ? ws : hs;
             }
 
             // 4. 宽高有一个命中，另一个没有命中
-            // 4.1 一个在区间，另一个小于最小值
-            if (width < range.minWidth || height < range.minHeight) {
-                return BitmapFactory.decodeByteArray(data, offset, size, options);
+            // 4.1 一个在区间，另一个小于最小值, 不用scale
+            if (originalWidth < range.minWidth || originalHeight < range.minHeight) {
+                return 1.0F;
             }
-
-            // 4.2 一个在区间，另一个大于最大值
-            {
-                options.inSampleSize = computeInSample(width, height, range);
-                Bitmap res = BitmapFactory.decodeByteArray(data, offset, size, options);
-                if (!checkBitmap(res)) {
-                    recycle(res);
-                    return null;
-                }
-                return processBitmap(res, range);
+            // 4.2 一个在区间，另一个大于最大值, 需要scale
+            if (originalWidth > range.maxWidth) {
+                return range.maxWidth / (float) originalWidth;
+            } else {
+                // originalHeight > range.maxHeight
+                return range.minHeight / (float) originalHeight;
             }
         }
 
@@ -500,14 +478,7 @@ public class BitmapUtils {
             return BitmapUtils.calculateInSampleBySize(originalWidth, originalHeight, range.minWidth, range.minHeight);
         }
 
-        protected static float computeScale(int originalWidth, int originalHeight, SizeRange range) {
-
-
-
-
-        }
-
-        protected SizeRange computeSizeRange(int width, int height, float upperLimitFactor, float lowerLimitFactor) {
+        protected static SizeRange computeSizeRange(int width, int height, float upperLimitFactor, float lowerLimitFactor) {
             SizeRange range = new SizeRange();
             range.expectWidth = width;
             range.expectHeight = height;
@@ -537,190 +508,53 @@ public class BitmapUtils {
     }
 
 
-    /**
-     * 按照期望的大小得到当前图片的bitmap
-     *
-     * @param filePath
-     * @param expectWidth
-     * @param expectHeight
-     * @param options
-     * @return
-     */
-    public static Bitmap decodeFile(String filePath, int expectWidth, int expectHeight,
-                                    BitmapFactory.Options options, boolean zoomScale,
-                                    boolean enableCalculateSample, boolean calculateSampleBySize) {
-        if (null == options) {
-            options = new BitmapFactory.Options();
+    public static class ImageThumbnailUtils extends BaseThumbnailUtils {
+
+        protected ImageThumbnailUtils(boolean zoomImage, float upperLimitFactor, float lowerLimitFactor) {
+            super(zoomImage, upperLimitFactor, lowerLimitFactor);
         }
-        options.inSampleSize = 1;
-        options.inJustDecodeBounds = true;
-        FileInputStream stream = null;
-        Bitmap res = null;
-        try {
-            stream = new FileInputStream(filePath);
-            FileDescriptor fd = stream.getFD();
-            BitmapFactory.decodeFileDescriptor(fd, null, options);
-            if (BitmapUtils.checkOptions(options)) {
-                return null;
-            }
-            final int originalWidth = options.outWidth;
-            final int originalHeight = options.outHeight;
-            //step1. 原始图片太小，直接返回原始图片
-            if (originalWidth <= expectWidth || originalHeight <= expectHeight) {
-                res = BitmapFactory.decodeFile(filePath, options);
-                return res;
-            }
 
-
-            if (enableCalculateSample) {
-                final ValueReference<Integer> sampleRef = new ValueReference<Integer>();
-                int sample = 1;
-                if (calculateSampleBySize) {
-                    sample = calculateSampleBySize(originalWidth, originalHeight, expectWidth, expectHeight);
-                } else {
-                    sample = calculateSampleByCount(originalWidth, originalHeight, expectWidth, expectHeight);
-                }
-                res = Bitmap.createBitmap()
-            }
-
-
-            final ValueReference<Float> scaleRef = new ValueReference<Float>();
-            calculateSampleAndScale(options.outWidth, options.outHeight, expectWidth, expectHeight, sampleRef, scaleRef);
-            if (null != sampleRef.getValue()) {
-                options.inSampleSize = sampleRef.getValue();
-            } else {
-                options.inSampleSize = 1;
-            }
-            options.inJustDecodeBounds = false;
-            options.inDither = false;
-            Bitmap res = BitmapFactory.decodeFile(filePath, options);
-
-            if (null != scaleRef.getValue()) {
-                Matrix matrix = new Matrix();
-                matrix.setScale(scales.getValue(), scales.getValue());
-                Bitmap res1 = Bitmap.createBitmap(res, 0, 0, res.getWidth(), res.getHeight(), matrix, true);
-                recycle(res);
-                res = res1;
-            }
-
-            return res;
-        } catch (IOException ex) {
-            Log.e(TAG, "", ex);
-        } catch (OutOfMemoryError oom) {
-            Log.e(TAG, "Unable to decode file " + filePath + ". OutOfMemoryError.", oom);
-        } finally {
-            IOUtil.closeQuietly(stream);
+        protected Uri getExternalUri() {
+            return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         }
-        return null;
-    }
 
-    /**
-     * 根据原始大小和输出的大小，计算采样率和scale系数
-     *
-     * @param originalWidth  original width
-     * @param originalHeight original height
-     * @param width          target width
-     * @param height         target height
-     * @param outInSample    in sample
-     * @param outScale       out scale factor
-     */
-    public static void calculateSampleAndScale(int originalWidth, int originalHeight, int width, int height,
-                                               boolean zoomImage, Boolean calculateSampleBySize,
-                                               ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
-        if (width == originalWidth && originalHeight == height) {
-            outInSample.setValue(Integer.valueOf(1));
-            outScale.setValue(null);
-            return;
+        protected Uri getThumbnailUri() {
+            return MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI;
         }
-        if (width >= originalWidth || height >= originalHeight) {
-            outInSample.setValue(Integer.valueOf(1));
-            if (zoomImage) {
-                outScale.setValue(calculateScale(originalWidth, originalHeight, width, height, zoomImage));
-                return;
-            }
-            int ow = originalWidth;
-            int oh = originalHeight;
-            int inSample = 1;
-            do {
-                inSample *= 2;
-                ow /= 2;
-                oh /= 2;
-            } while (ow >= width && oh >= height);
-            inSample = inSample / 2 <= 1 ? 1 : inSample / 2;
-            ow = originalWidth / inSample;
-            oh = originalHeight / inSample;
 
-            outInSample.setValue(Integer.valueOf(inSample));
-            if (MathUtils.equals(ow, width) && MathUtils.equals(oh, height)) {
-                outScale.setValue(null);
-                return;
-            }
+        @Override
+        public Bitmap extractThumbnailFromFileTag(String path, SizeRange range) {
+            return null;
+        }
 
-            outScale.setValue(BitmapUtils.calculateShrinkScale(ow, oh, width, height));
+        @Override
+        public Bitmap decodeFile(String filePath, int expectWidth, int expectHeight, BitmapFactory.Options options) {
+            return null;
         }
     }
 
+    public static class VideoThumbnailUtils extends BaseThumbnailUtils {
 
-    /**
-     * 计算采样频率，首先使用采样率，如果只修改采样率就能满足范围，则只是可以不scale，否则会使用采样率和scale配合
-     *
-     * @param originalWidth  original width
-     * @param originalHeight original height
-     * @param sizeRange      期望的范围
-     * @param outInSample
-     * @param outScale
-     */
-    public static void calculateSampleAndScale(int originalWidth, int originalHeight, BitmapSizeRange sizeRange,
-                                               ValueReference<Integer> outInSample, ValueReference<Float> outScale) {
-        if (sizeRange.validate(originalWidth, originalHeight)) {
-            outInSample.setValue(Integer.valueOf(1));
-            outScale.setValue(null);
-            return;
+        protected VideoThumbnailUtils(boolean zoomImage, float upperLimitFactor, float lowerLimitFactor) {
+            super(zoomImage, upperLimitFactor, lowerLimitFactor);
         }
 
-        if (originalWidth <= sizeRange.minWidth || originalHeight >= sizeRange.minHeight) {
-            outInSample.setValue(Integer.valueOf(1));
-            outScale.setValue(BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, sizeRange.expectWidth, sizeRange.expectHeight));
-            return;
-        }
-        float topScale = BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, sizeRange.maxWidth, sizeRange.maxHeight);
-        float scale = BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, sizeRange.expectWidth, sizeRange.expectHeight);
-        float lowScale = BitmapUtils.calculateShrinkScale(originalWidth, originalHeight, sizeRange.minWidth, sizeRange.minHeight);
-        int sample = 1;
-        final List<Integer> validateSamples = new ArrayList<Integer>();
-        while (sample <= topScale) {
-            if (sample >= lowScale && sample <= topScale) {
-                validateSamples.add(Integer.valueOf(sample));
-            }
-            sample *= 2;
-        }
-        if (validateSamples.isEmpty()) {
-            outInSample.setValue(null);
-            outScale.setValue(Float.valueOf(scale));
+        protected Uri getExternalUri() {
+            return MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
         }
 
-        outInSample.setValue(validateSamples.get(0));
-        outScale.setValue(null);
-    }
+        protected Uri getThumbnailUri() {
+            return MediaStore.Video.Thumbnails.EXTERNAL_CONTENT_URI;
+        }
 
-    public static Bitmap decode(byte[] source, Integer sample, Float scales, BitmapFactory.Options options) {
-        if (null == options) {
-            options = new BitmapFactory.Options();
+        @Override
+        public Bitmap extractThumbnailFromFileTag(String path, SizeRange range) {
+            return null;
         }
-        options.inJustDecodeBounds = false;
-        options.inDither = false;
-        if (null != sample) {
-            options.inSampleSize = sample;
-        }
-        Bitmap res = BitmapFactory.decodeByteArray(source, 0, source.length, options);
 
-        if (null != scales && null != scales) {
-            Matrix matrix = new Matrix();
-            matrix.setScale(scales, scales);
-            Bitmap res1 = Bitmap.createBitmap(res, 0, 0, res.getWidth(), res.getHeight(), matrix, true);
-            recycle(res);
-            res = res1;
+        @Override
+        public Bitmap decodeFile(String filePath, int expectWidth, int expectHeight, BitmapFactory.Options options) {
+            return null;
         }
-        return res;
     }
 }
