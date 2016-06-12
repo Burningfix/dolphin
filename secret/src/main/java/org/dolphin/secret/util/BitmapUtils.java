@@ -5,13 +5,19 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.ExifInterface;
 import android.media.MediaMetadataRetriever;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.Log;
+
+import org.dolphin.http.MimeType;
+import org.dolphin.secret.SecretApplication;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,7 +42,7 @@ public class BitmapUtils {
         return true;
     }
 
-    public static boolean checkData(byte[] data) {
+    public static boolean checkByteArray(byte[] data) {
         if (null == data || data.length <= 0) {
             return false;
         }
@@ -267,7 +273,7 @@ public class BitmapUtils {
         }
 
         protected Context getContext() {
-            return null;
+            return SecretApplication.getInstance();
         }
 
         protected boolean isZoomImage() {
@@ -282,22 +288,21 @@ public class BitmapUtils {
             return MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI;
         }
 
-        public Bitmap extractThumbnailFromMediaStore(final String path, final SizeRange range) {
+        protected Bitmap extractThumbnailFromMediaStore(final String path, final SizeRange range) {
             // MINI_KIND: 512 x 384
             // MICRO_KIND: 96 x 96
             // 数据库中只有MICRO_KIND模式
-            if (!range.withInInternal(86, 96)) {
+            if (!range.withInInternal(96, 96)) {
                 return null;
             }
 
             ContentResolver resolver = getContext().getContentResolver();
-            String[] projection = new String[]{"_data", "_id", "width", "height"};
+            String[] projection = new String[]{"_id"};
             String whereClause = "_data = '" + path + "'";
             Cursor cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
             Integer id = null;
             if (null != cursor && cursor.moveToFirst()) {
                 id = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID));
-
             }
             if (null != cursor) {
                 cursor.close();
@@ -324,10 +329,10 @@ public class BitmapUtils {
             return null;
         }
 
-        public abstract Bitmap extractThumbnailFromFileTag(String path, SizeRange range);
+        protected abstract Bitmap extractThumbnailFromFileTag(String path, SizeRange range);
 
-        public abstract Bitmap decodeFile(String filePath, int expectWidth, int expectHeight,
-                                          BitmapFactory.Options options);
+        protected abstract Bitmap decodeFile(String filePath, SizeRange range,
+                                             BitmapFactory.Options options);
 
         /**
          * 尝试得到指定文件的thumbnail，尝试的渠道有三种：
@@ -368,7 +373,7 @@ public class BitmapUtils {
             }
 
             // step 3. 直接decode文件，尝试从文件中读取
-            res = decodeFile(filePath, expectWidth, expectHeight, options);
+            res = decodeFile(filePath, range, options);
             if (checkBitmap(res)) {
                 return res;
             }
@@ -376,7 +381,7 @@ public class BitmapUtils {
             return null;
         }
 
-        public static Bitmap resize(byte[] data, int offset, int length, SizeRange range) {
+        protected static Bitmap resize(byte[] data, int offset, int length, SizeRange range) {
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             options.inSampleSize = 1;
@@ -396,7 +401,7 @@ public class BitmapUtils {
             return resize(res, range, options);
         }
 
-        public static Bitmap resize(Bitmap source, SizeRange range, BitmapFactory.Options options) {
+        protected static Bitmap resize(Bitmap source, SizeRange range, BitmapFactory.Options options) {
             if (!checkBitmap(source)) {
                 return source;
             }
@@ -417,7 +422,7 @@ public class BitmapUtils {
             return res;
         }
 
-        public static Bitmap resize(File imageFile, SizeRange range) {
+        protected static Bitmap resize(File imageFile, SizeRange range) {
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
             options.inSampleSize = 1;
@@ -446,27 +451,24 @@ public class BitmapUtils {
             }
 
             // 2. 宽高都没有命中之都小于目标期望值, 返回当前source, 不用scale
-            if (originalWidth < range.minWidth && originalHeight < range.minHeight) {
+            if (originalWidth <= range.minWidth && originalHeight <= range.minHeight) {
                 return 1.0F;
             }
 
             // 3. 宽高都没有命中之都大于目标期望值, 需要scale
-            if (originalWidth > range.maxWidth && originalHeight > range.maxHeight) {
+            if (originalWidth >= range.maxWidth && originalHeight >= range.maxHeight) {
                 float ws = range.expectWidth / (float) originalWidth;
                 float hs = range.expectHeight / (float) originalHeight;
-                if (zoom) {
-                    return ws > hs ? ws : hs;
-                }
-                return ws <= hs ? ws : hs;
+                return ws > hs ? hs : ws;
             }
 
             // 4. 宽高有一个命中，另一个没有命中
             // 4.1 一个在区间，另一个小于最小值, 不用scale
-            if (originalWidth < range.minWidth || originalHeight < range.minHeight) {
+            if (originalWidth <= range.minWidth || originalHeight <= range.minHeight) {
                 return 1.0F;
             }
             // 4.2 一个在区间，另一个大于最大值, 需要scale
-            if (originalWidth > range.maxWidth) {
+            if (originalWidth >= range.maxWidth) {
                 return range.maxWidth / (float) originalWidth;
             } else {
                 // originalHeight > range.maxHeight
@@ -507,8 +509,8 @@ public class BitmapUtils {
         }
     }
 
-
     public static class ImageThumbnailUtils extends BaseThumbnailUtils {
+        public final static ImageThumbnailUtils DEFAULT = new ImageThumbnailUtils(true, 0.2F, 0.2F);
 
         protected ImageThumbnailUtils(boolean zoomImage, float upperLimitFactor, float lowerLimitFactor) {
             super(zoomImage, upperLimitFactor, lowerLimitFactor);
@@ -523,17 +525,31 @@ public class BitmapUtils {
         }
 
         @Override
-        public Bitmap extractThumbnailFromFileTag(String path, SizeRange range) {
-            return null;
+        protected Bitmap extractThumbnailFromFileTag(String path, SizeRange range) {
+            MimeType mimeType = MimeType.createFromFileName(path);
+            if (null == mimeType || !mimeType.getContentType().contains("image/jpeg")) {
+                return null;
+            }
+            ExifInterface exif = null;
+            byte[] thumbData = null;
+            try {
+                exif = new ExifInterface(path);
+                thumbData = exif.getThumbnail();
+                return resize(thumbData, 0, thumbData.length, range);
+            } catch (IOException ex) {
+                Log.w(TAG, ex);
+                return null;
+            }
         }
 
         @Override
-        public Bitmap decodeFile(String filePath, int expectWidth, int expectHeight, BitmapFactory.Options options) {
-            return null;
+        protected Bitmap decodeFile(String filePath, SizeRange range, BitmapFactory.Options options) {
+            return resize(new File(filePath), range);
         }
     }
 
     public static class VideoThumbnailUtils extends BaseThumbnailUtils {
+        public final static VideoThumbnailUtils DEFAULT = new VideoThumbnailUtils(true, 0.2F, 0.2F);
 
         protected VideoThumbnailUtils(boolean zoomImage, float upperLimitFactor, float lowerLimitFactor) {
             super(zoomImage, upperLimitFactor, lowerLimitFactor);
@@ -548,13 +564,18 @@ public class BitmapUtils {
         }
 
         @Override
-        public Bitmap extractThumbnailFromFileTag(String path, SizeRange range) {
+        protected Bitmap extractThumbnailFromFileTag(String path, SizeRange range) {
             return null;
         }
 
         @Override
-        public Bitmap decodeFile(String filePath, int expectWidth, int expectHeight, BitmapFactory.Options options) {
-            return null;
+        protected Bitmap decodeFile(String filePath, SizeRange range, BitmapFactory.Options options) {
+            // from mediaRetriver
+            Bitmap res = extractFromMediaMetadataRetriever(filePath);
+            if (!checkBitmap(res)) {
+                return null;
+            }
+            return resize(res, range, options);
         }
     }
 }

@@ -1,8 +1,11 @@
 package org.dolphin.secret.browser;
 
+import android.app.Activity;
 import android.app.Fragment;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -19,16 +22,11 @@ import android.widget.Toast;
 
 import org.dolphin.lib.util.DateUtils;
 import org.dolphin.lib.util.FileInfoUtil;
-import org.dolphin.lib.util.IOUtil;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
-import org.dolphin.secret.core.ReadableFileInputStream;
 import org.dolphin.secret.picker.FileRequestProvider;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -48,11 +46,17 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     }
 
     protected final List<FileInfo> fileList = new LinkedList<FileInfo>();
+    private State state = State.Normal;
+    private ListView listView;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         listView = new ListView(inflater.getContext());
+        Drawable drawable = new ColorDrawable(0xFFEEEEEE);
+        drawable.setBounds(0, 0, 1000, 1);
+        listView.setDividerHeight(1);
+        listView.setDivider(drawable);
         listView.setAdapter(listAdapter);
         listView.setOnItemClickListener(this);
         this.fileList.addAll(getFileList());
@@ -70,8 +74,6 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         BrowserManager.getInstance().addImageFileChangeListener(this);
     }
 
-    private State state = State.Normal;
-    private ListView listView;
 
     public void setState(State state) {
         this.state = state;
@@ -95,26 +97,40 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         FileInfo item = (FileInfo) listAdapter.getItem(position);
         onItemClicked(item);
-        File file = new File(BrowserManager.sRootDir, item.proguardFileName);
-        try {
-            File outFile = new File(BrowserManager.sRootDir, "out");
-            if (!outFile.exists()) outFile.createNewFile();
-            ReadableFileInputStream inputStream = new ReadableFileInputStream(file, item);
-            FileOutputStream fileOutputStream = new FileOutputStream(outFile);
-            IOUtil.copy(inputStream, fileOutputStream);
-            IOUtil.safeClose(inputStream);
-            IOUtil.safeClose(fileOutputStream);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        File file = new File(BrowserManager.sRootDir, item.proguardFileName);
+//        try {
+//            File outFile = new File(BrowserManager.sRootDir, "out");
+//            if (!outFile.exists()) outFile.createNewFile();
+//            ReadableFileInputStream inputStream = new ReadableFileInputStream(file, item);
+//            FileOutputStream fileOutputStream = new FileOutputStream(outFile);
+//            IOUtil.copy(inputStream, fileOutputStream);
+//            IOUtil.safeClose(inputStream);
+//            IOUtil.safeClose(fileOutputStream);
+//        } catch (FileNotFoundException e) {
+//            e.printStackTrace();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     protected void onItemClicked(FileInfo fileInfo) {
         // TODO
     }
 
+
+    protected View crateItemView(FileInfo item, View convertView) {
+        View root = View.inflate(FilePage.this.getActivity(), R.layout.file_item, null);
+        ThumbnailImageView imageVIew = (ThumbnailImageView) root.findViewById(R.id.thumbnail);
+        TextView nameView = (TextView) root.findViewById(R.id.name);
+        TextView size = (TextView) root.findViewById(R.id.size);
+        TextView duration = (TextView) root.findViewById(R.id.duration);
+        TextView encodeTime = (TextView) root.findViewById(R.id.encode_time);
+        imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
+        nameView.setText(item.originalFileName);
+        size.setText(FileInfoUtil.formatSize(item.originalFileLength));
+        encodeTime.setText(DateUtils.formatDate(item.encodeTime));
+        return root;
+    }
 
     private BaseAdapter listAdapter = new BaseAdapter() {
         @Override
@@ -135,18 +151,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             FileInfo item = (FileInfo) getItem(position);
-            View root = View.inflate(FilePage.this.getActivity(), R.layout.file_item, null);
-            ThumbnailImageView imageVIew = (ThumbnailImageView) root.findViewById(R.id.thumbnail);
-            TextView nameView = (TextView) root.findViewById(R.id.name);
-            TextView size = (TextView) root.findViewById(R.id.size);
-            TextView duration = (TextView) root.findViewById(R.id.duration);
-            TextView encodeTime = (TextView) root.findViewById(R.id.encode_time);
-            imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
-            nameView.setText(item.originalFileName);
-            size.setText(FileInfoUtil.formatSize(item.originalFileLength));
-//            duration.setText("12:22:22");
-            encodeTime.setText(DateUtils.formatDate(item.encodeTime));
-            return root;
+            return crateItemView(item, convertView);
         }
     };
 
@@ -157,6 +162,17 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if ((IMPORT_PHOTO_REQUEST_CODE == requestCode
+                || IMPORT_PHOTO_REQUEST_CODE == requestCode
+                || IMPORT_PHOTO_REQUEST_CODE == requestCode)
+                && resultCode == Activity.RESULT_OK) {
+            // 导入成功
+            if (null == data) {
+                return;
+            }
+            List<FileRequestProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
+            importFileEntryList(selectedFileList);
+        }
         super.onActivityResult(requestCode, resultCode, data);
     }
 

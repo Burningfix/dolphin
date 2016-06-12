@@ -2,16 +2,15 @@ package org.dolphin.secret.core;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.media.ThumbnailUtils;
-import android.provider.MediaStore;
 import android.util.Log;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.job.Operator;
 import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.lib.Preconditions;
 import org.dolphin.lib.util.ByteUtil;
 import org.dolphin.lib.util.IOUtil;
-import org.dolphin.lib.Preconditions;
+import org.dolphin.secret.util.BitmapUtils;
 import org.dolphin.secret.util.UnsupportEncode;
 
 import java.io.ByteArrayOutputStream;
@@ -164,7 +163,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
         int thumbnailRangeCount = 0;
         cache.footBodyContent = null;
         int originalFileLength = (int) originalFile.length();
-        cache.thumbnail = createBitmap(originalFile, fileInfo);
+        cache.thumbnail = getThumbnail(originalFile, fileInfo);
         try {
             randomAccessFile = new RandomAccessFile(originalFile, "rw");
             byte[] dom = new byte[32];
@@ -235,7 +234,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
         byte[] originalHeadBuffer = null;
         byte[] originalFootBuffer = null;
         int transferSize = fileInfo.transferSize;
-        outCache.thumbnail = createBitmap(originalFile, fileInfo);
+        outCache.thumbnail = getThumbnail(originalFile, fileInfo);
         try {
             randomAccessFile = new RandomAccessFile(originalFile, "rw");
             byte[] dom = new byte[32];
@@ -300,50 +299,30 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
     /**
      * 创建当前文件的thumbnail
      */
-    public static Bitmap createBitmap(File file, FileInfo fileInfo) {
+    public static Bitmap getThumbnail(File file, FileInfo fileInfo) {
+//        String mime = fileInfo.originalMimeType;
+//        try {
+//            if (mime.startsWith("image")) {
+//                return createImageThumbnail(file);
+//            }
+//            if (mime.startsWith("video")) {
+//                return ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MINI_KIND);
+//            }
+//        } catch (IOException exception) {
+//
+//        }
+//        // TODO
+//        return null;
+
         String mime = fileInfo.originalMimeType;
-        try {
-            if (mime.startsWith("image")) {
-                return createImageThumbnail(file, fileInfo);
-            }
-            if (mime.startsWith("video")) {
-                return ThumbnailUtils.createVideoThumbnail(file.getPath(), MediaStore.Video.Thumbnails.MINI_KIND);
-            }
-        } catch (IOException exception) {
-
+        if (mime.startsWith("image")) {
+            return BitmapUtils.ImageThumbnailUtils.DEFAULT.extractThumbnail(file.getAbsolutePath(), 200, 200, null);
         }
-        // TODO
+        if (mime.startsWith("video")) {
+            return BitmapUtils.VideoThumbnailUtils.DEFAULT.extractThumbnail(file.getAbsolutePath(), 200, 200, null);
+        }
         return null;
     }
-
-    // 尽量的靠近200*200
-    public static Bitmap createImageThumbnail(File file, FileInfo fileInfo) throws IOException {
-        FileInputStream inputStream = null;
-        try {
-            inputStream = new FileInputStream(file);
-//            inputStream.mark(0);
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inJustDecodeBounds = true;
-            BitmapFactory.decodeStream(inputStream, null, options);
-            int w = options.outWidth;
-            int h = options.outHeight;
-            options.inJustDecodeBounds = false;
-            options.inSampleSize = FileConstants.calculateSampleSize(w, h, 200, 200);
-//            inputStream.reset();
-            IOUtil.safeClose(inputStream);
-            inputStream = new FileInputStream(file);
-            Bitmap bitmap = BitmapFactory.decodeStream(inputStream, null, options);
-            return bitmap;
-        } finally {
-            IOUtil.safeClose(inputStream);
-        }
-    }
-
-    // 尽量的靠近200*200
-    public static Bitmap createAudioThumbnail(String path) {
-        return null;
-    }
-
 
     /**
      * 返回当前系统时间

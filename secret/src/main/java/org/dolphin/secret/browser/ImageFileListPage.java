@@ -13,11 +13,9 @@ import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.MainActivity;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
-import org.dolphin.secret.picker.FileRequestProvider;
 
 import java.io.File;
 import java.util.Calendar;
-import java.util.List;
 import java.util.Locale;
 
 /**
@@ -91,16 +89,11 @@ public class ImageFileListPage extends FilePage {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == CATCH_PHOTO_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
             if (!ValueUtil.isEmpty(lastCreateFileName)) {
                 BrowserManager.getInstance().obscureFile(lastCreateFileName);
             }
-        } else if (IMPORT_PHOTO_REQUEST_CODE == requestCode && resultCode == Activity.RESULT_OK) {
-            // 导入成功
-            if (null == data) return;
-            List<FileRequestProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
-            importFileEntryList(selectedFileList);
         }
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }

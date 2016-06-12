@@ -29,7 +29,7 @@ import java.util.List;
  */
 public class BrowserManager {
     public static final String TAG = "BrowserManager";
-    public static File sRootDir = new File("/sdcard/se");
+    public static File sRootDir = new File(SecretApplication.getInstance().getFilesDir(), "se");
     private static BrowserManager sInstance = null;
 
     public synchronized static BrowserManager getInstance() {
@@ -46,8 +46,24 @@ public class BrowserManager {
 
     private BrowserManager() {
         this.rootDir = sRootDir;
-        if (!rootDir.isDirectory()) {
-            throw new IllegalArgumentException("");
+        checkEnvironment();
+    }
+
+    private void checkEnvironment() {
+        if (this.rootDir.exists()) {
+            if (!this.rootDir.isDirectory()) {
+                FileUtils.deleteQuietly(this.rootDir);
+                checkEnvironment();
+            }
+        } else {
+            if (!this.rootDir.mkdirs()) {
+                // Double-check that some other thread or process hasn't made
+                // the directory in the background
+                if (!this.rootDir.isDirectory()) {
+                    FileUtils.deleteQuietly(this.rootDir);
+                    checkEnvironment();
+                }
+            }
         }
     }
 

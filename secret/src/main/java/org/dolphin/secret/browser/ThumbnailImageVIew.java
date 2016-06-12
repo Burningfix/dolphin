@@ -13,6 +13,7 @@ import org.dolphin.job.Job;
 import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.lib.util.ValueUtil;
+import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileConstants;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
@@ -41,13 +42,16 @@ public class ThumbnailImageView extends ImageView {
         super(context, attrs, defStyleAttr);
     }
 
-    public void setFile(String path, FileInfo fileInfo) {
-        notifyPropertyChanged(this.attached, this.visible, path, fileInfo);
-    }
-
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     public ThumbnailImageView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
+    }
+
+    public void setFile(String path, FileInfo fileInfo) {
+        this.fileInfo = fileInfo;
+        this.filePath = path;
+        this.setImageResource(R.drawable.default_thumbnail_loading);
+        notifyPropertyChanged(this.attached, this.visible, path, fileInfo);
     }
 
     @Override
@@ -66,11 +70,6 @@ public class ThumbnailImageView extends ImageView {
     protected void onVisibilityChanged(View changedView, int visibility) {
         notifyPropertyChanged(this.attached, VISIBLE == visibility, this.filePath, this.fileInfo);
         super.onVisibilityChanged(changedView, visibility);
-    }
-
-    public void setFile(FileInfo file) {
-        this.fileInfo = file;
-        notifyPropertyChanged(this.attached, VISIBLE == View.VISIBLE, this.filePath, this.fileInfo);
     }
 
     private void notifyPropertyChanged(boolean newAttached, boolean newVisible, String newPath, FileInfo newFileInfo) {
