@@ -1,4 +1,4 @@
-package org.dolphin.secret.env;
+package org.dolphin.secret.permission;
 
 /**
  * Created by yananh on 2016/6/12.

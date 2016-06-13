@@ -10,6 +10,10 @@ public class ValueUtil {
         return false;
     }
 
+    public static boolean isEmpty(Object[] data) {
+        return null == data || data.length <= 0;
+    }
+
     public static boolean isEquals(Object obj1, Object obj2) {
         if (obj1 == obj2) return true;
         if (null == obj1 || null == obj2) return false;
