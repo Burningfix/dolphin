@@ -1,6 +1,7 @@
 package org.dolphin.secret.browser;
 
 import android.media.MediaScannerConnection;
+import android.os.Environment;
 import android.util.Log;
 
 import org.apache.commons.io.FileUtils;
@@ -29,7 +30,7 @@ import java.util.List;
  */
 public class BrowserManager {
     public static final String TAG = "BrowserManager";
-    public static File sRootDir = new File(SecretApplication.getInstance().getFilesDir(), "se");
+    public static File sRootDir = new File(Environment.getExternalStorageDirectory(), "se");
     private static BrowserManager sInstance = null;
 
     public synchronized static BrowserManager getInstance() {

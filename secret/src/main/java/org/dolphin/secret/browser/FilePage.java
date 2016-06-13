@@ -8,6 +8,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.v7.widget.AppCompatRadioButton;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -33,7 +34,8 @@ import java.util.List;
 /**
  * Created by yananh on 2016/1/23.
  */
-public class FilePage extends Fragment implements BrowserManager.FileChangeListener, AdapterView.OnItemClickListener {
+public class FilePage extends Fragment implements BrowserManager.FileChangeListener,
+        AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
     protected final int CATCH_PHOTO_REQUEST_CODE = 1234;
     protected final int CATCH_VIDEO_REQUEST_CODE = 1235;
     protected final int AUDIO_REQUEST_CODE = 1236;
@@ -59,6 +61,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         listView.setDivider(drawable);
         listView.setAdapter(listAdapter);
         listView.setOnItemClickListener(this);
+        listView.setOnItemLongClickListener(this);
         this.fileList.addAll(getFileList());
         notifyStateChange();
         addListener();
@@ -97,21 +100,18 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         FileInfo item = (FileInfo) listAdapter.getItem(position);
         onItemClicked(item);
-//        File file = new File(BrowserManager.sRootDir, item.proguardFileName);
-//        try {
-//            File outFile = new File(BrowserManager.sRootDir, "out");
-//            if (!outFile.exists()) outFile.createNewFile();
-//            ReadableFileInputStream inputStream = new ReadableFileInputStream(file, item);
-//            FileOutputStream fileOutputStream = new FileOutputStream(outFile);
-//            IOUtil.copy(inputStream, fileOutputStream);
-//            IOUtil.safeClose(inputStream);
-//            IOUtil.safeClose(fileOutputStream);
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
+
+
+    @Override
+    public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+        if (this.state != State.Selectable) {
+            this.state = State.Selectable;
+            notifyStateChange();
+        }
+        return false;
+    }
+
 
     protected void onItemClicked(FileInfo fileInfo) {
         // TODO
@@ -125,10 +125,16 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         TextView size = (TextView) root.findViewById(R.id.size);
         TextView duration = (TextView) root.findViewById(R.id.duration);
         TextView encodeTime = (TextView) root.findViewById(R.id.encode_time);
+        AppCompatRadioButton radioButton = (AppCompatRadioButton) root.findViewById(R.id.file_radio);
         imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
         nameView.setText(item.originalFileName);
         size.setText(FileInfoUtil.formatSize(item.originalFileLength));
         encodeTime.setText(DateUtils.formatDate(item.encodeTime));
+        if (this.state == State.Normal) {
+            radioButton.setVisibility(View.GONE);
+        } else {
+            radioButton.setVisibility(View.VISIBLE);
+        }
         return root;
     }
 

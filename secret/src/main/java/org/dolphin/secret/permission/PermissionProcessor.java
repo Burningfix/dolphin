@@ -7,18 +7,13 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Looper;
-import android.os.Parcelable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.PermissionChecker;
 
-import com.google.common.collect.ArrayListMultimap;
-
-import org.dolphin.lib.util.ListUtil;
 import org.dolphin.lib.util.ValueUtil;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -109,6 +104,7 @@ public class PermissionProcessor {
 
     /**
      * 是否显示请求权限的弹框， 有时候当弹出权限提示时，有的用户会选中‘不再提示’选项
+     *
      * @param activity
      * @param permissionSpecs
      * @return
@@ -146,7 +142,7 @@ public class PermissionProcessor {
         context.startActivity(intent);
         try {
             Looper.loop();
-            return true;
+            throw new UnsupportedOperationException("Cannot running here!!");
         } catch (PermissionGrantedException exception) {
             return true;
         } catch (PermissionDeniedException ex) {

@@ -535,6 +535,9 @@ public class BitmapUtils {
             try {
                 exif = new ExifInterface(path);
                 thumbData = exif.getThumbnail();
+                if (thumbData == null || thumbData.length <= 0) {
+                    return null;
+                }
                 return resize(thumbData, 0, thumbData.length, range);
             } catch (IOException ex) {
                 Log.w(TAG, ex);
