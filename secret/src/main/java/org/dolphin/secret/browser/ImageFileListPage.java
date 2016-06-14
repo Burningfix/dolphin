@@ -13,6 +13,7 @@ import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.MainActivity;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.play.ImagePlayerActivity;
 
 import java.io.File;
 import java.util.Calendar;
@@ -53,7 +54,9 @@ public class ImageFileListPage extends FilePage {
     }
 
     protected void onItemClicked(FileInfo fileInfo, int position) {
-        // TODO
+        Intent inten = new Intent(getActivity(), ImagePlayerActivity.class);
+        inten.putExtra("position", position);
+        startActivity(inten);
     }
 
     private String lastCreateFileName = null;

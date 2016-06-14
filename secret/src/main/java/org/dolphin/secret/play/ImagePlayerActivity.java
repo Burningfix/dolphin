@@ -8,6 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import org.dolphin.secret.R;
+import org.dolphin.secret.browser.BrowserManager;
+import org.dolphin.secret.core.FileInfo;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import uk.co.senab.photoview.PhotoView;
 
@@ -21,23 +26,29 @@ public class ImagePlayerActivity extends Activity {
         mViewPager = (HackyViewPager) findViewById(R.id.view_pager);
         setContentView(mViewPager);
 
-        mViewPager.setAdapter(new SamplePagerAdapter());
+        List<FileInfo> images = new ArrayList<FileInfo>(BrowserManager.getInstance().getImageFileList());
+        int position = getIntent().getIntExtra("position", 0);
+        mViewPager.setAdapter(new SamplePagerAdapter(images));
+        mViewPager.setCurrentItem(position);
+        mViewPager.setOffscreenPageLimit(3);
     }
 
     static class SamplePagerAdapter extends PagerAdapter {
+        List<FileInfo> images;
 
-
+        SamplePagerAdapter(List<FileInfo> images) {
+            this.images = images;
+        }
 
         @Override
         public int getCount() {
-            return sDrawables.length;
+            return this.images.size();
         }
 
         @Override
         public View instantiateItem(ViewGroup container, int position) {
-            PhotoView photoView = new PhotoView(container.getContext());
-            photoView.setImageResource(sDrawables[position]);
-
+            ZoomPhotoView photoView = new ZoomPhotoView(container.getContext());
+            photoView.setFile();
             // Now just add PhotoView to ViewPager and return it
             container.addView(photoView, ViewGroup.LayoutParams.MATCH_PARENT, ViewPager.LayoutParams.MATCH_PARENT);
 
@@ -53,6 +64,5 @@ public class ImagePlayerActivity extends Activity {
         public boolean isViewFromObject(View view, Object object) {
             return view == object;
         }
-
     }
 }
