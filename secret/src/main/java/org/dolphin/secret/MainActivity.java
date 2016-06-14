@@ -13,6 +13,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import org.dolphin.secret.browser.BrowserManager;
+import org.dolphin.secret.browser.FilePage;
 import org.dolphin.secret.browser.ImageFileListPage;
 import org.dolphin.secret.browser.NavigationDrawerFragment;
 import org.dolphin.secret.browser.VideoFileListPage;
@@ -66,7 +67,7 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
         }
     }
 
-    public NavigationDrawerFragment getNavigationDrawerFragment(){
+    public NavigationDrawerFragment getNavigationDrawerFragment() {
         return mNavigationDrawerFragment;
     }
 
@@ -159,6 +160,11 @@ public class MainActivity extends AppCompatActivity implements NavigationDrawerF
 
     @Override
     public void onBackPressed() {
+        FilePage fragment = (FilePage) getFragmentManager().findFragmentById(R.id.container);
+        if (null != fragment && fragment.onBackPressed()) {
+            return;
+        }
+
         long timeMillis = System.currentTimeMillis();
         if (timeMillis - mPrevPressedTime <= 1500) {
             mPrevPressedTime = timeMillis;

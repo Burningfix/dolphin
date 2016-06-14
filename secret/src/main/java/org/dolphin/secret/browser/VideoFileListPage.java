@@ -67,7 +67,7 @@ public class VideoFileListPage extends FilePage {
         return super.onOptionsItemSelected(item);
     }
 
-    protected void onItemClicked(FileInfo fileInfo) {
+    protected void onItemClicked(FileInfo fileInfo, int position) {
         Intent videoPlaybackActivity = new Intent(getActivity(), VideoPlayerActivity.class);
         String id = HttpContainer.getInstance().deliveryId(fileInfo);
         String path = SecretApplication.getInstance().getHttpServer().wrapObscurePath(id);

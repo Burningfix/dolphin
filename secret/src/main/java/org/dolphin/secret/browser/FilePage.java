@@ -8,7 +8,6 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v7.widget.AppCompatRadioButton;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -28,8 +27,10 @@ import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.picker.FileRequestProvider;
 
 import java.io.File;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Created by yananh on 2016/1/23.
@@ -48,6 +49,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     }
 
     protected final List<FileInfo> fileList = new LinkedList<FileInfo>();
+    protected final Set<FileInfo> selected = new HashSet<FileInfo>();
     private State state = State.Normal;
     private ListView listView;
 
@@ -99,44 +101,71 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         FileInfo item = (FileInfo) listAdapter.getItem(position);
-        onItemClicked(item);
+        if (this.state == State.Selectable) {
+            if (selected.contains(item)) {
+                selected.remove(item);
+                view.setBackgroundResource(R.color.deep_select_color);
+            } else {
+                selected.add(item);
+                view.setBackgroundResource(R.color.deep_deep_select_color);
+            }
+        } else {
+            onItemClicked(item, position);
+        }
     }
-
 
     @Override
     public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
         if (this.state != State.Selectable) {
             this.state = State.Selectable;
+            this.selected.add(((ItemViewHolder) view.getTag()).fileInfo);
             notifyStateChange();
         }
-        return false;
+        return true;
     }
 
 
-    protected void onItemClicked(FileInfo fileInfo) {
+    protected void onItemClicked(FileInfo fileInfo, int position) {
         // TODO
     }
 
+    public boolean onBackPressed() {
+        if (state == State.Normal) {
+            return false;
+        }
+
+        this.state = State.Normal;
+        this.selected.clear();
+        notifyStateChange();
+        return true;
+    }
 
     protected View crateItemView(FileInfo item, View convertView) {
         View root = View.inflate(FilePage.this.getActivity(), R.layout.file_item, null);
-        ThumbnailImageView imageVIew = (ThumbnailImageView) root.findViewById(R.id.thumbnail);
-        TextView nameView = (TextView) root.findViewById(R.id.name);
-        TextView size = (TextView) root.findViewById(R.id.size);
-        TextView duration = (TextView) root.findViewById(R.id.duration);
-        TextView encodeTime = (TextView) root.findViewById(R.id.encode_time);
-        AppCompatRadioButton radioButton = (AppCompatRadioButton) root.findViewById(R.id.file_radio);
-        imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
-        nameView.setText(item.originalFileName);
-        size.setText(FileInfoUtil.formatSize(item.originalFileLength));
-        encodeTime.setText(DateUtils.formatDate(item.encodeTime));
+        ItemViewHolder viewHolder = new ItemViewHolder();
+        viewHolder.fileInfo = item;
+        viewHolder.imageVIew = (ThumbnailImageView) root.findViewById(R.id.thumbnail);
+        viewHolder.nameView = (TextView) root.findViewById(R.id.name);
+        viewHolder.size = (TextView) root.findViewById(R.id.size);
+        viewHolder.duration = (TextView) root.findViewById(R.id.duration);
+        viewHolder.encodeTime = (TextView) root.findViewById(R.id.encode_time);
+        viewHolder.imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
+        viewHolder.nameView.setText(item.originalFileName);
+        viewHolder.size.setText(FileInfoUtil.formatSize(item.originalFileLength));
+        viewHolder.encodeTime.setText(DateUtils.formatDate(item.encodeTime));
         if (this.state == State.Normal) {
-            radioButton.setVisibility(View.GONE);
+            root.setBackgroundResource(R.drawable.list_item_view_backgroud_color);
         } else {
-            radioButton.setVisibility(View.VISIBLE);
+            if (this.selected.contains(item)) {
+                root.setBackgroundResource(R.color.deep_deep_select_color);
+            } else {
+                root.setBackgroundResource(R.color.deep_select_color);
+            }
         }
+        root.setTag(viewHolder);
         return root;
     }
+
 
     private BaseAdapter listAdapter = new BaseAdapter() {
         @Override
@@ -224,5 +253,14 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
                 }
             }
         });
+    }
+
+    protected static class ItemViewHolder {
+        ThumbnailImageView imageVIew;
+        TextView nameView;
+        TextView size;
+        TextView duration;
+        TextView encodeTime;
+        FileInfo fileInfo;
     }
 }

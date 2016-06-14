@@ -52,7 +52,7 @@ public class ImageFileListPage extends FilePage {
         return super.onOptionsItemSelected(item);
     }
 
-    protected void onItemClicked(FileInfo fileInfo) {
+    protected void onItemClicked(FileInfo fileInfo, int position) {
         // TODO
     }
 
