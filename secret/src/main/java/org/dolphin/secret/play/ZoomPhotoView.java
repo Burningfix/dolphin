@@ -2,6 +2,7 @@ package org.dolphin.secret.play;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -9,12 +10,13 @@ import org.dolphin.arch.AndroidMainScheduler;
 import org.dolphin.job.Job;
 import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
+import org.dolphin.lib.util.IOUtil;
 import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.R;
-import org.dolphin.secret.browser.CacheManager;
-import org.dolphin.secret.core.FileConstants;
+import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.core.FileInfo;
-import org.dolphin.secret.core.FileInfoContentCache;
+import org.dolphin.secret.core.ReadableFileInputStream;
+import org.dolphin.secret.util.BitmapUtils;
 
 import java.io.File;
 
@@ -116,24 +118,33 @@ public class ZoomPhotoView extends PhotoView {
             loadJob.abort();
             loadJob = null;
         }
-        FileInfoContentCache cache = CacheManager.getInstance().getCache(fileInfo);
-        if (null != cache) {
-            Bitmap bm = cache.thumbnail;
-            if (null != bm) {
-                this.setImageBitmap(bm);
-                return;
-            }
-        }
 
-        Job job = new Job(filePath);
-        job.then(new Operator<String, Bitmap>() {
-            @Override
-            public Bitmap operate(String filePath) throws Throwable {
-                File file = new File(filePath);
-                Bitmap bitmap = FileConstants.readThumbnailFromEncodedFile(file, fileInfo);
-                return bitmap;
-            }
-        })
+        new Job(filePath)
+                .then(new Operator<String, Bitmap>() {
+                    @Override
+                    public Bitmap operate(String filePath) throws Throwable {
+                        ReadableFileInputStream fileInputStream = null;
+                        try {
+                            fileInputStream = new ReadableFileInputStream(new File(filePath), fileInfo);
+                            int screenWidth = SecretApplication.getInstance().getWidth();
+                            int screenHeight = SecretApplication.getInstance().getHeight();
+                            fileInputStream.mark(0);
+                            BitmapFactory.Options options = new BitmapFactory.Options();
+                            options.inJustDecodeBounds = true;
+                            BitmapFactory.decodeStream(fileInputStream, null, options);
+                            if (!BitmapUtils.checkOptions(options)) {
+                                return null;
+                            }
+                            fileInputStream.reset();
+                            options.inJustDecodeBounds = false;
+                            options.inSampleSize = BitmapUtils.calculateInSampleByCount(options.outWidth,
+                                    options.outHeight, screenWidth, screenHeight);
+                            return BitmapFactory.decodeStream(fileInputStream, null, options);
+                        } finally {
+                            IOUtil.closeQuietly(fileInputStream);
+                        }
+                    }
+                })
                 .workOn(Schedulers.computation())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
@@ -145,15 +156,9 @@ public class ZoomPhotoView extends PhotoView {
                 .result(new Job.Callback1<Bitmap>() {
                     @Override
                     public void call(Bitmap result) {
-                        if (null == result) return;
-                        FileInfoContentCache cache = CacheManager.getInstance().getCache(fileInfo);
-                        if (null != cache) {
-                            cache.thumbnail = result;
-                        } else {
-                            cache = new FileInfoContentCache();
-                            cache.thumbnail = result;
+                        if (null == result) {
+                            return;
                         }
-                        CacheManager.getInstance().putCache(fileInfo, cache);
                         ZoomPhotoView.this.setImageBitmap(result);
                     }
                 })

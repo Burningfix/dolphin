@@ -1,6 +1,7 @@
 package org.dolphin.secret.play;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
@@ -11,10 +12,9 @@ import org.dolphin.secret.R;
 import org.dolphin.secret.browser.BrowserManager;
 import org.dolphin.secret.core.FileInfo;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-
-import uk.co.senab.photoview.PhotoView;
 
 public class ImagePlayerActivity extends Activity {
     private ViewPager mViewPager;
@@ -48,7 +48,9 @@ public class ImagePlayerActivity extends Activity {
         @Override
         public View instantiateItem(ViewGroup container, int position) {
             ZoomPhotoView photoView = new ZoomPhotoView(container.getContext());
-            photoView.setFile();
+            FileInfo fileInfo = images.get(position);
+            photoView.setBackgroundColor(0xFFE1E1E1);
+            photoView.setFile(BrowserManager.sRootDir.getAbsolutePath() + File.separator + fileInfo.proguardFileName, fileInfo);
             // Now just add PhotoView to ViewPager and return it
             container.addView(photoView, ViewGroup.LayoutParams.MATCH_PARENT, ViewPager.LayoutParams.MATCH_PARENT);
 

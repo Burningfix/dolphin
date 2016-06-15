@@ -112,8 +112,16 @@ public class BitmapUtils {
         return inSample;
     }
 
-    public static int calculateInSampleByCount(int originalWidth, int originalHeight, int maxOutWidth, int maxOutHeight) {
-        return 1;
+    public static int calculateInSampleByCount(int originalWidth, int originalHeight, int minOutWidth, int minOutHeight) {
+        int inSample = 1;
+        int original = originalWidth * originalHeight;
+        int dest = minOutWidth * minOutHeight;
+        do {
+            inSample *= 2;
+            original /= 2;
+        } while (original >= dest);
+        inSample = inSample / 2 <= 1 ? 1 : inSample / 2;
+        return inSample;
     }
 
     public static Bitmap extractBitmap(Bitmap source, int width, int height) {
