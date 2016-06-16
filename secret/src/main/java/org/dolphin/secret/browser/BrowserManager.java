@@ -171,6 +171,35 @@ public class BrowserManager {
         }
     }
 
+    public synchronized void deleteFiles(FileInfo ... fileInfos) {
+        if (null == fileInfos || fileInfos.isEmpty()) {
+            return;
+        }
+
+        for (FileInfo fileInfo : fileInfos) {
+            new Job(fileInfo)
+                    .then(new DeleteFileOperator(rootDir))
+                    .workOn(Schedulers.io())
+                    .work();
+            CacheManager.getInstance().remove(fileInfo);
+            if (fileInfo.isPhotoType()) {
+                this.imageFileList.remove(fileInfo);
+
+            }
+            if (fileInfo.isAudioType()) {
+                this.audioFileList.remove(fileInfo);
+
+            }
+            if (fileInfo.isVideoType()) {
+                this.videoFileList.remove(fileInfo);
+            }
+        }
+
+        notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
+        notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
+        notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
+    }
+
     private synchronized void onLeakedFile(List<String> leakedFileList) {
         if (null == leakedFileList || leakedFileList.isEmpty()) {
             return;

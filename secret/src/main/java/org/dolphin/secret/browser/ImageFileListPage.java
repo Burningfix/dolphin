@@ -30,7 +30,11 @@ public class ImageFileListPage extends FilePage {
                 && mainActivity.getNavigationDrawerFragment().isDrawerOpen()) {
             return;
         }
-        inflater.inflate(R.menu.menu_image, menu);
+        if (isNormalState()) {
+            inflater.inflate(R.menu.menu_image, menu);
+        } else {
+            super.onCreateOptionsMenu(menu, inflater);
+        }
     }
 
     @Override

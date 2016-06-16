@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -27,6 +28,7 @@ import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.picker.FileRequestProvider;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -52,11 +54,14 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     protected final Set<FileInfo> selected = new HashSet<FileInfo>();
     private State state = State.Normal;
     private ListView listView;
+    private View editLayout;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        listView = new ListView(inflater.getContext());
+        View root = inflater.inflate(R.layout.file_browser_layout, null);
+        listView = (ListView) root.findViewById(R.id.list_view);
+        editLayout = root.findViewById(R.id.edit_layout);
         Drawable drawable = new ColorDrawable(0xFFEEEEEE);
         drawable.setBounds(0, 0, 1000, 1);
         listView.setDividerHeight(1);
@@ -64,11 +69,21 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         listView.setAdapter(listAdapter);
         listView.setOnItemClickListener(this);
         listView.setOnItemLongClickListener(this);
+        editLayout.findViewById(R.id.delete).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                BrowserManager.getInstance().deleteFiles(Arrays.asList(selected.toArray(new FileInfo[0])));
+                selected.clear();
+                setState(State.Normal);
+            }
+        });
+
+
         this.fileList.addAll(getFileList());
         notifyStateChange();
         addListener();
         setHasOptionsMenu(true);
-        return listView;
+        return root;
     }
 
     protected List<FileInfo> getFileList() {
@@ -77,12 +92,6 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
 
     protected void addListener() {
         BrowserManager.getInstance().addImageFileChangeListener(this);
-    }
-
-
-    public void setState(State state) {
-        this.state = state;
-        notifyStateChange();
     }
 
     public void notifyStateChange() {
@@ -98,10 +107,35 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         notifyStateChange();
     }
 
+    protected void setState(State state) {
+        if (this.state == state) {
+            return;
+        }
+        this.state = state;
+        if (state == State.Normal) {
+            this.selected.clear();
+            editLayout.animate().cancel();
+            editLayout.animate().setDuration(500).translationY(1000).start();
+        } else {
+            editLayout.animate().cancel();
+            editLayout.animate().setDuration(500).translationY(0).start();
+        }
+        notifyStateChange();
+        getActivity().invalidateOptionsMenu();
+    }
+
+    protected final boolean isNormalState() {
+        return this.state == State.Normal;
+    }
+
+    protected final boolean isSelectableState() {
+        return this.state == State.Selectable;
+    }
+
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         FileInfo item = (FileInfo) listAdapter.getItem(position);
-        if (this.state == State.Selectable) {
+        if (isSelectableState()) {
             if (selected.contains(item)) {
                 selected.remove(item);
                 view.setBackgroundResource(R.color.deep_select_color);
@@ -116,28 +150,24 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
 
     @Override
     public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-        if (this.state != State.Selectable) {
-            this.state = State.Selectable;
+        if (isNormalState()) {
             this.selected.add(((ItemViewHolder) view.getTag()).fileInfo);
-            notifyStateChange();
+            setState(State.Selectable);
         }
+        return true;
+    }
+
+    public boolean onBackPressed() {
+        if (isNormalState()) {
+            return false;
+        }
+        setState(State.Normal);
         return true;
     }
 
 
     protected void onItemClicked(FileInfo fileInfo, int position) {
         // TODO
-    }
-
-    public boolean onBackPressed() {
-        if (state == State.Normal) {
-            return false;
-        }
-
-        this.state = State.Normal;
-        this.selected.clear();
-        notifyStateChange();
-        return true;
     }
 
     protected View crateItemView(FileInfo item, View convertView) {
@@ -192,7 +222,32 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
+        if (isNormalState()) {
+            super.onCreateOptionsMenu(menu, inflater);
+        } else {
+            inflater.inflate(R.menu.menu_pick, menu);
+        }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.menu_select && isSelectableState()) { // select all
+            selected.addAll(fileList);
+            notifyStateChange();
+            return true;
+        } else if (id == R.id.menu_unselect && isSelectableState()) { // unselect all
+            selected.clear();
+            notifyStateChange();
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     @Override

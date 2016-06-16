@@ -44,7 +44,11 @@ public class VideoFileListPage extends FilePage {
                 && mainActivity.getNavigationDrawerFragment().isDrawerOpen()) {
             return;
         }
-        inflater.inflate(R.menu.menu_video, menu);
+        if (isNormalState()) {
+            inflater.inflate(R.menu.menu_video, menu);
+        } else {
+            super.onCreateOptionsMenu(menu, inflater);
+        }
     }
 
     @Override
