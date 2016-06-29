@@ -103,5 +103,4 @@ public class CacheManager {
     public synchronized void remove(FileInfo fileInfo){
         lruCache.remove(fileInfo.originalFileName);
     }
-
 }

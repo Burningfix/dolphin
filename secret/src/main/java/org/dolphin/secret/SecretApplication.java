@@ -46,7 +46,7 @@ public class SecretApplication extends Application {
             System.exit(0);
         }
 
-        BrowserManager.getInstance().startScan();
+        BrowserManager.getInstance().start();
         httpServer.start();
     }
 
@@ -55,14 +55,9 @@ public class SecretApplication extends Application {
         super.onTerminate();
     }
 
-    public SecretApplication instance() {
-        return instance;
-    }
-
     public final HttpServer getHttpServer() {
         return httpServer;
     }
-
 
     public int getWidth() {
         if (widthPixels <= 0) {

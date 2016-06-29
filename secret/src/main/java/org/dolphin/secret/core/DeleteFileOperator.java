@@ -17,7 +17,7 @@ public class DeleteFileOperator implements Operator<FileInfo, Void> {
     }
     @Override
     public Void operate(FileInfo fileInfo) throws Throwable {
-        IOUtil.safeDeleteIfExists(new File(rootDir, fileInfo.proguardFileName)); //TODO, check result code
+        IOUtil.safeDeleteIfExists(new File(rootDir, fileInfo.obscuredFileName)); //TODO, check result code
         return null;
     }
 }

@@ -54,7 +54,7 @@ public class HttpServer {
             return new BinaryResource() {
                 @Override
                 public InputStream openStream() throws IOException {
-                    return new ReadableFileInputStream(new File(BrowserManager.sRootDir, fileInfo.proguardFileName), fileInfo);
+                    return new ReadableFileInputStream(new File(BrowserManager.sRootDir, fileInfo.obscuredFileName), fileInfo);
                 }
 
                 @Override

@@ -23,7 +23,7 @@ public class ObscureFileInfoReaderOperator implements Operator<File, FileInfo> {
         try {
             randomAccessFile = new RandomAccessFile(input, "r");
             fileVerify(randomAccessFile);
-            fileInfo.proguardFileName = input.getName();
+            fileInfo.obscuredFileName = input.getName();
             readFirst64Bytes(randomAccessFile, fileInfo);
             readOriginalFileName(randomAccessFile, fileInfo);
             readExtraHeadInfo(randomAccessFile, fileInfo);

@@ -1,7 +1,7 @@
 package org.dolphin.secret.core;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import org.dolphin.http.MimeType;
@@ -15,7 +15,6 @@ import org.dolphin.secret.util.UnsupportEncode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Date;
@@ -108,7 +107,11 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * @return 加密后的文件信息和头尾&thumbnail信息
      * @throws Throwable
      */
+    @NonNull
     public TwoTuple<FileInfo, FileInfoContentCache> operate(File input) throws Throwable {
+        if (!input.isFile() || !input.exists() || !input.canRead() || !input.canWrite()) {
+            throw new IOException("File " + input.getAbsolutePath() + " is Not support read or write or both!");
+        }
         boolean success;
         FileInfoContentCache cache = new FileInfoContentCache();
         FileInfo baseFileInfo = createFileInfo(input);
@@ -124,24 +127,24 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
         } catch (Throwable throwable) {
             Log.e(TAG, "Encode file " + input.getName() + " Failed!");
             // release cache
-            if (null != cache.thumbnail) {
-                cache.thumbnail.recycle();
-            }
+            BitmapUtils.recycle(cache.thumbnail);
             throw throwable;
         }
 
-        if (success) { // 修改文件名称
-            String proguardFileName = createProguardFileName(input.getName());
-            try {
-                IOUtil.renameTo(input, new File(input.getParentFile(), proguardFileName), true);
-                baseFileInfo.proguardFileName = proguardFileName;
-            } catch (IOException exception) {
-                exception.printStackTrace();
-                baseFileInfo.proguardFileName = input.getName();
-            }
-
-            Log.d(TAG, "Encode file " + baseFileInfo);
+        if (!success) {
+            throw new IOException("File " + input.getAbsolutePath() + " Obscure Failed!");
         }
+
+        // 修改文件名称
+        String proguardFileName = createProguardFileName(input.getName());
+        try {
+            IOUtil.renameTo(input, new File(input.getParentFile(), proguardFileName), true);
+            baseFileInfo.obscuredFileName = proguardFileName;
+        } catch (IOException exception) {
+            exception.printStackTrace();
+            baseFileInfo.obscuredFileName = input.getName();
+        }
+        Log.d(TAG, "Encode file " + baseFileInfo);
         return new TwoTuple<FileInfo, FileInfoContentCache>(baseFileInfo, cache);
     }
 

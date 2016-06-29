@@ -11,8 +11,11 @@ import org.dolphin.job.Operator;
 import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.job.tuple.FourTuple;
 import org.dolphin.job.tuple.TwoTuple;
+import org.dolphin.lib.util.ValueUtil;
+import org.dolphin.secret.BuildConfig;
 import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.core.DeleteFileOperator;
+import org.dolphin.secret.core.DeobscureOperator;
 import org.dolphin.secret.core.EncodeLeakFileOperator;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
@@ -21,9 +24,13 @@ import org.dolphin.secret.core.TraversalFolderOperator;
 import org.dolphin.secret.picker.FileRequestProvider;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by hanyanan on 2016/1/20.
@@ -42,8 +49,14 @@ public class BrowserManager {
     }
 
     private File rootDir;
-    private Job scanerJob = null;
-    private Job encodeJob = null;
+    private Job scannerJob = null;
+    private Job obscureJob = null;
+    private final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
+    private final List<FileChangeListener> videoFileChangeListeners = new ArrayList<FileChangeListener>();
+    private final List<FileChangeListener> audioFileChangeListeners = new ArrayList<FileChangeListener>();
+    private final List<FileInfo> imageFileList = new ArrayList<FileInfo>();
+    private final List<FileInfo> videoFileList = new ArrayList<FileInfo>();
+    private final List<FileInfo> audioFileList = new ArrayList<FileInfo>();
 
     private BrowserManager() {
         this.rootDir = sRootDir;
@@ -68,65 +81,19 @@ public class BrowserManager {
         }
     }
 
-    private final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
-    private final List<FileChangeListener> videoFileChangeListeners = new ArrayList<FileChangeListener>();
-    private final List<FileChangeListener> audioFileChangeListeners = new ArrayList<FileChangeListener>();
+    public File getRootDir() {
+        return this.rootDir;
+    }
 
-    private final List<FileInfo> imageFileList = new ArrayList<FileInfo>();
-    private final List<FileInfo> videoFileList = new ArrayList<FileInfo>();
-    private final List<FileInfo> audioFileList = new ArrayList<FileInfo>();
-    private final List<String> leakedFileList = new ArrayList<String>();
-
-    public synchronized void startScan() {
+    public synchronized void start() {
         imageFileList.clear();
         videoFileList.clear();
         audioFileList.clear();
-        leakedFileList.clear();
-        if (scanerJob != null) {
-            scanerJob.abort();
+        if (scannerJob != null && !scannerJob.isAborted()) {
+            scannerJob.abort();
         }
-        scanerJob = new Job(this.rootDir);
-        scanerJob.then(new TraversalFolderOperator())
-                .workOn(Schedulers.io())
-                .callbackOn(AndroidMainScheduler.INSTANCE)
-                .error(new Job.Callback2() {
-                    @Override
-                    public void call(Throwable throwable, Object[] unexpectedResult) {
-                        onScanFailed(throwable);
-                    }
-                })
-                .result(new Job.Callback1<FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>>() {
-                    @Override
-                    public void call(FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>> result) {
-                        if (null == result) {
-                            onImageFileFound(null);
-                            onVideoFileFound(null);
-                            onAudioFileFound(null);
-                            onLeakedFile(null);
-                        } else {
-                            onImageFileFound(result.value1);
-                            onVideoFileFound(result.value2);
-                            onAudioFileFound(result.value3);
-                            onLeakedFile(result.value4);
-                        }
-                    }
-                })
-                .work();
-    }
-
-    /**
-     * 导入新的文件，需要扫描整个目录完成之后才能继续进行, 该文件必须是未加密的文件
-     * <br>
-     * 操作步骤：
-     * 1. 如果在扫描中，则会等待等待扫描结束再添加
-     * 2. 删除已经存在的相同文件，则删除原有的
-     * 3. 加密文件，添加到仓库中
-     *
-     * @param fileName
-     */
-    public synchronized void obscureFile(String fileName) {
-        new Job(new File(this.rootDir, fileName))
-                .then(new ObscureOperator())
+        scannerJob = new Job(this.rootDir)
+                .then(new TraversalFolderOperator())
                 .workOn(Schedulers.io())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
@@ -135,94 +102,66 @@ public class BrowserManager {
                         // TODO
                     }
                 })
-                .result(new Job.Callback1<TwoTuple<FileInfo, FileInfoContentCache>>() {
+                .result(new Job.Callback1<FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>>() {
                     @Override
-                    public void call(TwoTuple<FileInfo, FileInfoContentCache> result) {
-                        if (null == result || null == result.value1) {
-                            // do nothing
-                        } else {
-                            onFileFound(result.value1);
-                        }
+                    public void call(FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>> result) {
+                        onImageFileFound(null == result ? null : result.value1);
+                        onVideoFileFound(null == result ? null : result.value2);
+                        onAudioFileFound(null == result ? null : result.value3);
+                        onLeakFileFound(null == result ? null : result.value4);
                     }
                 })
                 .work();
     }
 
-    public synchronized void deleteFile(FileInfo fileInfo) {
-        new Job(fileInfo)
-                .then(new DeleteFileOperator(rootDir))
-                .workOn(Schedulers.io())
-                .work();
-        CacheManager.getInstance().remove(fileInfo);
-        if (fileInfo.isPhotoType()) {
-            this.imageFileList.remove(fileInfo);
-            notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
-            return;
-        }
-        if (fileInfo.isAudioType()) {
-            this.audioFileList.remove(fileInfo);
-            notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
-            return;
-        }
-        if (fileInfo.isVideoType()) {
-            this.videoFileList.remove(fileInfo);
-            notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
-            return;
-        }
+    private void onImageFileFound(List<FileInfo> files) {
+        onTypedFileFound(files, this.imageFileList, this.imageFileChangeListeners);
     }
 
-    public synchronized void deleteFiles(FileInfo ... fileInfos) {
-        if (null == fileInfos || fileInfos.isEmpty()) {
-            return;
-        }
-
-        for (FileInfo fileInfo : fileInfos) {
-            new Job(fileInfo)
-                    .then(new DeleteFileOperator(rootDir))
-                    .workOn(Schedulers.io())
-                    .work();
-            CacheManager.getInstance().remove(fileInfo);
-            if (fileInfo.isPhotoType()) {
-                this.imageFileList.remove(fileInfo);
-
-            }
-            if (fileInfo.isAudioType()) {
-                this.audioFileList.remove(fileInfo);
-
-            }
-            if (fileInfo.isVideoType()) {
-                this.videoFileList.remove(fileInfo);
-            }
-        }
-
-        notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
-        notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
-        notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
+    private void onVideoFileFound(List<FileInfo> files) {
+        onTypedFileFound(files, this.videoFileList, this.videoFileChangeListeners);
     }
 
-    private synchronized void onLeakedFile(List<String> leakedFileList) {
+    private void onAudioFileFound(List<FileInfo> files) {
+        onTypedFileFound(files, this.audioFileList, this.audioFileChangeListeners);
+    }
+
+    private void onImageFileRemoved(List<FileInfo> files) {
+        onTypedFileRemoved(files, this.imageFileList, this.imageFileChangeListeners);
+    }
+
+    private void onVideoFileRemoved(List<FileInfo> files) {
+        onTypedFileRemoved(files, this.videoFileList, this.videoFileChangeListeners);
+    }
+
+    private void onAudioFileRemoved(List<FileInfo> files) {
+        onTypedFileRemoved(files, this.audioFileList, this.audioFileChangeListeners);
+    }
+
+    private void onLeakFileFound(List<String> leakedFileList) {
         if (null == leakedFileList || leakedFileList.isEmpty()) {
             return;
         }
-
-        StringBuilder sb = new StringBuilder();
-        for (String fileName : leakedFileList) {
-            sb.append(fileName).append(" ");
+        if (BuildConfig.DEBUG) {
+            StringBuilder sb = new StringBuilder();
+            for (String fileName : leakedFileList) {
+                sb.append(fileName).append(" ");
+            }
+            Log.d(TAG, "Found leak file[" + sb.toString() + "]");
         }
-        Log.d(TAG, "Found leak file[" + sb.toString() + "]");
 
-        if (null != encodeJob) {
-            encodeJob.abort();
-            encodeJob = null;
+        if (null != obscureJob) {
+            obscureJob.abort();
+            obscureJob = null;
         }
-        encodeJob = new Job(leakedFileList);
-        encodeJob.then(new EncodeLeakFileOperator(rootDir))
+        obscureJob = new Job(leakedFileList);
+        obscureJob.then(new EncodeLeakFileOperator(rootDir))
                 .workOn(Schedulers.io())
                 .callbackOn(AndroidMainScheduler.INSTANCE)
                 .error(new Job.Callback2() {
                     @Override
                     public void call(Throwable throwable, Object[] unexpectedResult) {
-
+                        // TODO
                     }
                 })
                 .result(new Job.Callback1<List<TwoTuple<FileInfo, FileInfoContentCache>>>() {
@@ -253,19 +192,153 @@ public class BrowserManager {
                 .work();
     }
 
+    private static void onTypedFileFound(List<FileInfo> newFiles, List<FileInfo> out,
+                                         List<FileChangeListener> fileChangeListeners) {
+        if (null == out || null == fileChangeListeners) {
+            throw new NullPointerException("");
+        }
 
-    public void stop() {
-        if (scanerJob != null) {
-            scanerJob.abort();
-            scanerJob = null;
+        CopyOnWriteArrayList<FileInfo> copyOnWriteArrayList = null;
+        CopyOnWriteArrayList<FileChangeListener> listeners = null;
+        synchronized (out) {
+            if (null == newFiles || newFiles.isEmpty()) {
+                return;
+            }
+            out.addAll(newFiles);
+
+            copyOnWriteArrayList = new CopyOnWriteArrayList<FileInfo>(out);
+            listeners = new CopyOnWriteArrayList<FileChangeListener>(fileChangeListeners);
+        }
+
+        notifyFileChanged(copyOnWriteArrayList, listeners);
+    }
+
+    private static void onTypedFileRemoved(List<FileInfo> rejectFiles, List<FileInfo> out,
+                                           List<FileChangeListener> fileChangeListeners) {
+        if (null == out || null == fileChangeListeners) {
+            throw new NullPointerException("");
+        }
+
+        CopyOnWriteArrayList<FileInfo> copyOnWriteArrayList = null;
+        CopyOnWriteArrayList<FileChangeListener> listeners = null;
+        synchronized (out) {
+            if (null == rejectFiles || rejectFiles.isEmpty()) {
+                return;
+            }
+            out.removeAll(rejectFiles);
+            copyOnWriteArrayList = new CopyOnWriteArrayList<FileInfo>(out);
+            listeners = new CopyOnWriteArrayList<FileChangeListener>(fileChangeListeners);
+        }
+
+        notifyFileChanged(copyOnWriteArrayList, listeners);
+    }
+
+    void onFileFound(FileInfo fileInfo) {
+        if (null == fileInfo) return;
+        List<FileInfo> files = new ArrayList<>();
+        files.add(fileInfo);
+        if (fileInfo.isPhotoType()) {
+            onImageFileFound(files);
+        } else if (fileInfo.isVideoType()) {
+            onVideoFileFound(files);
+        } else if (fileInfo.isAudioType()) {
+            onAudioFileFound(files);
         }
     }
 
+    void onFileRemoved(Iterable<FileInfo> fileInfos) {
+        Iterator<FileInfo> infoIterator = null;
+        if (null == fileInfos || null == (infoIterator = fileInfos.iterator())) {
+            return;
+        }
+        ArrayList<FileInfo> images = new ArrayList<FileInfo>();
+        ArrayList<FileInfo> audios = new ArrayList<FileInfo>();
+        ArrayList<FileInfo> videos = new ArrayList<FileInfo>();
+        while (infoIterator.hasNext()) {
+            FileInfo fileInfo = infoIterator.next();
+            if (fileInfo.isVideoType()) {
+                videos.add(fileInfo);
+            } else if (fileInfo.isPhotoType()) {
+                images.add(fileInfo);
+            } else if (fileInfo.isAudioType()) {
+                audios.add(fileInfo);
+            }
+        }
+        onImageFileRemoved(images);
+        onVideoFileRemoved(videos);
+        onAudioFileFound(audios);
+    }
 
-    public void importFiles(final List<FileRequestProvider.FileEntry> fileList, final ImportCallback callback) {
+    private static void notifyFileChanged(List<FileInfo> files, List<FileChangeListener> listeners) {
+        for (FileChangeListener listener : listeners) {
+            listener.onFileListChanged(files);
+        }
+    }
+
+    /**
+     * 导入新的文件，需要扫描整个目录完成之后才能继续进行, 该文件必须是未加密的文件
+     * <br>
+     * 操作步骤：
+     * 1. 如果在扫描中，则会等待等待扫描结束再添加
+     * 2. 删除已经存在的相同文件，则删除原有的
+     * 3. 加密文件，添加到仓库中
+     *
+     * @param fileName
+     */
+    public void obscureFile(String fileName) {
+        new Job(new File(this.rootDir, fileName))
+                .then(new ObscureOperator())
+                .workOn(Schedulers.io())
+                .callbackOn(AndroidMainScheduler.INSTANCE)
+                .error(new Job.Callback2() {
+                    @Override
+                    public void call(Throwable throwable, Object[] unexpectedResult) {
+                        // TODO
+                    }
+                })
+                .result(new Job.Callback1<TwoTuple<FileInfo, FileInfoContentCache>>() {
+                    @Override
+                    public void call(TwoTuple<FileInfo, FileInfoContentCache> result) {
+                        CacheManager.getInstance().putCache(result.value1, result.value2);
+                        onFileFound(result.value1);
+                    }
+                })
+                .work();
+    }
+
+    public synchronized void deleteFiles(Collection<FileInfo> fileInfos) {
+        if (null == fileInfos || fileInfos.isEmpty()) {
+            return;
+        }
+
+        for (FileInfo fileInfo : fileInfos) {
+            new Job(fileInfo)
+                    .then(new DeleteFileOperator(rootDir))
+                    .workOn(Schedulers.computation())
+                    .work();
+            CacheManager.getInstance().remove(fileInfo);
+            if (fileInfo.isPhotoType()) {
+                this.imageFileList.remove(fileInfo);
+
+            }
+            if (fileInfo.isAudioType()) {
+                this.audioFileList.remove(fileInfo);
+
+            }
+            if (fileInfo.isVideoType()) {
+                this.videoFileList.remove(fileInfo);
+            }
+        }
+
+        notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
+        notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
+        notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
+    }
+
+    public void importFiles(final List<FileRequestProvider.FileEntry> fileList, final ImportFileListener callback) {
         for (final FileRequestProvider.FileEntry fileEntry : fileList) {
             final File originalFile = new File(fileEntry.path);
-            final File destFile = new File(rootDir, originalFile.getName());
+            final File destFile = new File(getInstance().getRootDir(), originalFile.getName());
             new Job(fileEntry)
                     .workOn(Schedulers.io())
                     .callbackOn(AndroidMainScheduler.INSTANCE)
@@ -275,7 +348,6 @@ public class BrowserManager {
                             FileUtils.moveFile(originalFile, destFile);
                             MediaScannerConnection.scanFile(SecretApplication.getInstance(),
                                     new String[]{originalFile.getAbsolutePath()}, null, null);
-                            Thread.sleep(3000);
                             return destFile;
                         }
                     })
@@ -287,7 +359,7 @@ public class BrowserManager {
                                 // do nothing
                             } else {
                                 CacheManager.getInstance().putCache(result.value1, result.value2);
-                                callback.onImportSucced(fileEntry.path, result.value1);
+                                callback.onImportSuccess(fileEntry.path, result.value1);
                             }
                         }
                     })
@@ -299,95 +371,43 @@ public class BrowserManager {
                     })
                     .work();
         }
-
-
-        return;
     }
 
-
-    synchronized void onFileFound(FileInfo fileInfo) {
-        if (null == fileInfo) return;
-        List<FileInfo> files = new ArrayList<>();
-        files.add(fileInfo);
-        if (fileInfo.isPhotoType()) {
-            onImageFileFound(files);
+    public void exportFiles(final Collection<FileInfo> fileList) {
+        if (ValueUtil.isEmpty(fileList)) {
             return;
         }
-        if (fileInfo.isVideoType()) {
-            onVideoFileFound(files);
-            return;
-        }
-        if (fileInfo.isAudioType()) {
-            onAudioFileFound(files);
-            return;
-        }
-    }
+        onFileRemoved(fileList);
 
-    synchronized void onFileListFound(List<FileInfo> obscureFileList) {
-        if (null == obscureFileList || obscureFileList.isEmpty()) {
-            return;
+        for (final FileInfo fileInfo : fileList) {
+            new Job(fileInfo)
+                    .workOn(Schedulers.io())
+                    .then(DeobscureOperator.DEFAULT)
+                    .then(new Operator<File, Void>() {
+                        @Override
+                        public Void operate(File input) throws Throwable {
+                            File exportFile = getTypedFileDirector(fileInfo);
+                            FileUtils.moveFile(input, exportFile);
+                            MediaScannerConnection.scanFile(SecretApplication.getInstance(),
+                                    new String[]{exportFile.getAbsolutePath()}, null, null);
+                            return null;
+                        }
+                    })
+                    .work();
         }
-        final List<FileInfo> images = new ArrayList<FileInfo>();
-        final List<FileInfo> videos = new ArrayList<FileInfo>();
-        final List<FileInfo> audios = new ArrayList<FileInfo>();
-        for (FileInfo fileInfo : obscureFileList) {
-            if (fileInfo.isPhotoType()) {
-                images.add(fileInfo);
-            } else if (fileInfo.isVideoType()) {
-                videos.add(fileInfo);
-            } else if (fileInfo.isAudioType()) {
-                audios.add(fileInfo);
-            }
-        }
-
-        if (!images.isEmpty()) {
-            onImageFileFound(images);
-        }
-        if (!videos.isEmpty()) {
-            onVideoFileFound(videos);
-        }
-        if (!audios.isEmpty()) {
-            onAudioFileFound(audios);
-        }
-    }
-
-    private synchronized void onImageFileFound(List<FileInfo> files) {
-        if (null == files || files.isEmpty()) {
-            return;
-        }
-        this.imageFileList.addAll(files);
-        notifyFileChanged(this.imageFileList, this.imageFileChangeListeners);
-    }
-
-    private synchronized void onVideoFileFound(List<FileInfo> files) {
-        if (null == files || files.isEmpty()) {
-            return;
-        }
-        this.videoFileList.addAll(files);
-        notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
-    }
-
-    private synchronized void onAudioFileFound(List<FileInfo> files) {
-        if (null == files || files.isEmpty()) {
-            return;
-        }
-        this.audioFileList.addAll(files);
-        notifyFileChanged(this.audioFileList, this.audioFileChangeListeners);
-    }
-
-
-    private synchronized void onScanFailed(Throwable throwable) {
-        // TODO
     }
 
     public List<FileInfo> getImageFileList() {
-        return new ArrayList<FileInfo>(imageFileList);
+        return new CopyOnWriteArrayList<FileInfo>(imageFileList);
     }
 
     public List<FileInfo> getVideoFileList() {
-        return new ArrayList<FileInfo>(videoFileList);
+        return new CopyOnWriteArrayList<FileInfo>(videoFileList);
     }
 
+    public List<FileInfo> getAudioFileList() {
+        return new CopyOnWriteArrayList<FileInfo>(audioFileList);
+    }
 
     public synchronized void addImageFileChangeListener(FileChangeListener listener) {
         if (!imageFileChangeListeners.contains(listener)) {
@@ -425,25 +445,48 @@ public class BrowserManager {
         }
     }
 
-    private void notifyFileChanged(List<FileInfo> files, List<FileChangeListener> listeners) {
-        final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
-        synchronized (BrowserManager.class) {
-            imageFileChangeListeners.addAll(listeners);
-        }
-        for (FileChangeListener listener : imageFileChangeListeners) {
-            listener.onFileList(files);
-        }
-    }
-
     public static final Comparator<FileInfo> fileInfoComparator = new Comparator<FileInfo>() {
         @Override
         public int compare(FileInfo lhs, FileInfo rhs) {
-            long res = lhs.encodeTime - rhs.encodeTime;
-            return res < 0 ? -1 : 1;
+            return lhs.encodeTime > rhs.encodeTime ? 1 : -1;
         }
     };
 
+    public File getTypedFileDirector(FileInfo fileInfo) throws IOException {
+        if (null == fileInfo) {
+            return null;
+        }
+
+        File file = null;
+
+        if (fileInfo.isPhotoType()) {
+            file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        } else if (fileInfo.isVideoType()) {
+            file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
+        } else if (fileInfo.isAudioType()) {
+            file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM);
+        } else {
+            file = Environment.getExternalStorageDirectory();
+        }
+
+        if (!file.exists()) {
+            // create director
+            if (file.mkdir()) {
+                return file;
+            } else {
+                // create failed
+                throw new IOException("Create director " + file.getAbsolutePath() + " failed!");
+            }
+        }
+
+        if (!file.isDirectory()) {
+            throw new IOException("File " + file.getAbsolutePath() + " is not a director!");
+        }
+
+        return file;
+    }
+
     public interface FileChangeListener {
-        void onFileList(List<FileInfo> files);
+        void onFileListChanged(List<FileInfo> files);
     }
 }

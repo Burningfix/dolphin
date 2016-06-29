@@ -10,7 +10,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 
 import org.dolphin.lib.util.ValueUtil;
-import org.dolphin.secret.MainActivity;
+import org.dolphin.secret.BrowserMainActivity;
 import org.dolphin.secret.R;
 import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.core.FileInfo;
@@ -39,7 +39,7 @@ public class VideoFileListPage extends FilePage {
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        MainActivity mainActivity = (MainActivity) getActivity();
+        BrowserMainActivity mainActivity = (BrowserMainActivity) getActivity();
         if (mainActivity.getNavigationDrawerFragment() != null
                 && mainActivity.getNavigationDrawerFragment().isDrawerOpen()) {
             return;

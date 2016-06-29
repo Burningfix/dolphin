@@ -28,7 +28,6 @@ import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.picker.FileRequestProvider;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -72,13 +71,19 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         editLayout.findViewById(R.id.delete).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                BrowserManager.getInstance().deleteFiles(Arrays.asList(selected.toArray(new FileInfo[0])));
+                BrowserManager.getInstance().deleteFiles(selected);
                 selected.clear();
                 setState(State.Normal);
             }
         });
-
-
+        editLayout.findViewById(R.id.recover).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                BrowserManager.getInstance().exportFiles(selected);
+                selected.clear();
+                setState(State.Normal);
+            }
+        });
         this.fileList.addAll(getFileList());
         notifyStateChange();
         addListener();
@@ -99,7 +104,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     }
 
     @Override
-    public void onFileList(List<FileInfo> files) {
+    public void onFileListChanged(List<FileInfo> files) {
         if (null != files) {
             fileList.clear();
             fileList.addAll(files);
@@ -179,7 +184,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         viewHolder.size = (TextView) root.findViewById(R.id.size);
         viewHolder.duration = (TextView) root.findViewById(R.id.duration);
         viewHolder.encodeTime = (TextView) root.findViewById(R.id.encode_time);
-        viewHolder.imageVIew.setFile(new File(BrowserManager.sRootDir, item.proguardFileName).getPath(), item);
+        viewHolder.imageVIew.setFile(new File(BrowserManager.sRootDir, item.obscuredFileName).getPath(), item);
         viewHolder.nameView.setText(item.originalFileName);
         viewHolder.size.setText(FileInfoUtil.formatSize(item.originalFileLength));
         viewHolder.encodeTime.setText(DateUtils.formatDate(item.encodeTime));
@@ -279,14 +284,13 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         progressDialog.setMax(count);
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.show();
-        BrowserManager.getInstance().importFiles(selectedFileList, new ImportCallback() {
+        BrowserManager.getInstance().importFiles(selectedFileList, new ImportFileListener() {
             private final int totalCount = count;
             private int currFinished = 0;
 
             @Override
-            public void onImportSucced(String originalPath, FileInfo obscurePath) {
+            public void onImportSuccess(String originalPath, FileInfo obscurePath) {
                 Toast.makeText(getActivity(), "import file " + originalPath + " success", Toast.LENGTH_SHORT).show();
-                Log.d("import", "onImportSucced " + originalPath + " To " + obscurePath);
                 BrowserManager.getInstance().onFileFound(obscurePath);
                 progressDialog.setMessage(originalPath);
                 ++currFinished;
