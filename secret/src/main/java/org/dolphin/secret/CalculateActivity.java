@@ -5,10 +5,6 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -16,10 +12,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import org.dolphin.secret.util.ContextUtils;
+import org.dolphin.secret.util.DialogUtil;
+
 public class CalculateActivity extends AppCompatActivity {
     private final StringBuilder sb = new StringBuilder("");
     TextView result;
-    private String passwd;
+    private transient String passwd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,25 +27,32 @@ public class CalculateActivity extends AppCompatActivity {
 
         result = (TextView) this.findViewById(R.id.result);
 
-        SharedPreferences sharedata = getSharedPreferences("data", MODE_PRIVATE);
-        if(null != sharedata){
-            passwd = sharedata.getString("pass", null);
-        }
+        passwd = ContextUtils.getStringFromSharedPreferences(this.getApplicationContext(), "data", null);
 
-        if(TextUtils.isEmpty(passwd)){
-            AlertDialog dlg = new AlertDialog.Builder(this).create();
-            dlg.setMessage(getString(R.string.no_pass_tips, passwd));
-            dlg.setButton(AlertDialog.BUTTON_POSITIVE,getString(R.string.OK),(DialogInterface.OnClickListener)null);
+
+        if (TextUtils.isEmpty(passwd)) {
+            Dialog dlg = DialogUtil.showDialog(this, "输入密码", new TextView(this), new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+
+                }
+            }, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    passwd = null;
+                }
+            });
+            dlg.setCancelable(false);
             dlg.show();
         }
     }
 
 
-    public void onNumberClick(View view){
+    public void onNumberClick(View view) {
         Log.d("ddd", "" + view);
-        TextView tv = (TextView)view;
-        int id= view.getId();
-        switch (id){
+        TextView tv = (TextView) view;
+        int id = view.getId();
+        switch (id) {
             case R.id.calculate_number_0:
             case R.id.calculate_number_1:
             case R.id.calculate_number_2:
@@ -74,54 +80,19 @@ public class CalculateActivity extends AppCompatActivity {
     }
 
 
-    private void inputNumber(CharSequence number){
+    private void inputNumber(CharSequence number) {
         sb.append(number);
         result.setText(sb.toString());
     }
 
 
-    private void clear(){
-        sb.delete(0,sb.length());
+    private void clear() {
+        sb.delete(0, sb.length());
         result.setText("");
     }
 
-    private void calculate(){
-        final String pass = sb.toString();
-        if(TextUtils.isEmpty(this.passwd)){
-            AlertDialog dlg = new AlertDialog.Builder(this).create();
-            dlg.setMessage(getString(R.string.put_pass_tips, pass));
-            dlg.setCancelable(false);
-            dlg.setButton(AlertDialog.BUTTON_POSITIVE,getString(R.string.OK), new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    SharedPreferences sharedata = getSharedPreferences("data", MODE_PRIVATE);
-                    if(null != sharedata){
-                        CalculateActivity.this.passwd = pass;
-                        sharedata.edit().putString("pass",pass).commit();
-                        Intent intent = new Intent(CalculateActivity.this, BrowserMainActivity.class);
-                        startActivity(intent);
-                    }
-                }
-            });
-            dlg.setButton(AlertDialog.BUTTON_NEGATIVE,getString(R.string.cancel), (DialogInterface.OnClickListener)null);
-            dlg.show();
-        }else{
-            if(this.passwd.equals(pass)){
-                Intent intent = new Intent(CalculateActivity.this, BrowserMainActivity.class);
-                startActivity(intent);
-            }
-        }
+    private void calculate() {
 
-        sb.delete(0,sb.length());
-
-        try {
-            String res = MathUtil.mixOperation(pass);
-            if (null != res) result.setText(res);
-            else result.setText("");
-        }catch (Throwable throwable){
-            throwable.printStackTrace();
-            result.setText("错误");
-        }
     }
 
     @Override

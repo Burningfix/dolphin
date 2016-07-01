@@ -1,10 +1,12 @@
 package org.dolphin.lib.util;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * Created by hanyanan on 2015/10/16.
  */
 public class ValueUtil {
-
     public static boolean isEmpty(CharSequence charSequence) {
         if (null == charSequence || charSequence.length() <= 0) return true;
         return false;
@@ -12,6 +14,10 @@ public class ValueUtil {
 
     public static boolean isEmpty(Object[] data) {
         return null == data || data.length <= 0;
+    }
+
+    public static boolean isEmpty(Collection data) {
+        return null == data || data.isEmpty();
     }
 
     public static boolean isEquals(Object obj1, Object obj2) {
