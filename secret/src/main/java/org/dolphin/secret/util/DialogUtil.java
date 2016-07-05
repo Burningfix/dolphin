@@ -60,7 +60,7 @@ public class DialogUtil {
         return dlg;
     }
 
-    public static Dialog showDialog(Activity activity, String title, View view, DialogInterface.OnClickListener okListener,
+    public static AlertDialog showDialog(Activity activity, String title, View view, DialogInterface.OnClickListener okListener,
                                     DialogInterface.OnClickListener cancelListener) {
         AlertDialog dlg = createDialog(activity, title, view);
         dlg.setButton(DialogInterface.BUTTON_POSITIVE, "确定", okListener);
