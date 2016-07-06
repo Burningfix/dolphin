@@ -1,4 +1,4 @@
-package org.dolphin.secret.cal;
+package org.dolphin.secret.calculator;
 
 import java.math.BigDecimal;
 
@@ -20,5 +20,10 @@ public class EOFOperationalCharacter implements OperationalCharacter {
     @Override
     public BigDecimal getValue() {
         return this.value;
+    }
+
+    @Override
+    public String toString() {
+        return "EOF";
     }
 }
