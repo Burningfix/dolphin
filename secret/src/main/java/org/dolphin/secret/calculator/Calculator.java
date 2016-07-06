@@ -3,7 +3,6 @@ package org.dolphin.secret.calculator;
 import org.dolphin.secret.calculator.exception.BadNumberException;
 import org.dolphin.secret.calculator.exception.ReadFailedException;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Stack;
 
@@ -21,13 +20,14 @@ public class Calculator {
     }
 
 
-    public static void main(String[] argv) throws ReadFailedException, IOException, BadNumberException {
+    public static void main(String[] argv) throws ReadFailedException, BadNumberException {
         System.out.println(Calculator.getInstance().compute("1+2*3/4-5")); // -2.5
         System.out.println(Calculator.getInstance().compute("3.4*1.5/3-3+4")); // 2.7
-        System.out.println(Calculator.getInstance().compute("3-4+5*6/4-6/3+4-5/6+3")); // 3
+        System.out.println(Calculator.getInstance().compute("3-4*5/9-4*5/6+3")); // 3
+        System.out.println(Calculator.getInstance().compute("1+2*(2+4*3-8)")); // 13
     }
 
-    public BigDecimal compute(String expression) throws ReadFailedException, BadNumberException, IOException {
+    public BigDecimal compute(String expression) throws ReadFailedException, BadNumberException {
         CharArrayReader reader = new CharArrayReader(expression.toCharArray());
         return compute(reader).getValue();
     }
@@ -43,37 +43,29 @@ public class Calculator {
         while (expression.ready()) {
             char next = expression.shift();
             if (next == '+') {
-                OperationalCharacter right = readNumberOperationalCharacter(expression);
+                OperationalCharacter right = readAtomicOperationalCharacter(expression);
                 AddOperationalCharacter addOperationalCharacter = new AddOperationalCharacter(right);
                 operationalCharacterStack.push(addOperationalCharacter);
             } else if (next == '-') {
-                OperationalCharacter right = readNumberOperationalCharacter(expression);
+                OperationalCharacter right = readAtomicOperationalCharacter(expression);
                 SubtractOperationalCharacter subtractOperationalCharacter = new SubtractOperationalCharacter(right);
                 operationalCharacterStack.push(subtractOperationalCharacter);
             } else if (next == '*') {
-                OperationalCharacter right = readNumberOperationalCharacter(expression);
+                OperationalCharacter right = readAtomicOperationalCharacter(expression);
                 OperationalCharacter lastOperationalCharacter = operationalCharacterStack.pop();
                 NumberOperationalCharacter numberOperationalCharacter = new NumberOperationalCharacter(
                         lastOperationalCharacter.getValue().multiply(right.getValue()));
                 operationalCharacterStack.push(numberOperationalCharacter);
             } else if (next == '/') {
-                OperationalCharacter right = readNumberOperationalCharacter(expression);
+                OperationalCharacter right = readAtomicOperationalCharacter(expression);
                 OperationalCharacter lastOperationalCharacter = operationalCharacterStack.pop();
                 NumberOperationalCharacter numberOperationalCharacter = new NumberOperationalCharacter(
-                        lastOperationalCharacter.getValue().divide(right.getValue()));
+                        lastOperationalCharacter.getValue().divide(right.getValue(), 10, BigDecimal.ROUND_HALF_EVEN));
                 operationalCharacterStack.push(numberOperationalCharacter);
-            } else if (next == '(') {
-                expression.unshift();
-                OperationalCharacter left = compute(expression);
-                operationalCharacterStack.push(left);
-            } else if (next == ')') {
-                break;
-            } else if (next >= '0' && next <= '9') {
-                expression.unshift();
-                NumberOperationalCharacter number = readNumberOperationalCharacter(expression);
-                operationalCharacterStack.push(number);
             } else {
-                throw new ReadFailedException("Not support char " + next);
+                expression.unshift();
+                OperationalCharacter left = readAtomicOperationalCharacter(expression);
+                operationalCharacterStack.push(left);
             }
         }
         BigDecimal res = new BigDecimal(0);
@@ -91,26 +83,69 @@ public class Calculator {
      * @throws BadNumberException
      * @throws ReadFailedException
      */
-    public NumberOperationalCharacter readNumberOperationalCharacter(CharArrayReader reader)
+    public NumberOperationalCharacter readAtomicOperationalCharacter(CharArrayReader reader)
             throws BadNumberException, ReadFailedException {
+        char next = reader.shift();
+        reader.unshift();
+        if (next == '(') {
+            return new NumberOperationalCharacter(readShortExpression(reader));
+        }
+
+        if (next == '.' || next >= '0' && next <= '9') {
+            return new NumberOperationalCharacter(readNumber(reader));
+        }
+
+        throw new ReadFailedException("");
+    }
+
+    /**
+     * 一个短句子，只能是一个简单的表达式或者()内
+     *
+     * @param reader
+     * @return
+     */
+    public BigDecimal readShortExpression(CharArrayReader reader) throws ReadFailedException, BadNumberException {
+        char next = reader.shift();
+        if (next != '(') {
+            throw new ReadFailedException("");
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        while (reader.ready()) {
+            char c = reader.shift();
+            if (c == '(') {
+                reader.unshift();
+                stringBuilder.append(readShortExpression(reader).toString());
+                continue;
+            }
+            if (c == ')') {
+                BigDecimal res = compute(stringBuilder.toString());
+                return res;
+            }
+        }
+        // TODO: 非正常结束，没有找到右括号
+        throw new ReadFailedException("");
+    }
+
+    public BigDecimal readNumber(CharArrayReader reader) throws BadNumberException {
+        if (!reader.ready()) {
+            throw new BadNumberException("ReadNumber");
+        }
+
         String s = "";
         while (reader.ready()) {
-            char next = reader.shift();
-            if (next == '(') {
-                reader.unshift();
-                return new NumberOperationalCharacter(compute(reader).getValue());
+            char c = reader.shift();
+            if (c == '.' || c >= '0' && c <= '9') {
+                s += c;
+                continue;
             }
-            if (next != '.' && next < '0' || next > '9') {
-                reader.unshift();
-                break;
-            }
-            s += next;
+            reader.unshift();
+            break;
         }
         try {
             BigDecimal bigDecimal = new BigDecimal(s);
-            return new NumberOperationalCharacter(bigDecimal);
+            return bigDecimal;
         } catch (Throwable throwable) {
-            throw new BadNumberException();
+            throw new BadNumberException(s);
         }
     }
 }
