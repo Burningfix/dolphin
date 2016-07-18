@@ -1,4 +1,4 @@
-package org.dolphin.secret.calculator;
+package org.dolphin.secret.calculator.character;
 
 import java.math.BigDecimal;
 
@@ -12,8 +12,9 @@ public interface OperationalCharacter {
         LEFT_PARENTHESES,  // 左括号
         RIGHT_PARENTHESES,  // 右括号
         ADD, // 加号
-        SUBTRACT, // 减号
-        // 乘号和除号可以直接进行计算，不做特殊处理
+        SUBTRACT, // 减号,
+        MULTIPLICATION, // 乘法
+        DIVISION,
     }
 
     public Type getType();

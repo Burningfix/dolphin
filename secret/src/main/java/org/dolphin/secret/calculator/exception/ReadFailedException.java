@@ -7,4 +7,5 @@ public class ReadFailedException extends Exception {
     public ReadFailedException(String s) {
         super(s);
     }
+
 }

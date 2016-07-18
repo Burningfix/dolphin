@@ -1,4 +1,6 @@
-package org.dolphin.secret.calculator;
+package org.dolphin.secret.calculator.character;
+
+import org.dolphin.secret.calculator.character.OperationalCharacter;
 
 import java.math.BigDecimal;
 
