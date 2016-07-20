@@ -2,7 +2,6 @@ package org.dolphin.secret.picker;
 
 import android.annotation.TargetApi;
 import android.content.Context;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Build;
@@ -21,7 +20,7 @@ import org.dolphin.secret.core.FileConstants;
  */
 public class PickImageView extends ImageView {
     public static final String TAG = "PickImageView";
-    private FileRequestProvider.FileEntry fileEntry = null;
+    private AndroidFileInfo androidFileInfo = null;
     private boolean isAttached = true;
     private Job job;
 
@@ -42,7 +41,7 @@ public class PickImageView extends ImageView {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
-    public void display(FileRequestProvider.FileEntry entry) {
+    public void display(AndroidFileInfo entry) {
         requestIfNeed(entry);
     }
 
@@ -50,7 +49,7 @@ public class PickImageView extends ImageView {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         isAttached = true;
-        requestIfNeed(this.fileEntry);
+        requestIfNeed(this.androidFileInfo);
     }
 
     @Override
@@ -63,15 +62,15 @@ public class PickImageView extends ImageView {
         }
     }
 
-    public void requestIfNeed(final FileRequestProvider.FileEntry entry) {
-        if (this.fileEntry == entry) return;
+    public void requestIfNeed(final AndroidFileInfo fileInfo) {
+        if (this.androidFileInfo == fileInfo) return;
         if (null != job) {
             job.abort();
         }
-        job = new Job(entry);
-        job.then(new Operator<FileRequestProvider.FileEntry, Bitmap>() {
+        job = new Job(fileInfo);
+        job.then(new Operator<AndroidFileProvider.FileEntry, Bitmap>() {
             @Override
-            public Bitmap operate(FileRequestProvider.FileEntry entry) throws Throwable {
+            public Bitmap operate(AndroidFileProvider.FileEntry entry) throws Throwable {
                 return getThumbnail(entry);
             }
         })
@@ -92,14 +91,13 @@ public class PickImageView extends ImageView {
                         }
                         PickImageView.this.setImageBitmap(result);
                         job = null;
-                        PickImageView.this.fileEntry = entry;
                     }
                 })
                 .work();
     }
 
 
-    public Bitmap getThumbnail(FileRequestProvider.FileEntry fileEntry) {
+    public Bitmap getThumbnail(AndroidFileProvider.FileEntry fileEntry) {
         if (!isAttached) return null;
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;

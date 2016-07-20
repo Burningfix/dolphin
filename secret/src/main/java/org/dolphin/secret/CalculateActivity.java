@@ -15,11 +15,12 @@ import android.widget.TextView;
 
 import org.dolphin.lib.util.SecurityUtil;
 import org.dolphin.lib.util.ValueUtil;
+import org.dolphin.secret.calculator.Calculator;
 import org.dolphin.secret.util.ContextUtils;
 import org.dolphin.secret.util.DialogUtil;
 
 public class CalculateActivity extends AppCompatActivity {
-    TextView result;
+    private TextView result;
     private transient String passwd;
 
     @Override
@@ -39,21 +40,29 @@ public class CalculateActivity extends AppCompatActivity {
         passwd = ContextUtils.getStringFromSharedPreferences(this.getApplicationContext(), "sign", null);
         if (TextUtils.isEmpty(passwd)) {
             final EditText editText = new EditText(this);
-            final AlertDialog dlg = DialogUtil.showDialog(this, "输入密码", editText, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    passwd = SecurityUtil.md5(editText.getText().toString());
-                    ContextUtils.putStringToSharedPreferences(CalculateActivity.this, "sign", passwd);
-                }
-            }, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    finish();
-                }
-            });
-            String digits = "1234567890-+*/.";
-            editText.setKeyListener(DigitsKeyListener.getInstance(digits));
-            editText.setHint("数字.+-*/(至少六位)");
+            final AlertDialog dlg = DialogUtil.showDialog(this, getResources().getString(R.string.input_pass),
+                    editText, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            passwd = SecurityUtil.md5(editText.getText().toString());
+                            ContextUtils.putStringToSharedPreferences(CalculateActivity.this, "sign", passwd);
+                            DialogUtil.showDialog(CalculateActivity.this, "", getResources().getString(R.string.enter_browser_tip),
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            Intent intent = new Intent(CalculateActivity.this, BrowserMainActivity.class);
+                                            startActivity(intent);
+                                        }
+                                    }).show();
+                        }
+                    }, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            finish();
+                        }
+                    });
+            editText.setKeyListener(DigitsKeyListener.getInstance("1234567890-+*/."));
+            editText.setHint(R.string.input_pass_hint);
             editText.addTextChangedListener(new TextWatcher() {
                 @Override
                 public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -113,7 +122,6 @@ public class CalculateActivity extends AppCompatActivity {
         }
     }
 
-
     private void inputNumber(CharSequence number) {
         CharSequence expression = result.getText();
         if (ValueUtil.isEmpty(expression)) {
@@ -140,12 +148,18 @@ public class CalculateActivity extends AppCompatActivity {
             return;
         }
         String md5 = SecurityUtil.md5(expression.toString());
-        if(TextUtils.equals(md5, this.passwd)) {
+        if (TextUtils.equals(md5, this.passwd)) {
             Intent intent = new Intent(this, BrowserMainActivity.class);
             startActivity(intent);
             result.setText("0");
+            return;
         }
 
+        try {
+            result.setText("" + Calculator.compute(expression));
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
     }
 
     /**

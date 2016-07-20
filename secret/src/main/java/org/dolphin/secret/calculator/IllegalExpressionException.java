@@ -1,4 +1,4 @@
-package org.dolphin.secret.calculator.exception;
+package org.dolphin.secret.calculator;
 
 /**
  * Created by yananh on 2016/7/17.

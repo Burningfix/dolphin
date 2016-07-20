@@ -25,7 +25,7 @@ import org.dolphin.lib.util.DateUtils;
 import org.dolphin.lib.util.FileInfoUtil;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
-import org.dolphin.secret.picker.FileRequestProvider;
+import org.dolphin.secret.picker.AndroidFileProvider;
 
 import java.io.File;
 import java.util.HashSet;
@@ -179,7 +179,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         View root = View.inflate(FilePage.this.getActivity(), R.layout.file_item, null);
         ItemViewHolder viewHolder = new ItemViewHolder();
         viewHolder.fileInfo = item;
-        viewHolder.imageVIew = (ThumbnailImageView) root.findViewById(R.id.thumbnail);
+        viewHolder.imageVIew = (ThumbnailImageVIew) root.findViewById(R.id.thumbnail);
         viewHolder.nameView = (TextView) root.findViewById(R.id.name);
         viewHolder.size = (TextView) root.findViewById(R.id.size);
         viewHolder.duration = (TextView) root.findViewById(R.id.duration);
@@ -265,13 +265,13 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
             if (null == data) {
                 return;
             }
-            List<FileRequestProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
+            List<AndroidFileProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
             importFileEntryList(selectedFileList);
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    protected void importFileEntryList(List<FileRequestProvider.FileEntry> selectedFileList) {
+    protected void importFileEntryList(List<AndroidFileProvider.FileEntry> selectedFileList) {
         if (null == selectedFileList || selectedFileList.isEmpty()) {
             return;
         }
@@ -315,7 +315,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     }
 
     protected static class ItemViewHolder {
-        ThumbnailImageView imageVIew;
+        ThumbnailImageVIew imageVIew;
         TextView nameView;
         TextView size;
         TextView duration;

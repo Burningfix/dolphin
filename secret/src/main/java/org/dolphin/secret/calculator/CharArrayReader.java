@@ -24,6 +24,10 @@ public class CharArrayReader {
         index = index < 0 ? 0 : index;
     }
 
+    public String toString() {
+        return new String(chars);
+    }
+
     public static class Builder {
         private char[] chars;
         private int offset;
