@@ -28,7 +28,7 @@ public class AndroidFileInfo implements Parcelable {
         size = in.readLong();
         lastModifyTime = in.readLong();
         mimeType = in.readString();
-        isFolder = in.readByte() > 0 ? true : false;
+        isFolder = in.readByte() > 0;
         width = in.readInt();
         height = in.readInt();
     }

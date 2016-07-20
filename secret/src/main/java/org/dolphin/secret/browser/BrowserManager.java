@@ -21,7 +21,7 @@ import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
 import org.dolphin.secret.core.ObscureOperator;
 import org.dolphin.secret.core.TraversalFolderOperator;
-import org.dolphin.secret.picker.AndroidFileProvider;
+import org.dolphin.secret.picker.AndroidTypedFileProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -335,16 +335,16 @@ public class BrowserManager {
         notifyFileChanged(this.videoFileList, this.videoFileChangeListeners);
     }
 
-    public void importFiles(final List<AndroidFileProvider.FileEntry> fileList, final ImportFileListener callback) {
-        for (final AndroidFileProvider.FileEntry fileEntry : fileList) {
+    public void importFiles(final List<AndroidTypedFileProvider.FileEntry> fileList, final ImportFileListener callback) {
+        for (final AndroidTypedFileProvider.FileEntry fileEntry : fileList) {
             final File originalFile = new File(fileEntry.path);
             final File destFile = new File(getInstance().getRootDir(), originalFile.getName());
             new Job(fileEntry)
                     .workOn(Schedulers.io())
                     .callbackOn(AndroidMainScheduler.INSTANCE)
-                    .then(new Operator<AndroidFileProvider.FileEntry, File>() {
+                    .then(new Operator<AndroidTypedFileProvider.FileEntry, File>() {
                         @Override
-                        public File operate(AndroidFileProvider.FileEntry input) throws Throwable {
+                        public File operate(AndroidTypedFileProvider.FileEntry input) throws Throwable {
                             FileUtils.moveFile(originalFile, destFile);
                             MediaScannerConnection.scanFile(SecretApplication.getInstance(),
                                     new String[]{originalFile.getAbsolutePath()}, null, null);

@@ -25,7 +25,7 @@ import org.dolphin.lib.util.DateUtils;
 import org.dolphin.lib.util.FileInfoUtil;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
-import org.dolphin.secret.picker.AndroidFileProvider;
+import org.dolphin.secret.picker.AndroidTypedFileProvider;
 
 import java.io.File;
 import java.util.HashSet;
@@ -265,13 +265,13 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
             if (null == data) {
                 return;
             }
-            List<AndroidFileProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
+            List<AndroidTypedFileProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
             importFileEntryList(selectedFileList);
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    protected void importFileEntryList(List<AndroidFileProvider.FileEntry> selectedFileList) {
+    protected void importFileEntryList(List<AndroidTypedFileProvider.FileEntry> selectedFileList) {
         if (null == selectedFileList || selectedFileList.isEmpty()) {
             return;
         }

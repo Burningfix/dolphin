@@ -520,7 +520,7 @@ public class BitmapUtils {
     public static class ImageThumbnailUtils extends BaseThumbnailUtils {
         public final static ImageThumbnailUtils DEFAULT = new ImageThumbnailUtils(true, 0.2F, 0.2F);
 
-        protected ImageThumbnailUtils(boolean zoomImage, float upperLimitFactor, float lowerLimitFactor) {
+        public ImageThumbnailUtils(boolean zoomImage, float upperLimitFactor, float lowerLimitFactor) {
             super(zoomImage, upperLimitFactor, lowerLimitFactor);
         }
 

@@ -15,7 +15,7 @@ import org.dolphin.secret.R;
 import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.http.HttpContainer;
-import org.dolphin.secret.picker.AndroidFileProvider;
+import org.dolphin.secret.picker.AndroidTypedFileProvider;
 import org.dolphin.secret.play.VideoPlayerActivity;
 
 import java.io.File;
@@ -126,7 +126,7 @@ public class VideoFileListPage extends FilePage {
             String path = videoUri.getPath();
 
 
-            List<AndroidFileProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
+            List<AndroidTypedFileProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
             importFileEntryList(selectedFileList);
         }
     }

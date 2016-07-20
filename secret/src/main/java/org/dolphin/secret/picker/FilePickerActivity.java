@@ -25,7 +25,7 @@ import java.util.Set;
  */
 public class FilePickerActivity extends AppCompatActivity {
     public static final String TAG = "FilePickerActivity";
-    public final AndroidFileProvider fileProvider = new AndroidFileProvider("image/jpeg", this);
+    public final AndroidTypedFileProvider fileProvider = new AndroidTypedFileProvider("image/jpeg", this);
     private GridView contentView;
     private View submitView;
     private FileListAdapter fileListAdapter = new FileListAdapter();
@@ -49,7 +49,7 @@ public class FilePickerActivity extends AppCompatActivity {
                     selectedFile.remove(fileListAdapter.getItem(position));
                     holder.checkbox.setChecked(false);
                 } else {
-                    selectedFile.add((AndroidFileProvider.FileEntry) fileListAdapter.getItem(position));
+                    selectedFile.add((AndroidTypedFileProvider.FileEntry) fileListAdapter.getItem(position));
                     holder.checkbox.setChecked(true);
                 }
                 onCheckChanged();
@@ -113,9 +113,9 @@ public class FilePickerActivity extends AppCompatActivity {
     }
 
     private class FileListAdapter extends BaseAdapter {
-        private List<AndroidFileProvider.AndroidFileInfo> fileEntryList = null;
+        private List<AndroidTypedFileProvider.AndroidFileInfo> fileEntryList = null;
 
-        public void setData(List<AndroidFileProvider.FileEntry> fileEntryList) {
+        public void setData(List<AndroidTypedFileProvider.FileEntry> fileEntryList) {
             this.fileEntryList = fileEntryList;
         }
 
@@ -138,7 +138,7 @@ public class FilePickerActivity extends AppCompatActivity {
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            final AndroidFileProvider.FileEntry fileEntry = (AndroidFileProvider.FileEntry) getItem(position);
+            final AndroidTypedFileProvider.FileEntry fileEntry = (AndroidTypedFileProvider.FileEntry) getItem(position);
             if (convertView == null) {
                 convertView = View.inflate(FilePickerActivity.this, R.layout.file_picker_item, null);
             }
