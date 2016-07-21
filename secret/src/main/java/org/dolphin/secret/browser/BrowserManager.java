@@ -22,7 +22,6 @@ import org.dolphin.secret.core.FileInfoContentCache;
 import org.dolphin.secret.core.ObscureOperator;
 import org.dolphin.secret.core.TraversalFolderOperator;
 import org.dolphin.secret.picker.AndroidFileInfo;
-import org.dolphin.secret.picker.AndroidTypedFileProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -234,7 +233,7 @@ public class BrowserManager {
         notifyFileChanged(copyOnWriteArrayList, listeners);
     }
 
-    void onFileFound(FileInfo fileInfo) {
+    void onObscureFileFound(FileInfo fileInfo) {
         if (null == fileInfo) return;
         List<FileInfo> files = new ArrayList<>();
         files.add(fileInfo);
@@ -301,7 +300,7 @@ public class BrowserManager {
                     @Override
                     public void call(TwoTuple<FileInfo, FileInfoContentCache> result) {
                         CacheManager.getInstance().putCache(result.value1, result.value2);
-                        onFileFound(result.value1);
+                        onObscureFileFound(result.value1);
                     }
                 })
                 .work();

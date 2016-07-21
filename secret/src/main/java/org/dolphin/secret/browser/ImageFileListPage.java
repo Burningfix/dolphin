@@ -1,6 +1,5 @@
 package org.dolphin.secret.browser;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.provider.MediaStore;
@@ -9,7 +8,6 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 
-import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.BrowserMainActivity;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
@@ -71,7 +69,6 @@ public class ImageFileListPage extends FilePage {
         intent.setAction(MediaStore.ACTION_IMAGE_CAPTURE);
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         // 根据文件地址创建文件
-        new DateFormat();
 
         String name = DateFormat.format("yyyyMMdd_hhmmss", Calendar.getInstance(Locale.getDefault())) + ".jpg";
         File file = new File(BrowserManager.sRootDir, name);
@@ -97,12 +94,7 @@ public class ImageFileListPage extends FilePage {
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == CATCH_PHOTO_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            if (!ValueUtil.isEmpty(lastCreateFileName)) {
-                BrowserManager.getInstance().obscureFile(lastCreateFileName);
-            }
-        }
-        super.onActivityResult(requestCode, resultCode, data);
+    public String getLastCaptureFile() {
+        return lastCreateFileName;
     }
 }

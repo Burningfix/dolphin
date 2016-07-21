@@ -9,7 +9,6 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -20,7 +19,6 @@ import android.widget.AdapterView;
 import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import org.dolphin.lib.util.DateUtils;
 import org.dolphin.lib.util.FileInfoUtil;
@@ -29,6 +27,7 @@ import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.picker.AndroidFileInfo;
 import org.dolphin.secret.picker.AndroidTypedFileProvider;
+import org.dolphin.secret.util.DialogUtil;
 
 import java.io.File;
 import java.util.Arrays;
@@ -300,10 +299,11 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
         if (null == selectedFileList || selectedFileList.isEmpty()) {
             return;
         }
+
         final int count = selectedFileList.size();
         final ProgressDialog progressDialog = new ProgressDialog(getActivity());
-        progressDialog.setTitle("Progress");
-        progressDialog.setMessage("Progress");
+        progressDialog.setTitle(getString(R.string.on_obscuring));
+        progressDialog.setMessage(getString(R.string.on_obscuring));
         progressDialog.setIndeterminate(true);
         progressDialog.setCancelable(false);
         progressDialog.setMax(count);
@@ -312,28 +312,33 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
         BrowserManager.getInstance().importFiles(selectedFileList, new ImportFileListener() {
             private final int totalCount = count;
             private int currFinished = 0;
+            private int failedCount = 0;
+
+            private void onFinish() {
+                if (failedCount > 0) {
+                    DialogUtil.createDialog(getActivity(), null, getString(R.string.on_obscuring_failed, failedCount)).show();
+                }
+            }
 
             @Override
             public void onImportSuccess(String originalPath, FileInfo obscurePath) {
-                Toast.makeText(getActivity(), "import file " + originalPath + " success", Toast.LENGTH_SHORT).show();
-                BrowserManager.getInstance().onFileFound(obscurePath);
-                progressDialog.setMessage(originalPath);
+                BrowserManager.getInstance().onObscureFileFound(obscurePath);
                 ++currFinished;
                 progressDialog.incrementProgressBy(1);
                 if (currFinished == totalCount) {
                     progressDialog.dismiss();
+                    onFinish();
                 }
             }
 
             @Override
             public void onImportFailed(String originalPath, Throwable error) {
-                Toast.makeText(getActivity(), "import file " + originalPath + " failed", Toast.LENGTH_SHORT).show();
-                Log.d("import", "onImportFailed " + originalPath + " To " + error);
-                progressDialog.setMessage(originalPath);
                 ++currFinished;
+                ++failedCount;
                 progressDialog.incrementProgressBy(1);
                 if (currFinished == totalCount) {
                     progressDialog.dismiss();
+                    onFinish();
                 }
             }
         });

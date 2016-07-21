@@ -1,6 +1,5 @@
 package org.dolphin.secret.browser;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.provider.MediaStore;
@@ -9,13 +8,11 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 
-import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.BrowserMainActivity;
 import org.dolphin.secret.R;
 import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.core.FileInfo;
 import org.dolphin.secret.http.HttpContainer;
-import org.dolphin.secret.picker.AndroidFileInfo;
 import org.dolphin.secret.play.VideoPlayerActivity;
 
 import java.io.File;
@@ -110,23 +107,7 @@ public class VideoFileListPage extends FilePage {
     }
 
     @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == CATCH_VIDEO_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
-            if (!ValueUtil.isEmpty(lastCreateFileName)) {
-                BrowserManager.getInstance().obscureFile(lastCreateFileName);
-            }
-        } else if (IMPORT_VIDEO_REQUEST_CODE == requestCode && resultCode == Activity.RESULT_OK) {
-            // 导入成功
-            if (null == data) {
-                return;
-            }
-
-            Uri videoUri = data.getData();
-            String path = videoUri.getPath();
-
-            List<AndroidFileInfo> selectedFileList = data.getParcelableArrayListExtra("data");
-            importAndroidFileList(selectedFileList);
-        }
+    public String getLastCaptureFile() {
+        return lastCreateFileName;
     }
 }
