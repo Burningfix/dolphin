@@ -20,7 +20,7 @@ public class PickImageView extends ImageView {
     public static final String TAG = "PickImageView";
     private static final BitmapUtils.ImageThumbnailUtils DECODER = new BitmapUtils.ImageThumbnailUtils(false, 0.2F, 0.2F);
     private AndroidFileInfo requireDisplay = null;
-    private AndroidFileInfo currenDisplay = null;
+    private AndroidFileInfo currentDisplay = null;
     private boolean isAttached = true;
     private Job job;
 
@@ -72,7 +72,7 @@ public class PickImageView extends ImageView {
             return;
         }
 
-        if (this.requireDisplay == this.currenDisplay) return;
+        if (this.requireDisplay == this.currentDisplay) return;
         if (null != job) {
             job.abort();
         }
@@ -89,19 +89,20 @@ public class PickImageView extends ImageView {
                 .error(new Job.Callback2() {
                     @Override
                     public void call(Throwable throwable, Object[] unexpectedResult) {
+                        currentDisplay = fileInfo;
                         job = null;
                     }
                 })
                 .result(new Job.Callback1<Bitmap>() {
                     @Override
                     public void call(Bitmap result) {
+                        currentDisplay = fileInfo;
+                        job = null;
                         if (null == result) {
                             // TODO
                             return;
                         }
                         PickImageView.this.setImageBitmap(result);
-                        currenDisplay = fileInfo;
-                        job = null;
                     }
                 })
                 .work();

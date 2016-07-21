@@ -17,6 +17,7 @@ import android.widget.TextView;
 import org.dolphin.secret.R;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 
@@ -25,7 +26,7 @@ import java.util.Set;
  */
 public class FilePickerActivity extends AppCompatActivity {
     public static final String TAG = "FilePickerActivity";
-    public final AndroidTypedFileProvider fileProvider = new AndroidTypedFileProvider("image/jpeg", this);
+    public final AndroidTypedFileProvider imageFileProvider = new AndroidTypedFileProvider("image/jpeg", this);
     private GridView contentView;
     private View submitView;
     private FileListAdapter fileListAdapter = new FileListAdapter();
@@ -39,7 +40,7 @@ public class FilePickerActivity extends AppCompatActivity {
         contentView = (GridView) findViewById(R.id.file_pick_gridview);
         submitView = findViewById(R.id.file_pick_submit);
         contentView.setAdapter(fileListAdapter);
-        fileListAdapter.setData(fileProvider.request());
+        fileListAdapter.setData(imageFileProvider.request());
         fileListAdapter.notifyDataSetChanged();
         contentView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -49,7 +50,7 @@ public class FilePickerActivity extends AppCompatActivity {
                     selectedFile.remove(fileListAdapter.getItem(position));
                     holder.checkbox.setChecked(false);
                 } else {
-                    selectedFile.add((AndroidTypedFileProvider.FileEntry) fileListAdapter.getItem(position));
+                    selectedFile.add((AndroidFileInfo) fileListAdapter.getItem(position));
                     holder.checkbox.setChecked(true);
                 }
                 onCheckChanged();
@@ -113,9 +114,9 @@ public class FilePickerActivity extends AppCompatActivity {
     }
 
     private class FileListAdapter extends BaseAdapter {
-        private List<AndroidTypedFileProvider.AndroidFileInfo> fileEntryList = null;
+        private List<AndroidFileInfo> fileEntryList = null;
 
-        public void setData(List<AndroidTypedFileProvider.FileEntry> fileEntryList) {
+        public void setData(List<AndroidFileInfo> fileEntryList) {
             this.fileEntryList = fileEntryList;
         }
 
@@ -138,7 +139,7 @@ public class FilePickerActivity extends AppCompatActivity {
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            final AndroidTypedFileProvider.FileEntry fileEntry = (AndroidTypedFileProvider.FileEntry) getItem(position);
+            final AndroidFileInfo fileEntry = (AndroidFileInfo) getItem(position);
             if (convertView == null) {
                 convertView = View.inflate(FilePickerActivity.this, R.layout.file_picker_item, null);
             }

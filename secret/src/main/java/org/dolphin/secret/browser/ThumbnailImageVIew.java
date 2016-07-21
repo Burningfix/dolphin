@@ -23,27 +23,27 @@ import java.io.File;
 /**
  * Created by yananh on 2016/1/23.
  */
-public class ThumbnailImageVIew extends ImageView {
+public class ThumbnailImageView extends ImageView {
     private boolean attached = false;
     private boolean visible = false;
     private String filePath = null;
     private FileInfo fileInfo = null;
     private Job loadJob = null;
 
-    public ThumbnailImageVIew(Context context) {
+    public ThumbnailImageView(Context context) {
         super(context);
     }
 
-    public ThumbnailImageVIew(Context context, AttributeSet attrs) {
+    public ThumbnailImageView(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public ThumbnailImageVIew(Context context, AttributeSet attrs, int defStyleAttr) {
+    public ThumbnailImageView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    public ThumbnailImageVIew(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public ThumbnailImageView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
@@ -158,7 +158,7 @@ public class ThumbnailImageVIew extends ImageView {
                             cache.thumbnail = result;
                         }
                         CacheManager.getInstance().putCache(fileInfo, cache);
-                        ThumbnailImageVIew.this.setImageBitmap(result);
+                        ThumbnailImageView.this.setImageBitmap(result);
                     }
                 })
                 .work();

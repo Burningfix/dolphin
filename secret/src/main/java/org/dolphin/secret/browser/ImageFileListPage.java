@@ -63,7 +63,7 @@ public class ImageFileListPage extends FilePage {
         startActivity(inten);
     }
 
-    private String lastCreateFileName = null;
+    protected String lastCreateFileName = null;
 
     private void catchPhoto() {
         Intent intent = new Intent();
@@ -90,8 +90,10 @@ public class ImageFileListPage extends FilePage {
         Intent pickIntent = new Intent();
         pickIntent.setType("image/*");
         pickIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        pickIntent.setAction("android.intent.action.PICK");
-        startActivityForResult(Intent.createChooser(pickIntent, "Select Picture"), IMPORT_PHOTO_REQUEST_CODE);
+        pickIntent.setAction(Intent.ACTION_GET_CONTENT);
+        // intent.setType("image/* video/*");
+        // pickIntent.setAction("android.intent.action.PICK");
+        startActivityForResult(Intent.createChooser(pickIntent, getResources().getString(R.string.select_image)), IMPORT_PHOTO_REQUEST_CODE);
     }
 
     @Override

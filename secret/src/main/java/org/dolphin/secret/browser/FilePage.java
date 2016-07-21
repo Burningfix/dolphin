@@ -6,6 +6,7 @@ import android.app.ProgressDialog;
 import android.content.Intent;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -23,11 +24,14 @@ import android.widget.Toast;
 
 import org.dolphin.lib.util.DateUtils;
 import org.dolphin.lib.util.FileInfoUtil;
+import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.picker.AndroidFileInfo;
 import org.dolphin.secret.picker.AndroidTypedFileProvider;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,13 +40,14 @@ import java.util.Set;
 /**
  * Created by yananh on 2016/1/23.
  */
-public class FilePage extends Fragment implements BrowserManager.FileChangeListener,
+public abstract class FilePage extends Fragment implements BrowserManager.FileChangeListener,
         AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener {
     protected final int CATCH_PHOTO_REQUEST_CODE = 1234;
     protected final int CATCH_VIDEO_REQUEST_CODE = 1235;
-    protected final int AUDIO_REQUEST_CODE = 1236;
+    protected final int CATCH_AUDIO_REQUEST_CODE = 1236;
     protected final int IMPORT_PHOTO_REQUEST_CODE = 1344;
     protected final int IMPORT_VIDEO_REQUEST_CODE = 1345;
+    protected final int IMPORT_AUDIO_REQUEST_CODE = 1349;
 
     public enum State {
         Normal,
@@ -179,7 +184,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         View root = View.inflate(FilePage.this.getActivity(), R.layout.file_item, null);
         ItemViewHolder viewHolder = new ItemViewHolder();
         viewHolder.fileInfo = item;
-        viewHolder.imageVIew = (ThumbnailImageVIew) root.findViewById(R.id.thumbnail);
+        viewHolder.imageVIew = (ThumbnailImageView) root.findViewById(R.id.thumbnail);
         viewHolder.nameView = (TextView) root.findViewById(R.id.name);
         viewHolder.size = (TextView) root.findViewById(R.id.size);
         viewHolder.duration = (TextView) root.findViewById(R.id.duration);
@@ -255,23 +260,43 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
         return super.onOptionsItemSelected(item);
     }
 
+    public abstract String getLastCaptureFile();
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if ((IMPORT_PHOTO_REQUEST_CODE == requestCode
-                || IMPORT_PHOTO_REQUEST_CODE == requestCode
-                || IMPORT_PHOTO_REQUEST_CODE == requestCode)
+                || IMPORT_VIDEO_REQUEST_CODE == requestCode
+                || IMPORT_AUDIO_REQUEST_CODE == requestCode)
                 && resultCode == Activity.RESULT_OK) {
-            // 导入成功
+            // 调用系统导入成功
             if (null == data) {
                 return;
             }
-            List<AndroidTypedFileProvider.FileEntry> selectedFileList = data.getParcelableArrayListExtra("data");
-            importFileEntryList(selectedFileList);
+            List<AndroidFileInfo> selectedFileList = data.getParcelableArrayListExtra("data");
+            if (null != selectedFileList) {
+                importAndroidFileList(selectedFileList);
+                return;
+            }
+            Uri uri = data.getData();
+            if (null != uri) {
+                AndroidFileInfo fileInfo = AndroidTypedFileProvider.requestSpec(getActivity(), uri);
+                importAndroidFileList(Arrays.<AndroidFileInfo>asList(fileInfo));
+            }
+            return;
         }
-        super.onActivityResult(requestCode, resultCode, data);
+
+        if ((requestCode == CATCH_PHOTO_REQUEST_CODE
+                || requestCode == CATCH_VIDEO_REQUEST_CODE
+                || requestCode == CATCH_AUDIO_REQUEST_CODE)
+                && resultCode == Activity.RESULT_OK) {
+            String lastCreateFileName = getLastCaptureFile();
+            if (!ValueUtil.isEmpty(lastCreateFileName)) {
+                BrowserManager.getInstance().obscureFile(lastCreateFileName);
+            }
+        }
     }
 
-    protected void importFileEntryList(List<AndroidTypedFileProvider.FileEntry> selectedFileList) {
+    protected void importAndroidFileList(List<AndroidFileInfo> selectedFileList) {
         if (null == selectedFileList || selectedFileList.isEmpty()) {
             return;
         }
@@ -315,7 +340,7 @@ public class FilePage extends Fragment implements BrowserManager.FileChangeListe
     }
 
     protected static class ItemViewHolder {
-        ThumbnailImageVIew imageVIew;
+        ThumbnailImageView imageVIew;
         TextView nameView;
         TextView size;
         TextView duration;

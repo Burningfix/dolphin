@@ -28,6 +28,46 @@ public class AndroidTypedFileProvider {
         return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
     }
 
+    public static AndroidFileInfo requestSpec(Context context, Uri uri) {
+        String[] projection = {MediaStore.MediaColumns._ID,
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                MediaStore.MediaColumns.DATA,
+                MediaStore.MediaColumns.TITLE,
+                MediaStore.MediaColumns.SIZE,
+                MediaStore.MediaColumns.DATE_MODIFIED,
+                MediaStore.MediaColumns.MIME_TYPE,
+                MediaStore.MediaColumns.WIDTH,
+                MediaStore.MediaColumns.HEIGHT};
+        Cursor cursor = context.getContentResolver().query(uri, projection, null, null, null);
+        try {
+            if (null != cursor && cursor.moveToFirst()) {
+                AndroidFileInfo androidFileInfo = new AndroidFileInfo();
+                // 获得图片的id
+                androidFileInfo.id = cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns._ID));
+                // 获得图片显示的名称
+                androidFileInfo.name = cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME));
+                // 获得图片的大小信息
+                androidFileInfo.size = cursor.getLong(cursor.getColumnIndex(MediaStore.MediaColumns.SIZE));
+                // 获得图片所在的路径(可以使用路径构建URI)
+                androidFileInfo.path = cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.DATA));
+                // 最后修改时间
+                androidFileInfo.lastModifyTime = ValueUtil.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)), -1);
+                // mimeType
+                androidFileInfo.mimeType = cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.MIME_TYPE));
+                // width(如果有)
+                androidFileInfo.width = ValueUtil.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.WIDTH)), -1);
+                // height(如果有)
+                androidFileInfo.height = ValueUtil.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.HEIGHT)), -1);
+                return androidFileInfo;
+            }
+        } finally {
+            if (null != cursor) {
+                cursor.close();
+            }
+        }
+        return null;
+    }
+
     public List<AndroidFileInfo> request() {
         // 指定要查询的uri资源
         Uri uri = getDatabaseUri();
