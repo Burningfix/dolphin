@@ -7,6 +7,7 @@ import android.text.format.DateFormat;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import org.dolphin.secret.BrowserMainActivity;
 import org.dolphin.secret.R;
@@ -80,16 +81,17 @@ public class ImageFileListPage extends FilePage {
         Uri uri = Uri.fromFile(file);
         // 设置系统相机拍摄照片完成后图片文件的存放地址
         intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-        startActivityForResult(intent, CATCH_PHOTO_REQUEST_CODE);
+
+        if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+            startActivityForResult(intent, CATCH_PHOTO_REQUEST_CODE);
+        }
     }
 
     private void importAlbum() {
-        Intent pickIntent = new Intent();
+        Intent pickIntent = new Intent(Intent.ACTION_GET_CONTENT, null);
         pickIntent.setType("image/*");
-        pickIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        pickIntent.setAction(Intent.ACTION_GET_CONTENT);
-        // intent.setType("image/* video/*");
-        // pickIntent.setAction("android.intent.action.PICK");
+        pickIntent.putExtra("android.intent.extra.ALLOW_MULTIPLE", true); // 可以多选
+//        pickIntent.putExtra("android.intent.extra.LOCAL_ONLY", true); // 只选择本地的，忽略server上的
         startActivityForResult(Intent.createChooser(pickIntent, getResources().getString(R.string.select_image)), IMPORT_PHOTO_REQUEST_CODE);
     }
 

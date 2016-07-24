@@ -9,6 +9,7 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -30,7 +31,6 @@ import org.dolphin.secret.picker.AndroidTypedFileProvider;
 import org.dolphin.secret.util.DialogUtil;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -277,9 +277,17 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
                 return;
             }
             Uri uri = data.getData();
-            if (null != uri) {
-                AndroidFileInfo fileInfo = AndroidTypedFileProvider.requestSpec(getActivity(), uri);
-                importAndroidFileList(Arrays.<AndroidFileInfo>asList(fileInfo));
+            if (null == uri) {
+                return;
+            }
+            String schema = uri.getScheme();
+            if (TextUtils.isEmpty(schema)) {
+                return;
+            }
+            if (schema.equalsIgnoreCase("file")) {
+
+            } else if (schema.equalsIgnoreCase("content")) {
+                importAndroidFileList(AndroidTypedFileProvider.requestSpec(getActivity(), uri));
             }
             return;
         }

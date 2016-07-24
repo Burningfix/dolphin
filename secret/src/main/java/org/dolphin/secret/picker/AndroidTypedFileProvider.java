@@ -28,7 +28,7 @@ public class AndroidTypedFileProvider {
         return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
     }
 
-    public static AndroidFileInfo requestSpec(Context context, Uri uri) {
+    public static List<AndroidFileInfo> requestSpec(Context context, Uri uri) {
         String[] projection = {MediaStore.MediaColumns._ID,
                 MediaStore.MediaColumns.DISPLAY_NAME,
                 MediaStore.MediaColumns.DATA,
@@ -38,6 +38,7 @@ public class AndroidTypedFileProvider {
                 MediaStore.MediaColumns.MIME_TYPE,
                 MediaStore.MediaColumns.WIDTH,
                 MediaStore.MediaColumns.HEIGHT};
+        final List<AndroidFileInfo> fileInfos = new LinkedList<AndroidFileInfo>();
         Cursor cursor = context.getContentResolver().query(uri, projection, null, null, null);
         try {
             if (null != cursor && cursor.moveToFirst()) {
@@ -58,14 +59,14 @@ public class AndroidTypedFileProvider {
                 androidFileInfo.width = ValueUtil.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.WIDTH)), -1);
                 // height(如果有)
                 androidFileInfo.height = ValueUtil.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.MediaColumns.HEIGHT)), -1);
-                return androidFileInfo;
+                fileInfos.add(androidFileInfo);
             }
         } finally {
             if (null != cursor) {
                 cursor.close();
             }
         }
-        return null;
+        return fileInfos;
     }
 
     public List<AndroidFileInfo> request() {
