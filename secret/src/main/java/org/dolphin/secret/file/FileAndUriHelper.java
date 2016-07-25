@@ -1,4 +1,4 @@
-package org.dolphin.secret.util;
+package org.dolphin.secret.file;
 
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -14,10 +14,12 @@ import android.text.TextUtils;
 import java.io.File;
 
 /**
- * Created by hanyanan on 2016/7/22.
+ * Created by hanyanan on 2016/7/25.
  */
-public class UriUtil {
-    public static Uri filePathToUri(Context context, String type, String path) {
+public class FileAndUriHelper {
+    public static final String TAG = "AndroidFileInfoOperation";
+
+    public static <T> T readAttributes(Context context, String type, String path, final FileAttributeReader<T> fileAttributeReader) {
         if (TextUtils.isEmpty(path)) {
             return null;
         }
@@ -33,22 +35,19 @@ public class UriUtil {
         }
         path = Uri.decode(path);
         ContentResolver cr = context.getContentResolver();
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         sb.append("(")
                 .append(MediaStore.MediaColumns.DATA)
                 .append("=")
                 .append("'").append(path).append("'")
                 .append(")");
-        Cursor cur = cr.query(contentUri, new String[]{MediaStore.MediaColumns._ID}, sb.toString(), null, null);
-        if (null == cur) {
-            return null;
-        }
-        int id = 0;
-        for (cur.moveToFirst(); !cur.isAfterLast(); cur.moveToNext()) {
-            id = cur.getInt(cur.getColumnIndex(MediaStore.MediaColumns._ID));
-        }
-        cur.close();
-        return Uri.parse("content://media/external/images/media/" + id);
+        final FileAttributeReader<T> fileAttributeReaderProxy = new FileAttributeReaderWrapper<T>(fileAttributeReader) {
+            @Override
+            public String selection() {
+                return sb.toString();
+            }
+        };
+        return readAttributes(context, contentUri, fileAttributeReaderProxy);
     }
 
     /**
@@ -65,8 +64,8 @@ public class UriUtil {
      * @param context
      * @param uri
      */
-    public static String getAbsolutePath(Context context, Uri uri) {
-        if (context == null || uri == null) {
+    public static <T> T readAttributes(Context context, Uri uri, final FileAttributeReader<T> fileAttributeReader) {
+        if (context == null || uri == null || null == fileAttributeReader) {
             return null;
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT && DocumentsContract.isDocumentUri(context, uri)) {
@@ -75,12 +74,12 @@ public class UriUtil {
                 String[] split = docId.split(":");
                 String type = split[0];
                 if ("primary".equalsIgnoreCase(type)) {
-                    return Environment.getExternalStorageDirectory() + File.separator + split[1];
+                    return fileAttributeReader.read(Environment.getExternalStorageDirectory() + File.separator + split[1]);
                 }
             } else if (isDownloadsDocument(uri)) {
                 String id = DocumentsContract.getDocumentId(uri);
                 Uri contentUri = ContentUris.withAppendedId(Uri.parse("content://downloads/public_downloads"), Long.valueOf(id));
-                return getDataColumn(context, contentUri, null, null);
+                return readAttribute(context, contentUri, fileAttributeReader);
             } else if (isMediaDocument(uri)) {
                 // MediaProvider
                 String docId = DocumentsContract.getDocumentId(uri);
@@ -94,51 +93,62 @@ public class UriUtil {
                 } else if ("audio".equals(type)) {
                     contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
                 }
-                String selection = MediaStore.MediaColumns._ID + "=?";
-                String[] selectionArgs = new String[]{split[1]};
-                return getDataColumn(context, contentUri, selection, selectionArgs);
+                final String selection = MediaStore.MediaColumns._ID + "=?";
+                final String[] selectionArgs = new String[]{split[1]};
+                return readAttribute(context, contentUri, new FileAttributeReaderWrapper<T>(fileAttributeReader) {
+                    @Override
+                    public String[] selectionArgs() {
+                        // TODO
+                        return selectionArgs;
+                    }
+
+                    @Override
+                    public String selection() {
+                        // TODO
+                        return selection;
+                    }
+                });
             }
         } else {
             final String scheme = uri.getScheme();
             if (TextUtils.isEmpty(scheme)) {
-                return uri.getPath();
+                return fileAttributeReader.read(uri.getPath());
             } else if (ContentResolver.SCHEME_CONTENT.equalsIgnoreCase(scheme)) {
                 if (isGooglePhotosUri(uri)) { // Return the remote address
-                    return uri.getLastPathSegment();
+                    return fileAttributeReader.read(uri.getLastPathSegment());
                 }
-                return getDataColumn(context, uri, null, null);
+                return readAttribute(context, uri, fileAttributeReader);
             } else if (ContentResolver.SCHEME_FILE.equalsIgnoreCase(scheme)) {
-                return uri.getPath();
+                return fileAttributeReader.read(uri.getPath());
             }
         }
-        return uri.toString();
+        return fileAttributeReader.read(uri.toString());
     }
 
     /**
      * Get the value of the data column for this Uri. This is useful for
      * MediaStore Uris, and other file-based ContentProviders.
      *
-     * @param context       The context.
-     * @param uri           The Uri to query.
-     * @param selection     (Optional) Filter used in the query.
-     * @param selectionArgs (Optional) Selection arguments used in the query.
+     * @param context The context.
+     * @param uri     The Uri to query.
      * @return The value of the _data column, which is typically a file path.
      */
-    public static String getDataColumn(Context context, Uri uri, String selection, String[] selectionArgs) {
+    public static <T> T readAttribute(Context context, Uri uri, FileAttributeReader<T> fileAttributeReader) {
         Cursor cursor = null;
         String column = MediaStore.MediaColumns.DATA;
-        String[] projection = {column};
-        try {
-            cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
-            if (cursor != null && cursor.moveToFirst()) {
-                return cursor.getString(cursor.getColumnIndexOrThrow(column));
-            }
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
+        String[] projection = fileAttributeReader.projection();
+        String selection = fileAttributeReader.selection();
+        String[] selectionArgs = fileAttributeReader.selectionArgs();
+        cursor = context.getContentResolver().query(uri, projection, selection, selectionArgs, null);
+        if (null == cursor) {
+            return null;
         }
-        return null;
+        T res = null;
+        if (cursor.moveToFirst()) {
+            res = fileAttributeReader.read(cursor);
+        }
+        cursor.close();
+        return res;
     }
 
     /**

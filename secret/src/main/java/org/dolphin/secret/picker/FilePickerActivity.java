@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -14,7 +15,9 @@ import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.GridView;
 import android.widget.TextView;
+
 import org.dolphin.secret.R;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -26,21 +29,29 @@ import java.util.Set;
  */
 public class FilePickerActivity extends AppCompatActivity {
     public static final String TAG = "FilePickerActivity";
-    public final AndroidTypedFileProvider imageFileProvider = new AndroidTypedFileProvider("image/jpeg", this);
     private GridView contentView;
     private View submitView;
     private FileListAdapter fileListAdapter = new FileListAdapter();
     private final Set<AndroidFileInfo> selectedFile = new HashSet<AndroidFileInfo>();
-
+    private String type = "image";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.file_picker_layout);
 
+        type = getIntent().getType();
+        if (TextUtils.isEmpty(type)) {
+            type = "image";
+        } else {
+            int index = type.indexOf("/");
+            index = index <= 0 ? type.length() : index;
+            type = type.substring(0, index);
+        }
+
         contentView = (GridView) findViewById(R.id.file_pick_gridview);
         submitView = findViewById(R.id.file_pick_submit);
         contentView.setAdapter(fileListAdapter);
-        fileListAdapter.setData(imageFileProvider.request());
+        fileListAdapter.setData(AndroidFileProvider.requestType(this, type));
         fileListAdapter.notifyDataSetChanged();
         contentView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override

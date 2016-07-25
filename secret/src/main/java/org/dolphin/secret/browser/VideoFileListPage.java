@@ -99,11 +99,11 @@ public class VideoFileListPage extends FilePage {
     }
 
     private void importVideo() {
-        Intent pickIntent = new Intent();
+        Intent pickIntent = new Intent(Intent.ACTION_GET_CONTENT, null);
         pickIntent.setType("video/*");
-        pickIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-        pickIntent.setAction("android.intent.action.PICK");
-        startActivityForResult(Intent.createChooser(pickIntent, "Select Picture"), IMPORT_VIDEO_REQUEST_CODE);
+        pickIntent.putExtra("android.intent.extra.ALLOW_MULTIPLE", true); // 可以多选
+        pickIntent.putExtra("android.intent.extra.LOCAL_ONLY", true); // 只选择本地的，忽略server上的
+        startActivityForResult(Intent.createChooser(pickIntent, getResources().getString(R.string.select_video)), IMPORT_VIDEO_REQUEST_CODE);
     }
 
     @Override

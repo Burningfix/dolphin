@@ -18,7 +18,8 @@ import org.dolphin.secret.util.BitmapUtils;
  */
 public class PickImageView extends ImageView {
     public static final String TAG = "PickImageView";
-    private static final BitmapUtils.ImageThumbnailUtils DECODER = new BitmapUtils.ImageThumbnailUtils(false, 0.2F, 0.2F);
+    private static final BitmapUtils.ImageThumbnailUtils IMAGE_DECODER = new BitmapUtils.ImageThumbnailUtils(false, 0.2F, 0.2F);
+    private static final BitmapUtils.VideoThumbnailUtils VIDEO_DECODER = new BitmapUtils.VideoThumbnailUtils(false, 0.2F, 0.2F);
     private AndroidFileInfo requireDisplay = null;
     private AndroidFileInfo currentDisplay = null;
     private boolean isAttached = true;
@@ -109,29 +110,11 @@ public class PickImageView extends ImageView {
     }
 
     public Bitmap getThumbnail(AndroidFileInfo fileInfo) {
-        return DECODER.extractThumbnail(fileInfo.path, 200, 200, null);
+        if (fileInfo.mimeType.startsWith("image")) {
+            return IMAGE_DECODER.extractThumbnail(fileInfo.path, 200, 200, null);
+        } else if (fileInfo.mimeType.startsWith("video")) {
+            return VIDEO_DECODER.extractThumbnail(fileInfo.path, 200, 200, null);
+        }
+        return IMAGE_DECODER.extractThumbnail(fileInfo.path, 200, 200, null);
     }
-
-//    public Bitmap getThumbnail(AndroidTypedFileProvider.FileEntry fileEntry) {
-//        if (!isAttached) return null;
-//        BitmapFactory.Options options = new BitmapFactory.Options();
-//        options.inJustDecodeBounds = true;
-//        try {
-//            MediaStore.Images.Thumbnails.getThumbnail(getContext().getContentResolver(), Long.parseLong(fileEntry.id),
-//                    MediaStore.Images.Thumbnails.MINI_KIND, options);
-//        }catch (Throwable throwable) {
-//            throwable.printStackTrace();
-//        }
-//        if (options.outWidth <= 0 || options.outHeight <= 0) {
-//            BitmapFactory.decodeFile(fileEntry.path, options);
-//        }
-//        options.inJustDecodeBounds = false;
-//        options.inSampleSize = FileConstants.calculateSampleSize(options.outWidth, options.outHeight, 400, 400);
-//        Bitmap thumbnail = MediaStore.Images.Thumbnails.getThumbnail(getContext().getContentResolver(),
-//                Long.parseLong(fileEntry.id), MediaStore.Images.Thumbnails.MINI_KIND, options);
-//        if (null == thumbnail) {
-//            thumbnail = BitmapFactory.decodeFile(fileEntry.path, options);
-//        }
-//        return thumbnail;
-//    }
 }
