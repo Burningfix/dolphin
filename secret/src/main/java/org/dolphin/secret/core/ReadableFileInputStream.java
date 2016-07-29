@@ -17,7 +17,7 @@ import java.io.RandomAccessFile;
 public class ReadableFileInputStream extends InputStream {
     public static final String TAG = "ReadableFileInputStream";
     private final File file;
-    private FileInfo fileInfo = null;
+    private ObscureFileInfo fileInfo = null;
     private long nextReadIndex = 0;
     private FileInfoContentCache contentCache;
     private RandomAccessFile randomAccessFile;
@@ -29,7 +29,7 @@ public class ReadableFileInputStream extends InputStream {
         this.fileInfo = getFileInfo();
     }
 
-    public ReadableFileInputStream(File file, FileInfo fileInfo) throws FileNotFoundException {
+    public ReadableFileInputStream(File file, ObscureFileInfo fileInfo) throws FileNotFoundException {
         if (null == fileInfo) {
             throw new NullPointerException("");
         }
@@ -38,7 +38,7 @@ public class ReadableFileInputStream extends InputStream {
         randomAccessFile = new RandomAccessFile(file, "r");
     }
 
-    public ReadableFileInputStream(File file, FileInfo fileInfo, FileInfoContentCache cache) throws FileNotFoundException {
+    public ReadableFileInputStream(File file, ObscureFileInfo fileInfo, FileInfoContentCache cache) throws FileNotFoundException {
         this.file = file;
         this.fileInfo = fileInfo;
         this.contentCache = cache;
@@ -48,7 +48,7 @@ public class ReadableFileInputStream extends InputStream {
     @Override
     public int read() throws IOException {
         try {
-            FileInfo fileInfo = getFileInfo();
+            ObscureFileInfo fileInfo = getFileInfo();
             if (nextReadIndex >= fileInfo.originalFileLength) {
                 return -1;
             }
@@ -92,7 +92,7 @@ public class ReadableFileInputStream extends InputStream {
         Log.d(TAG, "Current index " + nextReadIndex + " , byteCount " + byteCount);
         int result = 0;
         try {
-            FileInfo fileInfo = getFileInfo();
+            ObscureFileInfo fileInfo = getFileInfo();
             if (nextReadIndex >= fileInfo.originalFileLength) {
                 return -1;
             }
@@ -172,7 +172,7 @@ public class ReadableFileInputStream extends InputStream {
     public long skip(long byteCount) throws IOException {
         Log.d(TAG, "skip " + byteCount);
         try {
-            FileInfo fileInfo = getFileInfo();
+            ObscureFileInfo fileInfo = getFileInfo();
             long max = fileInfo.originalFileLength - nextReadIndex;
             byteCount = max > byteCount ? byteCount : max;
             nextReadIndex += byteCount;
@@ -203,7 +203,7 @@ public class ReadableFileInputStream extends InputStream {
         return contentCache;
     }
 
-    private FileInfo getFileInfo() throws Throwable {
+    private ObscureFileInfo getFileInfo() throws Throwable {
         if (null == fileInfo) {
             ObscureFileInfoReaderOperator operator = ObscureFileInfoReaderOperator.DEFAULT;
             fileInfo = operator.operate(file);

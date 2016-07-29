@@ -6,7 +6,7 @@ import android.os.Parcelable;
 /**
  * Created by hanyanan on 2016/1/15.
  */
-public class FileInfo implements Parcelable {
+public class ObscureFileInfo implements Parcelable {
     public String dom;
     public int softwareVersion;
     public int encodeVersion;
@@ -22,11 +22,11 @@ public class FileInfo implements Parcelable {
     public long encodeTime;
     public byte[] extraTag;
 
-    public FileInfo() {
+    public ObscureFileInfo() {
 
     }
 
-    protected FileInfo(Parcel in) {
+    protected ObscureFileInfo(Parcel in) {
         dom = in.readString();
         softwareVersion = in.readInt();
         encodeVersion = in.readInt();
@@ -43,15 +43,15 @@ public class FileInfo implements Parcelable {
         extraTag = in.createByteArray();
     }
 
-    public static final Creator<FileInfo> CREATOR = new Creator<FileInfo>() {
+    public static final Creator<ObscureFileInfo> CREATOR = new Creator<ObscureFileInfo>() {
         @Override
-        public FileInfo createFromParcel(Parcel in) {
-            return new FileInfo(in);
+        public ObscureFileInfo createFromParcel(Parcel in) {
+            return new ObscureFileInfo(in);
         }
 
         @Override
-        public FileInfo[] newArray(int size) {
-            return new FileInfo[size];
+        public ObscureFileInfo[] newArray(int size) {
+            return new ObscureFileInfo[size];
         }
     };
 
@@ -66,10 +66,10 @@ public class FileInfo implements Parcelable {
             return true;
         }
 
-        if (!FileInfo.class.isInstance(o)) {
+        if (!ObscureFileInfo.class.isInstance(o)) {
             return false;
         }
-        FileInfo other = (FileInfo) o;
+        ObscureFileInfo other = (ObscureFileInfo) o;
         return this.originalFileName.equals(other.originalFileName);
     }
 

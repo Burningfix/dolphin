@@ -9,7 +9,7 @@ import android.view.ViewGroup;
 
 import org.dolphin.secret.R;
 import org.dolphin.secret.browser.BrowserManager;
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ public class ImagePlayerActivity extends Activity {
         mViewPager = (HackyViewPager) findViewById(R.id.view_pager);
         setContentView(mViewPager);
 
-        List<FileInfo> images = new ArrayList<FileInfo>(BrowserManager.getInstance().getImageFileList());
+        List<ObscureFileInfo> images = new ArrayList<ObscureFileInfo>(BrowserManager.getInstance().getImageFileList());
         int position = getIntent().getIntExtra("position", 0);
         mViewPager.setAdapter(new SamplePagerAdapter(images));
         mViewPager.setCurrentItem(position);
@@ -33,9 +33,9 @@ public class ImagePlayerActivity extends Activity {
     }
 
     static class SamplePagerAdapter extends PagerAdapter {
-        List<FileInfo> images;
+        List<ObscureFileInfo> images;
 
-        SamplePagerAdapter(List<FileInfo> images) {
+        SamplePagerAdapter(List<ObscureFileInfo> images) {
             this.images = images;
         }
 
@@ -47,7 +47,7 @@ public class ImagePlayerActivity extends Activity {
         @Override
         public View instantiateItem(ViewGroup container, int position) {
             ZoomPhotoView photoView = new ZoomPhotoView(container.getContext());
-            FileInfo fileInfo = images.get(position);
+            ObscureFileInfo fileInfo = images.get(position);
             photoView.setBackgroundColor(0xFFE1E1E1);
             photoView.setFile(BrowserManager.sRootDir.getAbsolutePath() + File.separator + fileInfo.obscuredFileName, fileInfo);
             // Now just add PhotoView to ViewPager and return it

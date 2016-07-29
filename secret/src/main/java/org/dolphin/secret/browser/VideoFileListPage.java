@@ -11,7 +11,7 @@ import android.view.MenuItem;
 import org.dolphin.secret.BrowserMainActivity;
 import org.dolphin.secret.R;
 import org.dolphin.secret.SecretApplication;
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.http.HttpContainer;
 import org.dolphin.secret.play.VideoPlayerActivity;
 
@@ -25,7 +25,7 @@ import java.util.Locale;
  */
 public class VideoFileListPage extends FilePage {
 
-    protected List<FileInfo> getFileList() {
+    protected List<ObscureFileInfo> getFileList() {
         return BrowserManager.getInstance().getVideoFileList();
     }
 
@@ -68,7 +68,7 @@ public class VideoFileListPage extends FilePage {
         return super.onOptionsItemSelected(item);
     }
 
-    protected void onItemClicked(FileInfo fileInfo, int position) {
+    protected void onItemClicked(ObscureFileInfo fileInfo, int position) {
         Intent videoPlaybackActivity = new Intent(getActivity(), VideoPlayerActivity.class);
         String id = HttpContainer.getInstance().deliveryId(fileInfo);
         String path = SecretApplication.getInstance().getHttpServer().wrapObscurePath(id);

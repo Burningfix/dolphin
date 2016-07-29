@@ -17,7 +17,7 @@ import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.core.DeleteFileOperator;
 import org.dolphin.secret.core.DeobscureOperator;
 import org.dolphin.secret.core.EncodeLeakFileOperator;
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
 import org.dolphin.secret.core.ObscureOperator;
 import org.dolphin.secret.core.TraversalFolderOperator;
@@ -54,9 +54,9 @@ public class BrowserManager {
     private final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
     private final List<FileChangeListener> videoFileChangeListeners = new ArrayList<FileChangeListener>();
     private final List<FileChangeListener> audioFileChangeListeners = new ArrayList<FileChangeListener>();
-    private final List<FileInfo> imageFileList = new ArrayList<FileInfo>();
-    private final List<FileInfo> videoFileList = new ArrayList<FileInfo>();
-    private final List<FileInfo> audioFileList = new ArrayList<FileInfo>();
+    private final List<ObscureFileInfo> imageFileList = new ArrayList<ObscureFileInfo>();
+    private final List<ObscureFileInfo> videoFileList = new ArrayList<ObscureFileInfo>();
+    private final List<ObscureFileInfo> audioFileList = new ArrayList<ObscureFileInfo>();
 
     private BrowserManager() {
         this.rootDir = sRootDir;
@@ -102,9 +102,9 @@ public class BrowserManager {
                         // TODO
                     }
                 })
-                .result(new Job.Callback1<FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>>() {
+                .result(new Job.Callback1<FourTuple<List<ObscureFileInfo>, List<ObscureFileInfo>, List<ObscureFileInfo>, List<String>>>() {
                     @Override
-                    public void call(FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>> result) {
+                    public void call(FourTuple<List<ObscureFileInfo>, List<ObscureFileInfo>, List<ObscureFileInfo>, List<String>> result) {
                         onImageFileFound(null == result ? null : result.value1);
                         onVideoFileFound(null == result ? null : result.value2);
                         onAudioFileFound(null == result ? null : result.value3);
@@ -114,27 +114,27 @@ public class BrowserManager {
                 .work();
     }
 
-    private void onImageFileFound(List<FileInfo> files) {
+    private void onImageFileFound(List<ObscureFileInfo> files) {
         onTypedFileFound(files, this.imageFileList, this.imageFileChangeListeners);
     }
 
-    private void onVideoFileFound(List<FileInfo> files) {
+    private void onVideoFileFound(List<ObscureFileInfo> files) {
         onTypedFileFound(files, this.videoFileList, this.videoFileChangeListeners);
     }
 
-    private void onAudioFileFound(List<FileInfo> files) {
+    private void onAudioFileFound(List<ObscureFileInfo> files) {
         onTypedFileFound(files, this.audioFileList, this.audioFileChangeListeners);
     }
 
-    private void onImageFileRemoved(List<FileInfo> files) {
+    private void onImageFileRemoved(List<ObscureFileInfo> files) {
         onTypedFileRemoved(files, this.imageFileList, this.imageFileChangeListeners);
     }
 
-    private void onVideoFileRemoved(List<FileInfo> files) {
+    private void onVideoFileRemoved(List<ObscureFileInfo> files) {
         onTypedFileRemoved(files, this.videoFileList, this.videoFileChangeListeners);
     }
 
-    private void onAudioFileRemoved(List<FileInfo> files) {
+    private void onAudioFileRemoved(List<ObscureFileInfo> files) {
         onTypedFileRemoved(files, this.audioFileList, this.audioFileChangeListeners);
     }
 
@@ -164,17 +164,17 @@ public class BrowserManager {
                         // TODO
                     }
                 })
-                .result(new Job.Callback1<List<TwoTuple<FileInfo, FileInfoContentCache>>>() {
+                .result(new Job.Callback1<List<TwoTuple<ObscureFileInfo, FileInfoContentCache>>>() {
                     @Override
-                    public void call(List<TwoTuple<FileInfo, FileInfoContentCache>> result) {
+                    public void call(List<TwoTuple<ObscureFileInfo, FileInfoContentCache>> result) {
                         if (null == result || result.isEmpty()) {
                             return;
                         }
-                        List<FileInfo> images = new ArrayList<FileInfo>();
-                        List<FileInfo> video = new ArrayList<FileInfo>();
-                        List<FileInfo> audio = new ArrayList<FileInfo>();
+                        List<ObscureFileInfo> images = new ArrayList<ObscureFileInfo>();
+                        List<ObscureFileInfo> video = new ArrayList<ObscureFileInfo>();
+                        List<ObscureFileInfo> audio = new ArrayList<ObscureFileInfo>();
 
-                        for (TwoTuple<FileInfo, FileInfoContentCache> tuple : result) {
+                        for (TwoTuple<ObscureFileInfo, FileInfoContentCache> tuple : result) {
                             CacheManager.getInstance().putCache(tuple.value1, tuple.value2);
                             if (tuple.value1.isPhotoType()) {
                                 images.add(tuple.value1);
@@ -192,13 +192,13 @@ public class BrowserManager {
                 .work();
     }
 
-    private static void onTypedFileFound(List<FileInfo> newFiles, List<FileInfo> out,
+    private static void onTypedFileFound(List<ObscureFileInfo> newFiles, List<ObscureFileInfo> out,
                                          List<FileChangeListener> fileChangeListeners) {
         if (null == out || null == fileChangeListeners) {
             throw new NullPointerException("");
         }
 
-        CopyOnWriteArrayList<FileInfo> copyOnWriteArrayList = null;
+        CopyOnWriteArrayList<ObscureFileInfo> copyOnWriteArrayList = null;
         CopyOnWriteArrayList<FileChangeListener> listeners = null;
         synchronized (out) {
             if (null == newFiles || newFiles.isEmpty()) {
@@ -206,36 +206,36 @@ public class BrowserManager {
             }
             out.addAll(newFiles);
 
-            copyOnWriteArrayList = new CopyOnWriteArrayList<FileInfo>(out);
+            copyOnWriteArrayList = new CopyOnWriteArrayList<ObscureFileInfo>(out);
             listeners = new CopyOnWriteArrayList<FileChangeListener>(fileChangeListeners);
         }
 
         notifyFileChanged(copyOnWriteArrayList, listeners);
     }
 
-    private static void onTypedFileRemoved(List<FileInfo> rejectFiles, List<FileInfo> out,
+    private static void onTypedFileRemoved(List<ObscureFileInfo> rejectFiles, List<ObscureFileInfo> out,
                                            List<FileChangeListener> fileChangeListeners) {
         if (null == out || null == fileChangeListeners) {
             throw new NullPointerException("");
         }
 
-        CopyOnWriteArrayList<FileInfo> copyOnWriteArrayList = null;
+        CopyOnWriteArrayList<ObscureFileInfo> copyOnWriteArrayList = null;
         CopyOnWriteArrayList<FileChangeListener> listeners = null;
         synchronized (out) {
             if (null == rejectFiles || rejectFiles.isEmpty()) {
                 return;
             }
             out.removeAll(rejectFiles);
-            copyOnWriteArrayList = new CopyOnWriteArrayList<FileInfo>(out);
+            copyOnWriteArrayList = new CopyOnWriteArrayList<ObscureFileInfo>(out);
             listeners = new CopyOnWriteArrayList<FileChangeListener>(fileChangeListeners);
         }
 
         notifyFileChanged(copyOnWriteArrayList, listeners);
     }
 
-    void onObscureFileFound(FileInfo fileInfo) {
+    void onObscureFileFound(ObscureFileInfo fileInfo) {
         if (null == fileInfo) return;
-        List<FileInfo> files = new ArrayList<>();
+        List<ObscureFileInfo> files = new ArrayList<>();
         files.add(fileInfo);
         if (fileInfo.isPhotoType()) {
             onImageFileFound(files);
@@ -246,16 +246,16 @@ public class BrowserManager {
         }
     }
 
-    void onFileRemoved(Iterable<FileInfo> fileInfos) {
-        Iterator<FileInfo> infoIterator = null;
+    void onFileRemoved(Iterable<ObscureFileInfo> fileInfos) {
+        Iterator<ObscureFileInfo> infoIterator = null;
         if (null == fileInfos || null == (infoIterator = fileInfos.iterator())) {
             return;
         }
-        ArrayList<FileInfo> images = new ArrayList<FileInfo>();
-        ArrayList<FileInfo> audios = new ArrayList<FileInfo>();
-        ArrayList<FileInfo> videos = new ArrayList<FileInfo>();
+        ArrayList<ObscureFileInfo> images = new ArrayList<ObscureFileInfo>();
+        ArrayList<ObscureFileInfo> audios = new ArrayList<ObscureFileInfo>();
+        ArrayList<ObscureFileInfo> videos = new ArrayList<ObscureFileInfo>();
         while (infoIterator.hasNext()) {
-            FileInfo fileInfo = infoIterator.next();
+            ObscureFileInfo fileInfo = infoIterator.next();
             if (fileInfo.isVideoType()) {
                 videos.add(fileInfo);
             } else if (fileInfo.isPhotoType()) {
@@ -269,7 +269,7 @@ public class BrowserManager {
         onAudioFileFound(audios);
     }
 
-    private static void notifyFileChanged(List<FileInfo> files, List<FileChangeListener> listeners) {
+    private static void notifyFileChanged(List<ObscureFileInfo> files, List<FileChangeListener> listeners) {
         for (FileChangeListener listener : listeners) {
             listener.onFileListChanged(files);
         }
@@ -296,9 +296,9 @@ public class BrowserManager {
                         // TODO
                     }
                 })
-                .result(new Job.Callback1<TwoTuple<FileInfo, FileInfoContentCache>>() {
+                .result(new Job.Callback1<TwoTuple<ObscureFileInfo, FileInfoContentCache>>() {
                     @Override
-                    public void call(TwoTuple<FileInfo, FileInfoContentCache> result) {
+                    public void call(TwoTuple<ObscureFileInfo, FileInfoContentCache> result) {
                         CacheManager.getInstance().putCache(result.value1, result.value2);
                         onObscureFileFound(result.value1);
                     }
@@ -306,12 +306,12 @@ public class BrowserManager {
                 .work();
     }
 
-    public synchronized void deleteFiles(Collection<FileInfo> fileInfos) {
+    public synchronized void deleteFiles(Collection<ObscureFileInfo> fileInfos) {
         if (null == fileInfos || fileInfos.isEmpty()) {
             return;
         }
 
-        for (FileInfo fileInfo : fileInfos) {
+        for (ObscureFileInfo fileInfo : fileInfos) {
             new Job(fileInfo)
                     .then(new DeleteFileOperator(rootDir))
                     .workOn(Schedulers.computation())
@@ -352,9 +352,9 @@ public class BrowserManager {
                         }
                     })
                     .then(ObscureOperator.INSTANCE)
-                    .result(new Job.Callback1<TwoTuple<FileInfo, FileInfoContentCache>>() {
+                    .result(new Job.Callback1<TwoTuple<ObscureFileInfo, FileInfoContentCache>>() {
                         @Override
-                        public void call(TwoTuple<FileInfo, FileInfoContentCache> result) {
+                        public void call(TwoTuple<ObscureFileInfo, FileInfoContentCache> result) {
                             if (null == result || null == result.value1) {
                                 // do nothing
                             } else {
@@ -373,13 +373,13 @@ public class BrowserManager {
         }
     }
 
-    public void exportFiles(final Collection<FileInfo> fileList) {
+    public void exportFiles(final Collection<ObscureFileInfo> fileList) {
         if (ValueUtil.isEmpty(fileList)) {
             return;
         }
         onFileRemoved(fileList);
 
-        for (final FileInfo fileInfo : fileList) {
+        for (final ObscureFileInfo fileInfo : fileList) {
             new Job(fileInfo)
                     .workOn(Schedulers.io())
                     .then(DeobscureOperator.DEFAULT)
@@ -387,7 +387,7 @@ public class BrowserManager {
                         @Override
                         public Void operate(File input) throws Throwable {
                             File exportFile = getTypedFileDirector(fileInfo);
-                            FileUtils.moveFile(input, exportFile);
+                            FileUtils.moveFile(input, new File(exportFile, input.getName()));
                             MediaScannerConnection.scanFile(SecretApplication.getInstance(),
                                     new String[]{exportFile.getAbsolutePath()}, null, null);
                             return null;
@@ -397,16 +397,16 @@ public class BrowserManager {
         }
     }
 
-    public List<FileInfo> getImageFileList() {
-        return new CopyOnWriteArrayList<FileInfo>(imageFileList);
+    public List<ObscureFileInfo> getImageFileList() {
+        return new CopyOnWriteArrayList<ObscureFileInfo>(imageFileList);
     }
 
-    public List<FileInfo> getVideoFileList() {
-        return new CopyOnWriteArrayList<FileInfo>(videoFileList);
+    public List<ObscureFileInfo> getVideoFileList() {
+        return new CopyOnWriteArrayList<ObscureFileInfo>(videoFileList);
     }
 
-    public List<FileInfo> getAudioFileList() {
-        return new CopyOnWriteArrayList<FileInfo>(audioFileList);
+    public List<ObscureFileInfo> getAudioFileList() {
+        return new CopyOnWriteArrayList<ObscureFileInfo>(audioFileList);
     }
 
     public synchronized void addImageFileChangeListener(FileChangeListener listener) {
@@ -445,14 +445,14 @@ public class BrowserManager {
         }
     }
 
-    public static final Comparator<FileInfo> fileInfoComparator = new Comparator<FileInfo>() {
+    public static final Comparator<ObscureFileInfo> fileInfoComparator = new Comparator<ObscureFileInfo>() {
         @Override
-        public int compare(FileInfo lhs, FileInfo rhs) {
+        public int compare(ObscureFileInfo lhs, ObscureFileInfo rhs) {
             return lhs.encodeTime > rhs.encodeTime ? 1 : -1;
         }
     };
 
-    public File getTypedFileDirector(FileInfo fileInfo) throws IOException {
+    public File getTypedFileDirector(ObscureFileInfo fileInfo) throws IOException {
         if (null == fileInfo) {
             return null;
         }
@@ -487,6 +487,6 @@ public class BrowserManager {
     }
 
     public interface FileChangeListener {
-        void onFileListChanged(List<FileInfo> files);
+        void onFileListChanged(List<ObscureFileInfo> files);
     }
 }

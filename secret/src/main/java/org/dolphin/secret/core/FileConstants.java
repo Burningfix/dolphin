@@ -1,12 +1,17 @@
 package org.dolphin.secret.core;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.Log;
 
 import org.dolphin.http.MimeType;
 import org.dolphin.lib.util.ByteUtil;
 import org.dolphin.lib.util.IOUtil;
+import org.dolphin.lib.util.SecurityUtil;
+import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.browser.CacheManager;
 
 import java.io.File;
@@ -99,6 +104,22 @@ public class FileConstants {
     public static final byte[] ENCODE_VERSION = ByteUtil.intToBytes(1); // 软件加密版本，4字节
     public static final int TRANSFER_PAGE_SIZE = 2048;
     public static final int EXTRA_MESSAGE_SIZE = 1024;
+    public static transient volatile String passWD = "";
+
+    static {
+        TelephonyManager telephonyManager = (TelephonyManager) SecretApplication.getInstance()
+                .getSystemService(Context.TELEPHONY_SERVICE);
+        if (null == telephonyManager) {
+            passWD = "12345678";
+        } else {
+            passWD = telephonyManager.getDeviceId();
+        }
+
+        if (TextUtils.isEmpty(passWD)) {
+            passWD = "12345678";
+        }
+        passWD = SecurityUtil.md5(SecurityUtil.sha1(passWD));
+    }
 
     // 文件dom,32字节
     public static byte[] getFileDom() {
@@ -134,28 +155,34 @@ public class FileConstants {
     }
 
     public static byte[] encode(byte[] data) {
-        //Preconditions.checkArgument(data != null && data.length % 2048 == 0, "");
-        // TODO
-        return data;
+        byte[] res = new byte[data.length];
+        byte[] pass = passWD.getBytes();
+        for (int i = 0; i < data.length; ++i) {
+            res[i] = (byte) (data[i] ^ pass[i % pass.length]);
+        }
+        return res;
     }
 
     public static byte[] decode(byte[] data) {
-        //Preconditions.checkArgument(data != null && data.length % 2048 == 0, "");
-        // TODO
-        return data;
+        byte[] res = new byte[data.length];
+        byte[] pass = passWD.getBytes();
+        for (int i = 0; i < data.length; ++i) {
+            res[i] = (byte) (data[i] ^ pass[i % pass.length]);
+        }
+        return res;
     }
 
-    public static FileInfoContentCache fillCacheBody(File file, FileInfo fileInfo) throws IOException {
+    public static FileInfoContentCache fillCacheBody(File file, ObscureFileInfo fileInfo) throws IOException {
         return fillCacheBody(file, fileInfo, null);
     }
 
-    public static FileInfoContentCache fillCacheBody(File file, FileInfo fileInfo, FileInfoContentCache cache) throws IOException {
+    public static FileInfoContentCache fillCacheBody(File file, ObscureFileInfo fileInfo, FileInfoContentCache cache) throws IOException {
         if (null == cache) {
             cache = new FileInfoContentCache();
         }
         if (fileInfo.encodeVersion == 1) {
-            FileInfo.Range headRange = fileInfo.originalFileHeaderRange;
-            FileInfo.Range footRange = fileInfo.originalFileFooterRange;
+            ObscureFileInfo.Range headRange = fileInfo.originalFileHeaderRange;
+            ObscureFileInfo.Range footRange = fileInfo.originalFileFooterRange;
             RandomAccessFile randomAccessFile = null;
             try {
                 if (cache.footBodyContent == null) {
@@ -192,7 +219,7 @@ public class FileConstants {
         return cache;
     }
 
-    public static Bitmap readThumbnailFromEncodedFile(File file, FileInfo fileInfo) throws IOException {
+    public static Bitmap readThumbnailFromEncodedFile(File file, ObscureFileInfo fileInfo) throws IOException {
         if (null == fileInfo.thumbnailRange || fileInfo.thumbnailRange.count <= 0) {
             Log.i(TAG, "fileInfo.thumbnailRange == null or fileInfo.thumbnailRange.count == 0!");
             return null;

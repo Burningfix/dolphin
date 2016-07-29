@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Date;
+import java.util.Random;
 
 /**
  * Created by hanyanan on 2016/1/15.
@@ -96,9 +97,14 @@ import java.util.Date;
  * ****************************|*******************************************|************************<br>
  * ......................................(加密后的文件).............................................<br>
  */
-public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileInfoContentCache>> {
+public class ObscureOperator implements Operator<File, TwoTuple<ObscureFileInfo, FileInfoContentCache>> {
     public static final String TAG = "ObscureOperator";
     public static final ObscureOperator INSTANCE = new ObscureOperator();
+    private final Random RANDOM = new Random();
+
+    private int getRandomSuffix() {
+        return Math.abs(RANDOM.nextInt()) / 1000000;
+    }
 
     /**
      * 加密文件，并返回加密后的文件信息
@@ -108,13 +114,13 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * @throws Throwable
      */
     @NonNull
-    public TwoTuple<FileInfo, FileInfoContentCache> operate(File input) throws Throwable {
+    public TwoTuple<ObscureFileInfo, FileInfoContentCache> operate(File input) throws Throwable {
         if (!input.isFile() || !input.exists() || !input.canRead() || !input.canWrite()) {
             throw new IOException("File " + input.getAbsolutePath() + " is Not support read or write or both!");
         }
         boolean success;
         FileInfoContentCache cache = new FileInfoContentCache();
-        FileInfo baseFileInfo = createFileInfo(input);
+        ObscureFileInfo baseFileInfo = createFileInfo(input);
         int transferSize = calculateTransferSize(baseFileInfo); // 2048 * N
         baseFileInfo.transferSize = transferSize;
         baseFileInfo.encodeTime = FileConstants.getCurrentTime();
@@ -145,7 +151,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
             baseFileInfo.obscuredFileName = input.getName();
         }
         Log.d(TAG, "Encode file " + baseFileInfo);
-        return new TwoTuple<FileInfo, FileInfoContentCache>(baseFileInfo, cache);
+        return new TwoTuple<ObscureFileInfo, FileInfoContentCache>(baseFileInfo, cache);
     }
 
     public static boolean shouldEncodeBigMode(File input, int transferSize) {
@@ -156,7 +162,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
     /**
      * 混淆大文件，一般只是混淆头部和尾部，encodeversion为2
      */
-    private static boolean proguardSmallFile(File originalFile, FileInfo fileInfo, FileInfoContentCache cache) throws Throwable {
+    private static boolean proguardSmallFile(File originalFile, ObscureFileInfo fileInfo, FileInfoContentCache cache) throws Throwable {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         RandomAccessFile randomAccessFile = null;
         boolean success = false;
@@ -210,7 +216,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
             fileInfo.originalFileFooterRange = null;
             fileInfo.originalFileHeaderRange = null;
             if (thumbnailRangeOffset > 0 && thumbnailRangeCount > 0) {
-                fileInfo.thumbnailRange = new FileInfo.Range();
+                fileInfo.thumbnailRange = new ObscureFileInfo.Range();
                 fileInfo.thumbnailRange.offset = thumbnailRangeOffset;
                 fileInfo.thumbnailRange.count = thumbnailRangeCount;
             }
@@ -230,7 +236,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
     /**
      * 混淆大文件，一般只是混淆头部和尾部，encodeversion为1
      */
-    private static boolean proguardLargeFile(File originalFile, FileInfo fileInfo, FileInfoContentCache outCache) throws Throwable {
+    private static boolean proguardLargeFile(File originalFile, ObscureFileInfo fileInfo, FileInfoContentCache outCache) throws Throwable {
         RandomAccessFile randomAccessFile = null;
         boolean success = false;
         boolean modified = false;
@@ -294,7 +300,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
 
 
     // 恒定大小为1024
-    public static byte[] getExtraMessage(File file, FileInfo fileInfo) {
+    public static byte[] getExtraMessage(File file, ObscureFileInfo fileInfo) {
         byte[] res = new byte[FileConstants.EXTRA_MESSAGE_SIZE];
         return res;
     }
@@ -302,7 +308,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
     /**
      * 创建当前文件的thumbnail
      */
-    public static Bitmap getThumbnail(File file, FileInfo fileInfo) {
+    public static Bitmap getThumbnail(File file, ObscureFileInfo fileInfo) {
 //        String mime = fileInfo.originalMimeType;
 //        try {
 //            if (mime.startsWith("image")) {
@@ -338,7 +344,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * 对原始的头部信息和尾部信息加密，尾部的[originalLength - transferSize, originalLength)加密后重新写入，
      * 将头部[0-transferSize)的内容加密后[originalLength, originalLength+transferSize)
      */
-    private static void obscureOriginalTailAndHeader(RandomAccessFile randomAccessFile, FileInfo fileInfo,
+    private static void obscureOriginalTailAndHeader(RandomAccessFile randomAccessFile, ObscureFileInfo fileInfo,
                                                      byte[] originalHeadData, byte[] originalFootData) throws IOException {
         Preconditions.checkNotNulls(originalHeadData, originalFootData);
         Preconditions.checkArgument(originalHeadData.length > 0);
@@ -348,12 +354,12 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
         randomAccessFile.seek(fileInfo.originalFileLength - fileInfo.transferSize);
         randomAccessFile.write(FileConstants.encode(originalFootData));
         randomAccessFile.write(FileConstants.encode(originalHeadData));
-        FileInfo.Range footRange = new FileInfo.Range();
+        ObscureFileInfo.Range footRange = new ObscureFileInfo.Range();
         footRange.offset = fileInfo.originalFileLength - fileInfo.transferSize;
         footRange.count = fileInfo.transferSize;
         fileInfo.originalFileFooterRange = footRange;
 
-        FileInfo.Range headRange = new FileInfo.Range();
+        ObscureFileInfo.Range headRange = new ObscureFileInfo.Range();
         headRange.offset = fileInfo.originalFileLength;
         headRange.count = fileInfo.transferSize;
         fileInfo.originalFileHeaderRange = headRange;
@@ -367,7 +373,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * @param fileInfo
      */
     private static void writeProguardFooter(RandomAccessFile randomAccessFile, File file,
-                                            FileInfo fileInfo, FileInfoContentCache cache) throws IOException {
+                                            ObscureFileInfo fileInfo, FileInfoContentCache cache) throws IOException {
         randomAccessFile.seek(fileInfo.originalFileLength + fileInfo.transferSize);
         fileInfo.extraTag = getExtraMessage(file, fileInfo);// 额外的信息，1024字节
         randomAccessFile.write(fileInfo.extraTag);
@@ -380,7 +386,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
             byte[] bm = bitmapOutputStream.toByteArray();
             randomAccessFile.write(bm);
             randomAccessFile.write(ByteUtil.intToBytes(bm.length));
-            FileInfo.Range range = new FileInfo.Range();
+            ObscureFileInfo.Range range = new ObscureFileInfo.Range();
             range.count = bm.length;
             range.offset = fileInfo.originalFileLength + fileInfo.transferSize + fileInfo.extraTag.length + 8;
             fileInfo.thumbnailRange = range;
@@ -397,7 +403,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * @param transferSize 该文件计算出来的需要移动的大小。
      * @throws IOException
      */
-    private static void writeProguardHeader(RandomAccessFile file, FileInfo fileInfo, int transferSize) throws IOException {
+    private static void writeProguardHeader(RandomAccessFile file, ObscureFileInfo fileInfo, int transferSize) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         outputStream.write(FileConstants.getFileDom()); // 文件的格式
         outputStream.write(FileConstants.getSoftwareVersion()); // 程序的版本号
@@ -421,7 +427,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * @param fileInfo 需要计算的文件信息集合
      * @return
      */
-    public static int calculateProguardHeaderSize(FileInfo fileInfo) {
+    public static int calculateProguardHeaderSize(ObscureFileInfo fileInfo) {
         return 32 // 文件的格式
                 + 4 // 程序的版本号
                 + 4 // 加密算法的版本号
@@ -439,7 +445,7 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * @param fileInfo
      * @return
      */
-    public static int calculateTransferSize(FileInfo fileInfo) {
+    public static int calculateTransferSize(ObscureFileInfo fileInfo) {
         int proguardHeaderSize = calculateProguardHeaderSize(fileInfo);
         int pages = proguardHeaderSize / FileConstants.TRANSFER_PAGE_SIZE + 1;
         return pages * FileConstants.TRANSFER_PAGE_SIZE;
@@ -455,8 +461,8 @@ public class ObscureOperator implements Operator<File, TwoTuple<FileInfo, FileIn
      * 原始文件修改时间(long)
      * 原始文件类型(char)
      */
-    private static FileInfo createFileInfo(File file) {
-        FileInfo fileInfo = new FileInfo();
+    private static ObscureFileInfo createFileInfo(File file) {
+        ObscureFileInfo fileInfo = new ObscureFileInfo();
         fileInfo.dom = new String(FileConstants.getFileDom());
         fileInfo.softwareVersion = ByteUtil.bytesToInt(FileConstants.getSoftwareVersion());
         fileInfo.encodeVersion = ByteUtil.bytesToInt(FileConstants.getEncodeVersion());
