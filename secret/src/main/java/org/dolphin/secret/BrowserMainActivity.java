@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import org.dolphin.secret.browser.AudioPage;
 import org.dolphin.secret.browser.FilePage;
 import org.dolphin.secret.browser.ImageFileListPage;
 import org.dolphin.secret.browser.NavigationDrawerFragment;
@@ -180,7 +181,7 @@ public class BrowserMainActivity extends AppCompatActivity implements Navigation
                 fragment = new ImageFileListPage();
                 break;
             case 2:
-                fragment = new ImageFileListPage();
+                fragment = new AudioPage();
                 break;
         }
         getFragmentManager().beginTransaction().replace(R.id.container, fragment).commit();
