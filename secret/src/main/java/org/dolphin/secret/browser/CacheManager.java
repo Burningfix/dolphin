@@ -1,15 +1,9 @@
 package org.dolphin.secret.browser;
 
-import android.app.ActivityManager;
-import android.content.Context;
-import android.graphics.Bitmap;
 import android.util.LruCache;
 
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
-
-import java.io.File;
-import java.util.Map;
 
 /**
  * Created by hanyanan on 2016/1/20.
@@ -91,16 +85,16 @@ public class CacheManager {
         }
     };
 
-    public synchronized void putCache(FileInfo fileInfo, FileInfoContentCache cache) {
+    public synchronized void putCache(ObscureFileInfo fileInfo, FileInfoContentCache cache) {
         lruCache.put(fileInfo.originalFileName, cache);
     }
 
-    public synchronized FileInfoContentCache getCache(FileInfo fileInfo) {
+    public synchronized FileInfoContentCache getCache(ObscureFileInfo fileInfo) {
         return lruCache.get(fileInfo.originalFileName);
     }
 
 
-    public synchronized void remove(FileInfo fileInfo){
+    public synchronized void remove(ObscureFileInfo fileInfo){
         lruCache.remove(fileInfo.originalFileName);
     }
 }

@@ -13,12 +13,12 @@ import java.io.RandomAccessFile;
 /**
  * Created by hanyanan on 2016/1/15.
  */
-public class ObscureFileInfoReaderOperator implements Operator<File, FileInfo> {
+public class ObscureFileInfoReaderOperator implements Operator<File, ObscureFileInfo> {
     public static final ObscureFileInfoReaderOperator DEFAULT = new ObscureFileInfoReaderOperator();
 
     @Override
-    public FileInfo operate(File input) throws Throwable {
-        FileInfo fileInfo = new FileInfo();
+    public ObscureFileInfo operate(File input) throws Throwable {
+        ObscureFileInfo fileInfo = new ObscureFileInfo();
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(input, "r");
@@ -35,7 +35,7 @@ public class ObscureFileInfoReaderOperator implements Operator<File, FileInfo> {
                 long currPosition = randomAccessFile.getFilePointer();
                 int thumbnailSize = FileConstants.readInt(randomAccessFile, -1);
                 if (thumbnailSize > 0) {
-                    fileInfo.thumbnailRange = new FileInfo.Range();
+                    fileInfo.thumbnailRange = new ObscureFileInfo.Range();
                     fileInfo.thumbnailRange.count = thumbnailSize;
                     fileInfo.thumbnailRange.offset = currPosition + 4;
                     randomAccessFile.skipBytes(thumbnailSize);
@@ -88,7 +88,7 @@ public class ObscureFileInfoReaderOperator implements Operator<File, FileInfo> {
      * @param outFileInfo
      * @throws IOException
      */
-    public static void readFirst64Bytes(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
+    public static void readFirst64Bytes(RandomAccessFile randomAccessFile, ObscureFileInfo outFileInfo) throws IOException {
         byte[] data = new byte[64];
         randomAccessFile.seek(0);
         randomAccessFile.readFully(data);
@@ -99,7 +99,7 @@ public class ObscureFileInfoReaderOperator implements Operator<File, FileInfo> {
     }
 
     // 读取原始的文件名称
-    public static void readOriginalFileName(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
+    public static void readOriginalFileName(RandomAccessFile randomAccessFile, ObscureFileInfo outFileInfo) throws IOException {
         randomAccessFile.seek(64);
         int length = FileConstants.readInt(randomAccessFile, -1);
         byte[] buff = new byte[length];
@@ -116,7 +116,7 @@ public class ObscureFileInfoReaderOperator implements Operator<File, FileInfo> {
      * @param randomAccessFile
      * @param outFileInfo
      */
-    private static void readExtraHeadInfo(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
+    private static void readExtraHeadInfo(RandomAccessFile randomAccessFile, ObscureFileInfo outFileInfo) throws IOException {
         byte[] buff = new byte[44];
         randomAccessFile.readFully(buff);
         outFileInfo.originalModifyTimeStamp = ByteUtil.bytesToLong(buff);
@@ -125,31 +125,31 @@ public class ObscureFileInfoReaderOperator implements Operator<File, FileInfo> {
     }
 
     // 读取原始的头部和尾部的区域
-    private static void readOriginalHeaderAndFooterRange(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
+    private static void readOriginalHeaderAndFooterRange(RandomAccessFile randomAccessFile, ObscureFileInfo outFileInfo) throws IOException {
         Preconditions.checkState(outFileInfo.transferSize > 0);
-        FileInfo.Range footRange = new FileInfo.Range();
+        ObscureFileInfo.Range footRange = new ObscureFileInfo.Range();
         footRange.count = outFileInfo.transferSize;
         footRange.offset = outFileInfo.originalFileLength - outFileInfo.transferSize;
         outFileInfo.originalFileFooterRange = footRange;
 
-        FileInfo.Range headRange = new FileInfo.Range();
+        ObscureFileInfo.Range headRange = new ObscureFileInfo.Range();
         headRange.count = outFileInfo.transferSize;
         headRange.offset = outFileInfo.originalFileLength;
         outFileInfo.originalFileHeaderRange = headRange;
     }
 
     // 读取thumbnail的信息
-    private static void readThumbnailRange(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
+    private static void readThumbnailRange(RandomAccessFile randomAccessFile, ObscureFileInfo outFileInfo) throws IOException {
         int length = FileConstants.readInt(randomAccessFile, randomAccessFile.length() - 4);
         if (length <= 0) return;
-        FileInfo.Range thumbnailRange = new FileInfo.Range();
+        ObscureFileInfo.Range thumbnailRange = new ObscureFileInfo.Range();
         thumbnailRange.offset = randomAccessFile.length() - 4 - length;
         thumbnailRange.count = length;
         outFileInfo.thumbnailRange = thumbnailRange;
     }
 
     // 读取extra信息和加密时间戳
-    private static void readExtraMessage(RandomAccessFile randomAccessFile, FileInfo outFileInfo) throws IOException {
+    private static void readExtraMessage(RandomAccessFile randomAccessFile, ObscureFileInfo outFileInfo) throws IOException {
         Preconditions.checkState(outFileInfo.originalFileLength > 0);
         randomAccessFile.seek(outFileInfo.originalFileLength + outFileInfo.transferSize);
         byte[] buff = new byte[FileConstants.EXTRA_MESSAGE_SIZE];

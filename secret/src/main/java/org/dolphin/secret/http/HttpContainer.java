@@ -1,6 +1,6 @@
 package org.dolphin.secret.http;
 
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -26,10 +26,10 @@ public class HttpContainer {
     }
 
     private final List<String> ids = new LinkedList<String>();
-    private final WeakHashMap<String, FileInfo> map = new WeakHashMap<String, FileInfo>();
-    private final WeakHashMap<FileInfo, String> remap = new WeakHashMap<FileInfo, String>();
+    private final WeakHashMap<String, ObscureFileInfo> map = new WeakHashMap<String, ObscureFileInfo>();
+    private final WeakHashMap<ObscureFileInfo, String> remap = new WeakHashMap<ObscureFileInfo, String>();
 
-    public synchronized String deliveryId(FileInfo fileInfo) {
+    public synchronized String deliveryId(ObscureFileInfo fileInfo) {
         String pre = remap.get(fileInfo);
         if (null != pre) {
             return pre;
@@ -42,7 +42,7 @@ public class HttpContainer {
         return id;
     }
 
-    public synchronized FileInfo getFileInfo(String id) {
+    public synchronized ObscureFileInfo getFileInfo(String id) {
         return map.get(id);
     }
 

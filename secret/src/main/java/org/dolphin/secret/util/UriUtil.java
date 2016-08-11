@@ -17,10 +17,7 @@ import java.io.File;
  * Created by hanyanan on 2016/7/22.
  */
 public class UriUtil {
-    public static Uri filePathToUri(Context context, String type, String path) {
-        if (TextUtils.isEmpty(path)) {
-            return null;
-        }
+    public static Uri getTypedUri(String type) {
         Uri contentUri = null;
         if ("image".equals(type)) {
             contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
@@ -28,7 +25,16 @@ public class UriUtil {
             contentUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
         } else if ("audio".equals(type)) {
             contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        } else {
+        }
+        return contentUri;
+    }
+
+    public static Uri filePathToUri(Context context, String type, String path) {
+        if (TextUtils.isEmpty(path)) {
+            return null;
+        }
+        Uri contentUri = getTypedUri(type);
+        if (null == contentUri) {
             return null;
         }
         path = Uri.decode(path);

@@ -24,7 +24,7 @@ import org.dolphin.lib.util.DateUtils;
 import org.dolphin.lib.util.FileInfoUtil;
 import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.R;
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.picker.AndroidFileInfo;
 import org.dolphin.secret.picker.AndroidFileProvider;
 import org.dolphin.secret.util.DialogUtil;
@@ -53,8 +53,8 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
         Selectable,
     }
 
-    protected final List<FileInfo> fileList = new LinkedList<FileInfo>();
-    protected final Set<FileInfo> selected = new HashSet<FileInfo>();
+    protected final List<ObscureFileInfo> fileList = new LinkedList<ObscureFileInfo>();
+    protected final Set<ObscureFileInfo> selected = new HashSet<ObscureFileInfo>();
     private State state = State.Normal;
     private ListView listView;
     private View editLayout;
@@ -95,7 +95,7 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
         return root;
     }
 
-    protected List<FileInfo> getFileList() {
+    protected List<ObscureFileInfo> getFileList() {
         return BrowserManager.getInstance().getImageFileList();
     }
 
@@ -108,7 +108,7 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
     }
 
     @Override
-    public void onFileListChanged(List<FileInfo> files) {
+    public void onFileListChanged(List<ObscureFileInfo> files) {
         if (null != files) {
             fileList.clear();
             fileList.addAll(files);
@@ -143,7 +143,7 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        FileInfo item = (FileInfo) listAdapter.getItem(position);
+        ObscureFileInfo item = (ObscureFileInfo) listAdapter.getItem(position);
         if (isSelectableState()) {
             if (selected.contains(item)) {
                 selected.remove(item);
@@ -175,11 +175,11 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
     }
 
 
-    protected void onItemClicked(FileInfo fileInfo, int position) {
+    protected void onItemClicked(ObscureFileInfo fileInfo, int position) {
         // TODO
     }
 
-    protected View crateItemView(FileInfo item, View convertView) {
+    protected View crateItemView(ObscureFileInfo item, View convertView) {
         View root = View.inflate(FilePage.this.getActivity(), R.layout.file_item, null);
         ItemViewHolder viewHolder = new ItemViewHolder();
         viewHolder.fileInfo = item;
@@ -224,7 +224,7 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
-            FileInfo item = (FileInfo) getItem(position);
+            ObscureFileInfo item = (ObscureFileInfo) getItem(position);
             return crateItemView(item, convertView);
         }
     };
@@ -321,7 +321,7 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
             }
 
             @Override
-            public void onImportSuccess(String originalPath, FileInfo obscurePath) {
+            public void onImportSuccess(String originalPath, ObscureFileInfo obscurePath) {
                 BrowserManager.getInstance().onObscureFileFound(obscurePath);
                 ++currFinished;
                 progressDialog.incrementProgressBy(1);
@@ -350,6 +350,6 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
         TextView size;
         TextView duration;
         TextView encodeTime;
-        FileInfo fileInfo;
+        ObscureFileInfo fileInfo;
     }
 }

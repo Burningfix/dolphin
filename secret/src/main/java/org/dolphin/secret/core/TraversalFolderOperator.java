@@ -14,7 +14,7 @@ import java.util.List;
  * 遍历整个文件的所有的文件,分别计算出所有的类型，包括图片，视频，音频
  */
 public class TraversalFolderOperator implements Operator<File,
-        FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>>> {
+        FourTuple<List<ObscureFileInfo>, List<ObscureFileInfo>, List<ObscureFileInfo>, List<String>>> {
     public static final String TAG = "TraversalFolderOperator";
 
     /**
@@ -24,14 +24,14 @@ public class TraversalFolderOperator implements Operator<File,
      * @throws Throwable
      */
     @Override
-    public FourTuple<List<FileInfo>, List<FileInfo>, List<FileInfo>, List<String>> operate(File rootDir) throws Throwable {
+    public FourTuple<List<ObscureFileInfo>, List<ObscureFileInfo>, List<ObscureFileInfo>, List<String>> operate(File rootDir) throws Throwable {
         String[] files = rootDir.list();
         if (null == files || files.length <= 0) return null;
         List<String> originalFileNames = Arrays.asList(files);
         if (null == originalFileNames || originalFileNames.isEmpty()) return null;
-        List<FileInfo> images = new ArrayList<FileInfo>();
-        List<FileInfo> videos = new ArrayList<FileInfo>();
-        List<FileInfo> audios = new ArrayList<FileInfo>();
+        List<ObscureFileInfo> images = new ArrayList<ObscureFileInfo>();
+        List<ObscureFileInfo> videos = new ArrayList<ObscureFileInfo>();
+        List<ObscureFileInfo> audios = new ArrayList<ObscureFileInfo>();
         List<String> leaks = new ArrayList<String>();
         ObscureFileInfoReaderOperator obscureFileInfoReaderOperator = ObscureFileInfoReaderOperator.DEFAULT;
         for (String name : originalFileNames) {
@@ -40,7 +40,7 @@ public class TraversalFolderOperator implements Operator<File,
                 if (!file.exists() || !file.isFile() || file.isHidden() || file.isDirectory()) {
                     continue;
                 }
-                FileInfo fileInfo = obscureFileInfoReaderOperator.operate(file);
+                ObscureFileInfo fileInfo = obscureFileInfoReaderOperator.operate(file);
                 Log.d(TAG, "Found File " + fileInfo.toString());
                 if (fileInfo.isPhotoType()) {
                     images.add(fileInfo);

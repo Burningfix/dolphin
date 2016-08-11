@@ -15,7 +15,7 @@ import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileConstants;
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
 
 import java.io.File;
@@ -27,7 +27,7 @@ public class ThumbnailImageView extends ImageView {
     private boolean attached = false;
     private boolean visible = false;
     private String filePath = null;
-    private FileInfo fileInfo = null;
+    private ObscureFileInfo fileInfo = null;
     private Job loadJob = null;
 
     public ThumbnailImageView(Context context) {
@@ -47,7 +47,7 @@ public class ThumbnailImageView extends ImageView {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
-    public void setFile(String path, FileInfo fileInfo) {
+    public void setFile(String path, ObscureFileInfo fileInfo) {
         this.fileInfo = fileInfo;
         this.filePath = path;
         this.setImageResource(R.drawable.default_thumbnail_loading);
@@ -72,7 +72,7 @@ public class ThumbnailImageView extends ImageView {
         super.onVisibilityChanged(changedView, visibility);
     }
 
-    private void notifyPropertyChanged(boolean newAttached, boolean newVisible, String newPath, FileInfo newFileInfo) {
+    private void notifyPropertyChanged(boolean newAttached, boolean newVisible, String newPath, ObscureFileInfo newFileInfo) {
         int nextOperation = 0;  // 0什么都不做，1加载新的图片，2，终止所有操作
         do {
             if (!newAttached || null == newPath) {
@@ -115,7 +115,7 @@ public class ThumbnailImageView extends ImageView {
     }
 
 
-    private void loadThumbnail(final String filePath, final FileInfo fileInfo) {
+    private void loadThumbnail(final String filePath, final ObscureFileInfo fileInfo) {
         if (loadJob != null) {
             loadJob.abort();
             loadJob = null;

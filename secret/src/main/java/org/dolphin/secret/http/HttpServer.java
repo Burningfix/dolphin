@@ -4,7 +4,7 @@ import org.dolphin.http.server.HttpGetRequestHandler;
 import org.dolphin.http.server.HttpGetServer;
 import org.dolphin.lib.binaryresource.BinaryResource;
 import org.dolphin.secret.browser.BrowserManager;
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.core.ReadableFileInputStream;
 
 import java.io.File;
@@ -50,7 +50,7 @@ public class HttpServer {
         @Override
         protected BinaryResource getResource(String path, Map<String, String> params, Map<String, String> responseHeaders) {
             String id = params.get("file");
-            final FileInfo fileInfo = HttpContainer.getInstance().getFileInfo(id);
+            final ObscureFileInfo fileInfo = HttpContainer.getInstance().getFileInfo(id);
             return new BinaryResource() {
                 @Override
                 public InputStream openStream() throws IOException {

@@ -7,11 +7,10 @@ import android.text.format.DateFormat;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.widget.Toast;
 
 import org.dolphin.secret.BrowserMainActivity;
 import org.dolphin.secret.R;
-import org.dolphin.secret.core.FileInfo;
+import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.play.ImagePlayerActivity;
 
 import java.io.File;
@@ -56,7 +55,7 @@ public class ImageFileListPage extends FilePage {
         return super.onOptionsItemSelected(item);
     }
 
-    protected void onItemClicked(FileInfo fileInfo, int position) {
+    protected void onItemClicked(ObscureFileInfo fileInfo, int position) {
         Intent inten = new Intent(getActivity(), ImagePlayerActivity.class);
         inten.putExtra("position", position);
         startActivity(inten);
