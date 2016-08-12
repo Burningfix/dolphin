@@ -176,7 +176,7 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
 
 
     protected void onItemClicked(ObscureFileInfo fileInfo, int position) {
-        // TODO
+
     }
 
     protected View crateItemView(ObscureFileInfo item, View convertView) {

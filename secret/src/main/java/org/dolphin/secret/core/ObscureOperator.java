@@ -17,7 +17,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Date;
 import java.util.Random;
 
 /**
@@ -144,8 +143,12 @@ public class ObscureOperator implements Operator<File, TwoTuple<ObscureFileInfo,
         // 修改文件名称
         String proguardFileName = createProguardFileName(input.getName());
         try {
-            IOUtil.renameTo(input, new File(input.getParentFile(), proguardFileName), true);
-            baseFileInfo.obscuredFileName = proguardFileName;
+            File proguardFile = new File(input.getParentFile(), proguardFileName);
+            while (proguardFile.exists()) {
+                proguardFile = new File(input.getParentFile(), proguardFileName + "_" + getRandomSuffix());
+            }
+            IOUtil.renameTo(input, proguardFile, true);
+            baseFileInfo.obscuredFileName = proguardFile.getName();
         } catch (IOException exception) {
             exception.printStackTrace();
             baseFileInfo.obscuredFileName = input.getName();
@@ -475,8 +478,6 @@ public class ObscureOperator implements Operator<File, TwoTuple<ObscureFileInfo,
 
     // 单项，不可逆
     public static String createProguardFileName(String originalFileName) {
-        Date date = new Date();
-
         return String.valueOf(System.currentTimeMillis());
     }
 }
