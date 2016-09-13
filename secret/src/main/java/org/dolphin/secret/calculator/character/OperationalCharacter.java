@@ -6,6 +6,10 @@ import java.math.BigDecimal;
  * Created by yananh on 2016/7/6.
  */
 public interface OperationalCharacter {
+    public Type getType();
+
+    public BigDecimal getValue();
+
     enum Type {
         EOF, // 结束
         NUMBER, // 正常的数字
@@ -16,8 +20,4 @@ public interface OperationalCharacter {
         MULTIPLICATION, // 乘法
         DIVISION,
     }
-
-    public Type getType();
-
-    public BigDecimal getValue();
 }

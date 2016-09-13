@@ -1,9 +1,9 @@
 package org.dolphin.secret.core;
 
 import org.dolphin.job.Operator;
+import org.dolphin.lib.Preconditions;
 import org.dolphin.lib.util.ByteUtil;
 import org.dolphin.lib.util.IOUtil;
-import org.dolphin.lib.Preconditions;
 import org.dolphin.secret.util.UnsupportEncode;
 
 import java.io.File;
@@ -15,40 +15,6 @@ import java.io.RandomAccessFile;
  */
 public class ObscureFileInfoReaderOperator implements Operator<File, ObscureFileInfo> {
     public static final ObscureFileInfoReaderOperator DEFAULT = new ObscureFileInfoReaderOperator();
-
-    @Override
-    public ObscureFileInfo operate(File input) throws Throwable {
-        ObscureFileInfo fileInfo = new ObscureFileInfo();
-        RandomAccessFile randomAccessFile = null;
-        try {
-            randomAccessFile = new RandomAccessFile(input, "r");
-            fileVerify(randomAccessFile);
-            fileInfo.obscuredFileName = input.getName();
-            readFirst64Bytes(randomAccessFile, fileInfo);
-            readOriginalFileName(randomAccessFile, fileInfo);
-            readExtraHeadInfo(randomAccessFile, fileInfo);
-            if (fileInfo.encodeVersion == 1) {
-                readOriginalHeaderAndFooterRange(randomAccessFile, fileInfo);
-                readThumbnailRange(randomAccessFile, fileInfo);
-                readExtraMessage(randomAccessFile, fileInfo);
-            } else {
-                long currPosition = randomAccessFile.getFilePointer();
-                int thumbnailSize = FileConstants.readInt(randomAccessFile, -1);
-                if (thumbnailSize > 0) {
-                    fileInfo.thumbnailRange = new ObscureFileInfo.Range();
-                    fileInfo.thumbnailRange.count = thumbnailSize;
-                    fileInfo.thumbnailRange.offset = currPosition + 4;
-                    randomAccessFile.skipBytes(thumbnailSize);
-                }
-                fileInfo.encodeTime = FileConstants.readLong(randomAccessFile, -1);
-                fileInfo.extraTag = FileConstants.readBytes(randomAccessFile, -1, 1024);
-            }
-        } finally {
-            IOUtil.safeClose(randomAccessFile);
-        }
-
-        return fileInfo;
-    }
 
     /**
      * 检查是已经加密过的，就是查看文件头部的32个字节是否是{@link FileConstants#FILE_DOM}
@@ -67,7 +33,6 @@ public class ObscureFileInfoReaderOperator implements Operator<File, ObscureFile
             if (dom[i] != encodeFileDom[i]) throw new UnsupportEncode();
         }
     }
-
 
     private static void fileVerify(RandomAccessFile randomAccessFile) throws UnsupportEncode, IOException {
         byte[] dom = new byte[32];
@@ -158,5 +123,39 @@ public class ObscureFileInfoReaderOperator implements Operator<File, ObscureFile
         byte[] et = new byte[8];
         randomAccessFile.readFully(et);
         outFileInfo.encodeTime = ByteUtil.bytesToLong(et);
+    }
+
+    @Override
+    public ObscureFileInfo operate(File input) throws Throwable {
+        ObscureFileInfo fileInfo = new ObscureFileInfo();
+        RandomAccessFile randomAccessFile = null;
+        try {
+            randomAccessFile = new RandomAccessFile(input, "r");
+            fileVerify(randomAccessFile);
+            fileInfo.obscuredFileName = input.getName();
+            readFirst64Bytes(randomAccessFile, fileInfo);
+            readOriginalFileName(randomAccessFile, fileInfo);
+            readExtraHeadInfo(randomAccessFile, fileInfo);
+            if (fileInfo.encodeVersion == 1) {
+                readOriginalHeaderAndFooterRange(randomAccessFile, fileInfo);
+                readThumbnailRange(randomAccessFile, fileInfo);
+                readExtraMessage(randomAccessFile, fileInfo);
+            } else {
+                long currPosition = randomAccessFile.getFilePointer();
+                int thumbnailSize = FileConstants.readInt(randomAccessFile, -1);
+                if (thumbnailSize > 0) {
+                    fileInfo.thumbnailRange = new ObscureFileInfo.Range();
+                    fileInfo.thumbnailRange.count = thumbnailSize;
+                    fileInfo.thumbnailRange.offset = currPosition + 4;
+                    randomAccessFile.skipBytes(thumbnailSize);
+                }
+                fileInfo.encodeTime = FileConstants.readLong(randomAccessFile, -1);
+                fileInfo.extraTag = FileConstants.readBytes(randomAccessFile, -1, 1024);
+            }
+        } finally {
+            IOUtil.safeClose(randomAccessFile);
+        }
+
+        return fileInfo;
     }
 }

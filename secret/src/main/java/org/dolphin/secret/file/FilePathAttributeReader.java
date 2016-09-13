@@ -5,7 +5,7 @@ import android.provider.MediaStore;
 
 /**
  * Created by hanyanan on 2016/7/25.
- *
+ * <p/>
  * 得到文件的路径
  */
 public class FilePathAttributeReader implements FileAttributeReader<String> {

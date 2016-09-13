@@ -101,62 +101,6 @@ public class ObscureOperator implements Operator<File, TwoTuple<ObscureFileInfo,
     public static final ObscureOperator INSTANCE = new ObscureOperator();
     private final Random RANDOM = new Random();
 
-    private int getRandomSuffix() {
-        return Math.abs(RANDOM.nextInt()) / 1000000;
-    }
-
-    /**
-     * 加密文件，并返回加密后的文件信息
-     *
-     * @param input 接受的输入参数
-     * @return 加密后的文件信息和头尾&thumbnail信息
-     * @throws Throwable
-     */
-    @NonNull
-    public TwoTuple<ObscureFileInfo, FileInfoContentCache> operate(File input) throws Throwable {
-        if (!input.isFile() || !input.exists() || !input.canRead() || !input.canWrite()) {
-            throw new IOException("File " + input.getAbsolutePath() + " is Not support read or write or both!");
-        }
-        boolean success;
-        FileInfoContentCache cache = new FileInfoContentCache();
-        ObscureFileInfo baseFileInfo = createFileInfo(input);
-        int transferSize = calculateTransferSize(baseFileInfo); // 2048 * N
-        baseFileInfo.transferSize = transferSize;
-        baseFileInfo.encodeTime = FileConstants.getCurrentTime();
-        try {
-            if (shouldEncodeBigMode(input, transferSize)) { //大文件模式，混淆局部
-                success = proguardLargeFile(input, baseFileInfo, cache);
-            } else { // 全局加密，将信息保存在头部，实际的信息保存在尾部
-                success = proguardSmallFile(input, baseFileInfo, cache);
-            }
-        } catch (Throwable throwable) {
-            Log.e(TAG, "Encode file " + input.getName() + " Failed!");
-            // release cache
-            BitmapUtils.recycle(cache.thumbnail);
-            throw throwable;
-        }
-
-        if (!success) {
-            throw new IOException("File " + input.getAbsolutePath() + " Obscure Failed!");
-        }
-
-        // 修改文件名称
-        String proguardFileName = createProguardFileName(input.getName());
-        try {
-            File proguardFile = new File(input.getParentFile(), proguardFileName);
-            while (proguardFile.exists()) {
-                proguardFile = new File(input.getParentFile(), proguardFileName + "_" + getRandomSuffix());
-            }
-            IOUtil.renameTo(input, proguardFile, true);
-            baseFileInfo.obscuredFileName = proguardFile.getName();
-        } catch (IOException exception) {
-            exception.printStackTrace();
-            baseFileInfo.obscuredFileName = input.getName();
-        }
-        Log.d(TAG, "Encode file " + baseFileInfo);
-        return new TwoTuple<ObscureFileInfo, FileInfoContentCache>(baseFileInfo, cache);
-    }
-
     public static boolean shouldEncodeBigMode(File input, int transferSize) {
         long originalFileLength = input.length();
         return (originalFileLength > transferSize * 4 && originalFileLength > 16 * 1024);
@@ -281,7 +225,6 @@ public class ObscureOperator implements Operator<File, TwoTuple<ObscureFileInfo,
         return success;
     }
 
-
     /**
      * 检查是否是支持加密，就是查看文件头部的32个字节是否是{@link FileConstants#FILE_DOM}
      *
@@ -300,7 +243,6 @@ public class ObscureOperator implements Operator<File, TwoTuple<ObscureFileInfo,
         }
         throw new UnsupportEncode();
     }
-
 
     // 恒定大小为1024
     public static byte[] getExtraMessage(File file, ObscureFileInfo fileInfo) {
@@ -396,7 +338,6 @@ public class ObscureOperator implements Operator<File, TwoTuple<ObscureFileInfo,
         }
     }
 
-
     /**
      * 向文件中写入格式化的头部信息和包括头部bound的随机段，总共大小就是指定的移动区域。
      * 写入的区域包括[0-transferSize)。
@@ -479,5 +420,61 @@ public class ObscureOperator implements Operator<File, TwoTuple<ObscureFileInfo,
     // 单项，不可逆
     public static String createProguardFileName(String originalFileName) {
         return String.valueOf(System.currentTimeMillis());
+    }
+
+    private int getRandomSuffix() {
+        return Math.abs(RANDOM.nextInt()) / 1000000;
+    }
+
+    /**
+     * 加密文件，并返回加密后的文件信息
+     *
+     * @param input 接受的输入参数
+     * @return 加密后的文件信息和头尾&thumbnail信息
+     * @throws Throwable
+     */
+    @NonNull
+    public TwoTuple<ObscureFileInfo, FileInfoContentCache> operate(File input) throws Throwable {
+        if (!input.isFile() || !input.exists() || !input.canRead() || !input.canWrite()) {
+            throw new IOException("File " + input.getAbsolutePath() + " is Not support read or write or both!");
+        }
+        boolean success;
+        FileInfoContentCache cache = new FileInfoContentCache();
+        ObscureFileInfo baseFileInfo = createFileInfo(input);
+        int transferSize = calculateTransferSize(baseFileInfo); // 2048 * N
+        baseFileInfo.transferSize = transferSize;
+        baseFileInfo.encodeTime = FileConstants.getCurrentTime();
+        try {
+            if (shouldEncodeBigMode(input, transferSize)) { //大文件模式，混淆局部
+                success = proguardLargeFile(input, baseFileInfo, cache);
+            } else { // 全局加密，将信息保存在头部，实际的信息保存在尾部
+                success = proguardSmallFile(input, baseFileInfo, cache);
+            }
+        } catch (Throwable throwable) {
+            Log.e(TAG, "Encode file " + input.getName() + " Failed!");
+            // release cache
+            BitmapUtils.recycle(cache.thumbnail);
+            throw throwable;
+        }
+
+        if (!success) {
+            throw new IOException("File " + input.getAbsolutePath() + " Obscure Failed!");
+        }
+
+        // 修改文件名称
+        String proguardFileName = createProguardFileName(input.getName());
+        try {
+            File proguardFile = new File(input.getParentFile(), proguardFileName);
+            while (proguardFile.exists()) {
+                proguardFile = new File(input.getParentFile(), proguardFileName + "_" + getRandomSuffix());
+            }
+            IOUtil.renameTo(input, proguardFile, true);
+            baseFileInfo.obscuredFileName = proguardFile.getName();
+        } catch (IOException exception) {
+            exception.printStackTrace();
+            baseFileInfo.obscuredFileName = input.getName();
+        }
+        Log.d(TAG, "Encode file " + baseFileInfo);
+        return new TwoTuple<ObscureFileInfo, FileInfoContentCache>(baseFileInfo, cache);
     }
 }

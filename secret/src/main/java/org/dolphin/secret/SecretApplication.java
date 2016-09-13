@@ -6,8 +6,8 @@ import android.util.DisplayMetrics;
 import android.widget.Toast;
 
 import org.dolphin.secret.browser.BrowserManager;
-import org.dolphin.secret.permission.PermissionProcessor;
 import org.dolphin.secret.http.HttpServer;
+import org.dolphin.secret.permission.PermissionProcessor;
 
 /**
  * Created by hanyanan on 2016/1/26.
@@ -39,9 +39,13 @@ public class SecretApplication extends Application {
         super.onCreate();
 
         if (PermissionProcessor.makeSurePermissionsAllowed(this)) {
-            Toast.makeText(this, "check permission true", Toast.LENGTH_SHORT).show();
+            if (BuildConfig.DEBUG) {
+                Toast.makeText(this, "check permission success!", Toast.LENGTH_SHORT).show();
+            }
         } else {
-            Toast.makeText(this, "check permission false", Toast.LENGTH_SHORT).show();
+            if (BuildConfig.DEBUG) {
+                Toast.makeText(this, "check permission failed!", Toast.LENGTH_SHORT).show();
+            }
             android.os.Process.killProcess(android.os.Process.myPid());
             System.exit(0);
         }

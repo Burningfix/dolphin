@@ -7,6 +7,17 @@ import android.os.Parcelable;
  * Created by hanyanan on 2016/1/15.
  */
 public class ObscureFileInfo implements Parcelable {
+    public static final Creator<ObscureFileInfo> CREATOR = new Creator<ObscureFileInfo>() {
+        @Override
+        public ObscureFileInfo createFromParcel(Parcel in) {
+            return new ObscureFileInfo(in);
+        }
+
+        @Override
+        public ObscureFileInfo[] newArray(int size) {
+            return new ObscureFileInfo[size];
+        }
+    };
     public String dom;
     public int softwareVersion;
     public int encodeVersion;
@@ -15,12 +26,12 @@ public class ObscureFileInfo implements Parcelable {
     public String originalFileName;
     public String obscuredFileName;
     public String originalMimeType;
+    public long encodeTime;
+    public byte[] extraTag;
     Range originalFileHeaderRange;
     Range originalFileFooterRange;
     Range thumbnailRange;
     int transferSize;
-    public long encodeTime;
-    public byte[] extraTag;
 
     public ObscureFileInfo() {
 
@@ -42,18 +53,6 @@ public class ObscureFileInfo implements Parcelable {
         encodeTime = in.readLong();
         extraTag = in.createByteArray();
     }
-
-    public static final Creator<ObscureFileInfo> CREATOR = new Creator<ObscureFileInfo>() {
-        @Override
-        public ObscureFileInfo createFromParcel(Parcel in) {
-            return new ObscureFileInfo(in);
-        }
-
-        @Override
-        public ObscureFileInfo[] newArray(int size) {
-            return new ObscureFileInfo[size];
-        }
-    };
 
     @Override
     public int hashCode() {
@@ -120,49 +119,6 @@ public class ObscureFileInfo implements Parcelable {
         dest.writeByteArray(extraTag);
     }
 
-    // 闭区间
-    static class Range implements Parcelable {
-        public long offset;
-        public int count;
-
-        public Range() {
-
-        }
-
-        protected Range(Parcel in) {
-            offset = in.readLong();
-            count = in.readInt();
-        }
-
-        public static final Creator<Range> CREATOR = new Creator<Range>() {
-            @Override
-            public Range createFromParcel(Parcel in) {
-                return new Range(in);
-            }
-
-            @Override
-            public Range[] newArray(int size) {
-                return new Range[size];
-            }
-        };
-
-        @Override
-        public String toString() {
-            return "[offset: " + offset + ", count: " + count + "]";
-        }
-
-        @Override
-        public int describeContents() {
-            return 0;
-        }
-
-        @Override
-        public void writeToParcel(Parcel dest, int flags) {
-            dest.writeLong(offset);
-            dest.writeInt(count);
-        }
-    }
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -184,5 +140,47 @@ public class ObscureFileInfo implements Parcelable {
         }
         sb.append("}");
         return sb.toString();
+    }
+
+    // 闭区间
+    static class Range implements Parcelable {
+        public static final Creator<Range> CREATOR = new Creator<Range>() {
+            @Override
+            public Range createFromParcel(Parcel in) {
+                return new Range(in);
+            }
+
+            @Override
+            public Range[] newArray(int size) {
+                return new Range[size];
+            }
+        };
+        public long offset;
+        public int count;
+
+        public Range() {
+
+        }
+
+        protected Range(Parcel in) {
+            offset = in.readLong();
+            count = in.readInt();
+        }
+
+        @Override
+        public String toString() {
+            return "[offset: " + offset + ", count: " + count + "]";
+        }
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeLong(offset);
+            dest.writeInt(count);
+        }
     }
 }

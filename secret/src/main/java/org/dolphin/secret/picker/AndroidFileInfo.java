@@ -7,6 +7,17 @@ import android.os.Parcelable;
  * Created by hanyanan on 2016/7/20.
  */
 public class AndroidFileInfo implements Parcelable {
+    public static final Creator<AndroidFileInfo> CREATOR = new Creator<AndroidFileInfo>() {
+        @Override
+        public AndroidFileInfo createFromParcel(Parcel in) {
+            return new AndroidFileInfo(in);
+        }
+
+        @Override
+        public AndroidFileInfo[] newArray(int size) {
+            return new AndroidFileInfo[size];
+        }
+    };
     public String id;
     public String name;
     public String path;
@@ -33,18 +44,6 @@ public class AndroidFileInfo implements Parcelable {
         height = in.readInt();
     }
 
-    public static final Creator<AndroidFileInfo> CREATOR = new Creator<AndroidFileInfo>() {
-        @Override
-        public AndroidFileInfo createFromParcel(Parcel in) {
-            return new AndroidFileInfo(in);
-        }
-
-        @Override
-        public AndroidFileInfo[] newArray(int size) {
-            return new AndroidFileInfo[size];
-        }
-    };
-
     @Override
     public int hashCode() {
         return id.hashCode();
@@ -52,7 +51,7 @@ public class AndroidFileInfo implements Parcelable {
 
     @Override
     public boolean equals(Object o) {
-        
+
         return super.equals(o);
     }
 

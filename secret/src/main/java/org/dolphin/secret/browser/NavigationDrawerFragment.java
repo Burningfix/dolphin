@@ -46,26 +46,78 @@ public class NavigationDrawerFragment extends Fragment {
      * expands it. This shared preference tracks this.
      */
     private static final String PREF_USER_LEARNED_DRAWER = "navigation_drawer_learned";
+    int[] contentId = new int[]{
+            R.string.video,
+            R.string.photo,
+            R.string.audio,
 
+    };
+    int[] drawableId = new int[]{
+            R.drawable.video,
+            R.drawable.image,
+            R.drawable.audio,
+    };
+    int[] colorId = new int[]{
+            R.color.beautiful_color_4,
+            R.color.beautiful_color_9,
+            R.color.beautiful_color_5,
+            R.color.beautiful_color_6,
+            R.color.beautiful_color_1,
+    };
     /**
      * A pointer to the current callbacks instance (the Activity).
      */
     private NavigationDrawerCallbacks mCallbacks;
-
     /**
      * Helper component that ties the action bar to the navigation drawer.
      */
     private ActionBarDrawerToggle mDrawerToggle;
-
     private DrawerLayout mDrawerLayout;
     private ListView mDrawerListView;
     private View mFragmentContainerView;
-
     private int mCurrentSelectedPosition = 0;
     private boolean mFromSavedInstanceState;
     private boolean mUserLearnedDrawer;
-
     private Toolbar mToolbar;
+    private BaseAdapter mListAdapter = new BaseAdapter() {
+        @Override
+        public int getCount() {
+            return contentId.length;
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return position;
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            Activity activity = getActivity();
+            LinearLayout linearLayout = (LinearLayout) View.inflate(activity, R.layout.navigation_item_layout, null);
+            ImageView icon = (ImageView) linearLayout.findViewById(R.id.icon);
+            TextView content = (TextView) linearLayout.findViewById(R.id.content);
+            icon.setImageResource(drawableId[position]);
+            content.setText(contentId[position]);
+
+            int normal = activity.getResources().getColor(R.color.default_navigation_color);
+            int pressedColor = activity.getResources().getColor(colorId[position]);
+            int[] colors = new int[]{pressedColor, pressedColor, pressedColor, pressedColor, normal};
+            int[][] states = new int[5][];
+            states[0] = new int[]{android.R.attr.state_pressed};
+            states[1] = new int[]{android.R.attr.state_activated};
+            states[2] = new int[]{android.R.attr.state_checked};
+            states[3] = new int[]{android.R.attr.state_selected};
+            states[4] = new int[]{};
+            ColorStateList colorList = new ColorStateList(states, colors);
+            content.setTextColor(colorList);
+            return linearLayout;
+        }
+    };
 
     public NavigationDrawerFragment() {
     }
@@ -114,66 +166,6 @@ public class NavigationDrawerFragment extends Fragment {
     public boolean isDrawerOpen() {
         return mDrawerLayout != null && mDrawerLayout.isDrawerOpen(mFragmentContainerView);
     }
-
-    int[] contentId = new int[]{
-            R.string.video,
-            R.string.photo,
-            R.string.audio,
-
-    };
-    int[] drawableId = new int[]{
-            R.drawable.video,
-            R.drawable.image,
-            R.drawable.audio,
-    };
-
-    int[] colorId = new int[]{
-            R.color.beautiful_color_4,
-            R.color.beautiful_color_9,
-            R.color.beautiful_color_5,
-            R.color.beautiful_color_6,
-            R.color.beautiful_color_1,
-    };
-
-    private BaseAdapter mListAdapter = new BaseAdapter() {
-        @Override
-        public int getCount() {
-            return contentId.length;
-        }
-
-        @Override
-        public Object getItem(int position) {
-            return position;
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            Activity activity = getActivity();
-            LinearLayout linearLayout = (LinearLayout) View.inflate(activity, R.layout.navigation_item_layout, null);
-            ImageView icon = (ImageView) linearLayout.findViewById(R.id.icon);
-            TextView content = (TextView) linearLayout.findViewById(R.id.content);
-            icon.setImageResource(drawableId[position]);
-            content.setText(contentId[position]);
-
-            int normal = activity.getResources().getColor(R.color.default_navigation_color);
-            int pressedColor = activity.getResources().getColor(colorId[position]);
-            int[] colors = new int[]{pressedColor, pressedColor, pressedColor, pressedColor, normal};
-            int[][] states = new int[5][];
-            states[0] = new int[]{android.R.attr.state_pressed};
-            states[1] = new int[]{android.R.attr.state_activated};
-            states[2] = new int[]{android.R.attr.state_checked};
-            states[3] = new int[]{android.R.attr.state_selected};
-            states[4] = new int[]{};
-            ColorStateList colorList = new ColorStateList(states, colors);
-            content.setTextColor(colorList);
-            return linearLayout;
-        }
-    };
 
     /**
      * Users of this fragment must call this method to set up the navigation drawer interactions.

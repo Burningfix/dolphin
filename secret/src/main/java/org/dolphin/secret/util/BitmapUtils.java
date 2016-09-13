@@ -260,133 +260,22 @@ public class BitmapUtils {
     private abstract static class BaseThumbnailUtils {
         private static final Map<Object, Long> FILE_ID_MAP = new ConcurrentHashMap<>();
         /**
-         * 在缩放的时候，是否采用小值，{@code true}scale时选取宽高大的比例，否则选取宽高小的比例
-         */
-        private boolean zoomImage = false;
-
-        /**
          * 解析的thumbnail的上限的因子, 上限为<b>[expectValue, expectValue + expectValue * upperLimitFactor]</b>
          */
         private final float upperLimitFactor;
-
         /**
          * 解析thumbnail的下限因子，下限为<b>[expectValue-expectValue*lowerLimitFactor, expectValue]</b>
          */
         private final float lowerLimitFactor;
+        /**
+         * 在缩放的时候，是否采用小值，{@code true}scale时选取宽高大的比例，否则选取宽高小的比例
+         */
+        private boolean zoomImage = false;
 
         protected BaseThumbnailUtils(boolean zoomImage, float upperLimitFactor, float lowerLimitFactor) {
             this.zoomImage = zoomImage;
             this.upperLimitFactor = upperLimitFactor;
             this.lowerLimitFactor = lowerLimitFactor;
-        }
-
-        protected Context getContext() {
-            return SecretApplication.getInstance();
-        }
-
-        protected boolean isZoomImage() {
-            return this.zoomImage;
-        }
-
-        protected Uri getExternalUri() {
-            return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
-        }
-
-        protected Uri getThumbnailUri() {
-            return MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI;
-        }
-
-        protected Bitmap extractThumbnailFromMediaStore(final String path, final SizeRange range) {
-            // MINI_KIND: 512 x 384
-            // MICRO_KIND: 96 x 96
-            // 数据库中只有MICRO_KIND模式
-            if (!range.withInInternal(96, 96)) {
-                return null;
-            }
-
-            ContentResolver resolver = getContext().getContentResolver();
-            String[] projection = new String[]{"_id"};
-            String whereClause = "_data = '" + path + "'";
-            Cursor cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
-            Integer id = null;
-            if (null != cursor && cursor.moveToFirst()) {
-                id = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID));
-            }
-            if (null != cursor) {
-                cursor.close();
-            }
-            if (null == id) {
-                return null;
-            }
-            projection = new String[]{"_data"};
-            whereClause = "_id = '" + id + "'";
-            cursor = resolver.query(getThumbnailUri(), projection, whereClause, null, null);
-            try {
-                if (null != cursor && cursor.moveToFirst()) {
-                    byte[] data = cursor.getBlob(cursor.getColumnIndex("_data"));
-                    if (null == data || data.length <= 0) {
-                        return null;
-                    }
-                    return BitmapFactory.decodeByteArray(data, 0, data.length);
-                }
-            } finally {
-                if (null != cursor) {
-                    cursor.close();
-                }
-            }
-            return null;
-        }
-
-        protected abstract Bitmap extractThumbnailFromFileTag(String path, SizeRange range);
-
-        protected abstract Bitmap decodeFile(String filePath, SizeRange range,
-                                             BitmapFactory.Options options);
-
-        /**
-         * 尝试得到指定文件的thumbnail，尝试的渠道有三种：
-         * 1. MediaStore的database， byte stream from database (MICRO_KIND)(96 x 96)
-         * 2. 从file的tag中获取， 比如jpeg的exif中获取
-         * 3. 解析整个文件，得到指定的thumbnail
-         *
-         * @param filePath
-         * @param expectWidth
-         * @param expectHeight
-         * @param options
-         * @return
-         */
-        public Bitmap extractThumbnail(String filePath, int expectWidth, int expectHeight,
-                                       BitmapFactory.Options options) {
-            SizeRange range = computeSizeRange(expectWidth, expectHeight, upperLimitFactor, lowerLimitFactor);
-            Bitmap res = null;
-            if (null == options) {
-                options = new BitmapFactory.Options();
-            }
-            options.inSampleSize = 1;
-            // step 1. 从MediaStore中获取
-            {
-                res = extractThumbnailFromMediaStore(filePath, range);
-                if (checkBitmap(res)) {
-                    return res;
-                }
-                recycle(res);
-            }
-
-            // step 2. 从文件tag中读取thumbnail，例如jpeg支持的exif
-            {
-                res = extractThumbnailFromFileTag(filePath, range);
-                if (checkBitmap(res)) {
-                    return res;
-                }
-                recycle(res);
-            }
-
-            // step 3. 直接decode文件，尝试从文件中读取
-            res = decodeFile(filePath, range, options);
-            if (checkBitmap(res)) {
-                return res;
-            }
-            recycle(res);
-            return null;
         }
 
         protected static Bitmap resize(byte[] data, int offset, int length, SizeRange range) {
@@ -497,6 +386,115 @@ public class BitmapUtils {
             range.minWidth = (int) (width - width * lowerLimitFactor);
             range.minHeight = (int) (height - height * lowerLimitFactor);
             return range;
+        }
+
+        protected Context getContext() {
+            return SecretApplication.getInstance();
+        }
+
+        protected boolean isZoomImage() {
+            return this.zoomImage;
+        }
+
+        protected Uri getExternalUri() {
+            return MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+        }
+
+        protected Uri getThumbnailUri() {
+            return MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI;
+        }
+
+        protected Bitmap extractThumbnailFromMediaStore(final String path, final SizeRange range) {
+            // MINI_KIND: 512 x 384
+            // MICRO_KIND: 96 x 96
+            // 数据库中只有MICRO_KIND模式
+            if (!range.withInInternal(96, 96)) {
+                return null;
+            }
+
+            ContentResolver resolver = getContext().getContentResolver();
+            String[] projection = new String[]{"_id"};
+            String whereClause = "_data = '" + path + "'";
+            Cursor cursor = resolver.query(getExternalUri(), projection, whereClause, null, null);
+            Integer id = null;
+            if (null != cursor && cursor.moveToFirst()) {
+                id = cursor.getInt(cursor.getColumnIndex(MediaStore.Images.Media._ID));
+            }
+            if (null != cursor) {
+                cursor.close();
+            }
+            if (null == id) {
+                return null;
+            }
+            projection = new String[]{"_data"};
+            whereClause = "_id = '" + id + "'";
+            cursor = resolver.query(getThumbnailUri(), projection, whereClause, null, null);
+            try {
+                if (null != cursor && cursor.moveToFirst()) {
+                    byte[] data = cursor.getBlob(cursor.getColumnIndex("_data"));
+                    if (null == data || data.length <= 0) {
+                        return null;
+                    }
+                    return BitmapFactory.decodeByteArray(data, 0, data.length);
+                }
+            } finally {
+                if (null != cursor) {
+                    cursor.close();
+                }
+            }
+            return null;
+        }
+
+        protected abstract Bitmap extractThumbnailFromFileTag(String path, SizeRange range);
+
+        protected abstract Bitmap decodeFile(String filePath, SizeRange range,
+                                             BitmapFactory.Options options);
+
+        /**
+         * 尝试得到指定文件的thumbnail，尝试的渠道有三种：
+         * 1. MediaStore的database， byte stream from database (MICRO_KIND)(96 x 96)
+         * 2. 从file的tag中获取， 比如jpeg的exif中获取
+         * 3. 解析整个文件，得到指定的thumbnail
+         *
+         * @param filePath
+         * @param expectWidth
+         * @param expectHeight
+         * @param options
+         * @return
+         */
+        public Bitmap extractThumbnail(String filePath, int expectWidth, int expectHeight,
+                                       BitmapFactory.Options options) {
+            SizeRange range = computeSizeRange(expectWidth, expectHeight, upperLimitFactor, lowerLimitFactor);
+            Bitmap res = null;
+            if (null == options) {
+                options = new BitmapFactory.Options();
+            }
+            options.inSampleSize = 1;
+            // step 1. 从MediaStore中获取
+            {
+                res = extractThumbnailFromMediaStore(filePath, range);
+                if (checkBitmap(res)) {
+                    return res;
+                }
+                recycle(res);
+            }
+
+            // step 2. 从文件tag中读取thumbnail，例如jpeg支持的exif
+            {
+                res = extractThumbnailFromFileTag(filePath, range);
+                if (checkBitmap(res)) {
+                    return res;
+                }
+                recycle(res);
+            }
+
+            // step 3. 直接decode文件，尝试从文件中读取
+            res = decodeFile(filePath, range, options);
+            if (checkBitmap(res)) {
+                return res;
+            }
+            recycle(res);
+            return null;
         }
 
         protected final static class SizeRange {

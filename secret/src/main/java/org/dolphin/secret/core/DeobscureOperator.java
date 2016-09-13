@@ -27,6 +27,14 @@ public class DeobscureOperator implements Operator<ObscureFileInfo, File> {
         this.rootDir = rootDir;
     }
 
+    private static void readObscureHeadAndFoot(RandomAccessFile randomAccessFile, ObscureFileInfo fileInfo,
+                                               byte[] outProguardHeadData, byte[] outProguardFootData) throws IOException {
+        ObscureFileInfo.Range footRange = fileInfo.originalFileFooterRange;
+        randomAccessFile.seek(footRange.offset);
+        randomAccessFile.readFully(outProguardFootData);
+        randomAccessFile.readFully(outProguardHeadData);
+    }
+
     private int getRandomSuffix() {
         return Math.abs(RANDOM.nextInt()) / 1000000;
     }
@@ -77,13 +85,5 @@ public class DeobscureOperator implements Operator<ObscureFileInfo, File> {
             ex.printStackTrace();
             return obscuredFile;
         }
-    }
-
-    private static void readObscureHeadAndFoot(RandomAccessFile randomAccessFile, ObscureFileInfo fileInfo,
-                                          byte[] outProguardHeadData, byte[] outProguardFootData) throws IOException {
-        ObscureFileInfo.Range footRange = fileInfo.originalFileFooterRange;
-        randomAccessFile.seek(footRange.offset);
-        randomAccessFile.readFully(outProguardFootData);
-        randomAccessFile.readFully(outProguardHeadData);
     }
 }

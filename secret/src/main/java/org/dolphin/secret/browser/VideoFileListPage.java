@@ -25,6 +25,8 @@ import java.util.Locale;
  */
 public class VideoFileListPage extends FilePage {
 
+    private String lastCreateFileName = null;
+
     protected List<ObscureFileInfo> getFileList() {
         return BrowserManager.getInstance().getVideoFileList();
     }
@@ -32,7 +34,6 @@ public class VideoFileListPage extends FilePage {
     protected void addListener() {
         BrowserManager.getInstance().addVideoFileChangeListener(this);
     }
-
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
@@ -75,8 +76,6 @@ public class VideoFileListPage extends FilePage {
         videoPlaybackActivity.putExtra("path", path);
         startActivity(videoPlaybackActivity);
     }
-
-    private String lastCreateFileName = null;
 
     private void catchVideo() {
         Intent takeVideoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);

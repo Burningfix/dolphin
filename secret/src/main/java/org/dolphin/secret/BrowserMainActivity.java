@@ -38,22 +38,6 @@ public class BrowserMainActivity extends AppCompatActivity implements Navigation
 
         // Set up the drawer.
         mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout));
-
-        int enterCount = ContextUtils.getAndIncreaseFromSharedPreferences(this, "enter_count");
-        if (enterCount <= 0) {
-            AlertDialog dialog = new AlertDialog.Builder(this).create();
-            dialog.setMessage(getString(R.string.user_first_enter));
-            dialog.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.i_known), (DialogInterface.OnClickListener) null);
-            dialog.show();
-        } else {
-            String[] tips = getResources().getStringArray(R.array.user_manual);
-            if (null != tips && enterCount <= tips.length) {
-                AlertDialog dialog = new AlertDialog.Builder(this).create();
-                dialog.setMessage(tips[enterCount - 1]);
-                dialog.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.i_known), (DialogInterface.OnClickListener) null);
-                dialog.show();
-            }
-        }
     }
 
     public NavigationDrawerFragment getNavigationDrawerFragment() {

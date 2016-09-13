@@ -4,8 +4,8 @@ package org.dolphin.secret.calculator;
  * Created by hanyanan on 2016/7/6.
  */
 public class CharArrayReader {
-    private int index = 0;
     private final char[] chars;
+    private int index = 0;
 
     public CharArrayReader(char[] chars) {
         this.chars = chars;

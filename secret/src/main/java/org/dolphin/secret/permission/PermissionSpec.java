@@ -10,6 +10,17 @@ import org.dolphin.lib.util.ValueUtil;
  * Created by hanyanan on 2016/6/13.
  */
 public final class PermissionSpec implements Parcelable {
+    public static final Creator<PermissionSpec> CREATOR = new Creator<PermissionSpec>() {
+        @Override
+        public PermissionSpec createFromParcel(Parcel in) {
+            return new PermissionSpec(in);
+        }
+
+        @Override
+        public PermissionSpec[] newArray(int size) {
+            return new PermissionSpec[size];
+        }
+    };
     final String permission;
     final int minVersionCode;
 
@@ -23,11 +34,11 @@ public final class PermissionSpec implements Parcelable {
         this.minVersionCode = -1;
     }
 
+
     private PermissionSpec(Parcel in) {
         permission = in.readString();
         minVersionCode = in.readInt();
     }
-
 
     public boolean isSupportOnDevice() {
         return Build.VERSION.SDK_INT >= minVersionCode;
@@ -62,17 +73,4 @@ public final class PermissionSpec implements Parcelable {
         dest.writeString(permission);
         dest.writeInt(minVersionCode);
     }
-
-
-    public static final Creator<PermissionSpec> CREATOR = new Creator<PermissionSpec>() {
-        @Override
-        public PermissionSpec createFromParcel(Parcel in) {
-            return new PermissionSpec(in);
-        }
-
-        @Override
-        public PermissionSpec[] newArray(int size) {
-            return new PermissionSpec[size];
-        }
-    };
 }

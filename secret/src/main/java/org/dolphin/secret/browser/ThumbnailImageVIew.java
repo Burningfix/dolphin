@@ -15,8 +15,8 @@ import org.dolphin.job.schedulers.Schedulers;
 import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.R;
 import org.dolphin.secret.core.FileConstants;
-import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
+import org.dolphin.secret.core.ObscureFileInfo;
 
 import java.io.File;
 

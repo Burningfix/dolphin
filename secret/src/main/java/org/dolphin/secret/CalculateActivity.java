@@ -46,14 +46,8 @@ public class CalculateActivity extends AppCompatActivity {
                         public void onClick(DialogInterface dialog, int which) {
                             passwd = SecurityUtil.md5(editText.getText().toString());
                             ContextUtils.putStringToSharedPreferences(CalculateActivity.this, "sign", passwd);
-                            DialogUtil.showDialog(CalculateActivity.this, "", getResources().getString(R.string.enter_browser_tip),
-                                    new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            Intent intent = new Intent(CalculateActivity.this, BrowserMainActivity.class);
-                                            startActivity(intent);
-                                        }
-                                    }).show();
+                            Intent intent = new Intent(CalculateActivity.this, BrowserMainActivity.class);
+                            startActivity(intent);
                         }
                     }, new DialogInterface.OnClickListener() {
                         @Override

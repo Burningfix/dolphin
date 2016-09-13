@@ -1,1 +1,1 @@
-include ':tinyhttpclient', ':lib-java', ':tinyhttpserver', ':jobs', ':sharelink',':arch', ':storage', ':secret', ':lib-android'
+include ':tinyhttpclient', ':lib-java', ':tinyhttpserver', ':jobs', ':sharelink', ':arch', ':storage', ':secret', ':lib-android', ':lockscreen'

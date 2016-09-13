@@ -21,6 +21,29 @@ public class HttpServer {
     private final HttpGetServer httpGetServer;
     private boolean isStart = false;
     private int port = DEFAULT_PORT;
+    private HttpGetRequestHandler requestHandler = new HttpGetRequestHandler() {
+        @Override
+        protected BinaryResource getResource(String path, Map<String, String> params, Map<String, String> responseHeaders) {
+            String id = params.get("file");
+            final ObscureFileInfo fileInfo = HttpContainer.getInstance().getFileInfo(id);
+            return new BinaryResource() {
+                @Override
+                public InputStream openStream() throws IOException {
+                    return new ReadableFileInputStream(new File(BrowserManager.sRootDir, fileInfo.obscuredFileName), fileInfo);
+                }
+
+                @Override
+                public byte[] read() throws IOException {
+                    throw new NullPointerException();
+                }
+
+                @Override
+                public long size() {
+                    return fileInfo.originalFileLength;
+                }
+            };
+        }
+    };
 
     public HttpServer() {
         httpGetServer = new HttpGetServer(port);
@@ -45,28 +68,4 @@ public class HttpServer {
     public String wrapObscurePath(String id) {
         return "http://127.0.0.1:" + port + FILE_PATH + "?file=" + id;
     }
-
-    private HttpGetRequestHandler requestHandler = new HttpGetRequestHandler() {
-        @Override
-        protected BinaryResource getResource(String path, Map<String, String> params, Map<String, String> responseHeaders) {
-            String id = params.get("file");
-            final ObscureFileInfo fileInfo = HttpContainer.getInstance().getFileInfo(id);
-            return new BinaryResource() {
-                @Override
-                public InputStream openStream() throws IOException {
-                    return new ReadableFileInputStream(new File(BrowserManager.sRootDir, fileInfo.obscuredFileName), fileInfo);
-                }
-
-                @Override
-                public byte[] read() throws IOException {
-                    throw new NullPointerException();
-                }
-
-                @Override
-                public long size() {
-                    return fileInfo.originalFileLength;
-                }
-            };
-        }
-    };
 }

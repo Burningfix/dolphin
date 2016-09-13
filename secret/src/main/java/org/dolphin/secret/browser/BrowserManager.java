@@ -37,8 +37,28 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class BrowserManager {
     public static final String TAG = "BrowserManager";
+    public static final Comparator<ObscureFileInfo> fileInfoComparator = new Comparator<ObscureFileInfo>() {
+        @Override
+        public int compare(ObscureFileInfo lhs, ObscureFileInfo rhs) {
+            return lhs.encodeTime > rhs.encodeTime ? 1 : -1;
+        }
+    };
     public static File sRootDir = new File(Environment.getExternalStorageDirectory(), "se");
     private static BrowserManager sInstance = null;
+    private final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
+    private final List<FileChangeListener> videoFileChangeListeners = new ArrayList<FileChangeListener>();
+    private final List<FileChangeListener> audioFileChangeListeners = new ArrayList<FileChangeListener>();
+    private final List<ObscureFileInfo> imageFileList = new ArrayList<ObscureFileInfo>();
+    private final List<ObscureFileInfo> videoFileList = new ArrayList<ObscureFileInfo>();
+    private final List<ObscureFileInfo> audioFileList = new ArrayList<ObscureFileInfo>();
+    private File rootDir;
+    private Job scannerJob = null;
+    private Job obscureJob = null;
+
+    private BrowserManager() {
+        this.rootDir = sRootDir;
+        checkEnvironment();
+    }
 
     public synchronized static BrowserManager getInstance() {
         if (null == sInstance) {
@@ -48,19 +68,51 @@ public class BrowserManager {
         return sInstance;
     }
 
-    private File rootDir;
-    private Job scannerJob = null;
-    private Job obscureJob = null;
-    private final List<FileChangeListener> imageFileChangeListeners = new ArrayList<FileChangeListener>();
-    private final List<FileChangeListener> videoFileChangeListeners = new ArrayList<FileChangeListener>();
-    private final List<FileChangeListener> audioFileChangeListeners = new ArrayList<FileChangeListener>();
-    private final List<ObscureFileInfo> imageFileList = new ArrayList<ObscureFileInfo>();
-    private final List<ObscureFileInfo> videoFileList = new ArrayList<ObscureFileInfo>();
-    private final List<ObscureFileInfo> audioFileList = new ArrayList<ObscureFileInfo>();
+    private static void onTypedFileFound(List<ObscureFileInfo> newFiles, List<ObscureFileInfo> out,
+                                         List<FileChangeListener> fileChangeListeners) {
+        if (null == out || null == fileChangeListeners) {
+            throw new NullPointerException("");
+        }
 
-    private BrowserManager() {
-        this.rootDir = sRootDir;
-        checkEnvironment();
+        CopyOnWriteArrayList<ObscureFileInfo> copyOnWriteArrayList = null;
+        CopyOnWriteArrayList<FileChangeListener> listeners = null;
+        synchronized (out) {
+            if (null == newFiles || newFiles.isEmpty()) {
+                return;
+            }
+            out.addAll(newFiles);
+
+            copyOnWriteArrayList = new CopyOnWriteArrayList<ObscureFileInfo>(out);
+            listeners = new CopyOnWriteArrayList<FileChangeListener>(fileChangeListeners);
+        }
+
+        notifyFileChanged(copyOnWriteArrayList, listeners);
+    }
+
+    private static void onTypedFileRemoved(List<ObscureFileInfo> rejectFiles, List<ObscureFileInfo> out,
+                                           List<FileChangeListener> fileChangeListeners) {
+        if (null == out || null == fileChangeListeners) {
+            throw new NullPointerException("");
+        }
+
+        CopyOnWriteArrayList<ObscureFileInfo> copyOnWriteArrayList = null;
+        CopyOnWriteArrayList<FileChangeListener> listeners = null;
+        synchronized (out) {
+            if (null == rejectFiles || rejectFiles.isEmpty()) {
+                return;
+            }
+            out.removeAll(rejectFiles);
+            copyOnWriteArrayList = new CopyOnWriteArrayList<ObscureFileInfo>(out);
+            listeners = new CopyOnWriteArrayList<FileChangeListener>(fileChangeListeners);
+        }
+
+        notifyFileChanged(copyOnWriteArrayList, listeners);
+    }
+
+    private static void notifyFileChanged(List<ObscureFileInfo> files, List<FileChangeListener> listeners) {
+        for (FileChangeListener listener : listeners) {
+            listener.onFileListChanged(files);
+        }
     }
 
     private void checkEnvironment() {
@@ -192,47 +244,6 @@ public class BrowserManager {
                 .work();
     }
 
-    private static void onTypedFileFound(List<ObscureFileInfo> newFiles, List<ObscureFileInfo> out,
-                                         List<FileChangeListener> fileChangeListeners) {
-        if (null == out || null == fileChangeListeners) {
-            throw new NullPointerException("");
-        }
-
-        CopyOnWriteArrayList<ObscureFileInfo> copyOnWriteArrayList = null;
-        CopyOnWriteArrayList<FileChangeListener> listeners = null;
-        synchronized (out) {
-            if (null == newFiles || newFiles.isEmpty()) {
-                return;
-            }
-            out.addAll(newFiles);
-
-            copyOnWriteArrayList = new CopyOnWriteArrayList<ObscureFileInfo>(out);
-            listeners = new CopyOnWriteArrayList<FileChangeListener>(fileChangeListeners);
-        }
-
-        notifyFileChanged(copyOnWriteArrayList, listeners);
-    }
-
-    private static void onTypedFileRemoved(List<ObscureFileInfo> rejectFiles, List<ObscureFileInfo> out,
-                                           List<FileChangeListener> fileChangeListeners) {
-        if (null == out || null == fileChangeListeners) {
-            throw new NullPointerException("");
-        }
-
-        CopyOnWriteArrayList<ObscureFileInfo> copyOnWriteArrayList = null;
-        CopyOnWriteArrayList<FileChangeListener> listeners = null;
-        synchronized (out) {
-            if (null == rejectFiles || rejectFiles.isEmpty()) {
-                return;
-            }
-            out.removeAll(rejectFiles);
-            copyOnWriteArrayList = new CopyOnWriteArrayList<ObscureFileInfo>(out);
-            listeners = new CopyOnWriteArrayList<FileChangeListener>(fileChangeListeners);
-        }
-
-        notifyFileChanged(copyOnWriteArrayList, listeners);
-    }
-
     void onObscureFileFound(ObscureFileInfo fileInfo) {
         if (null == fileInfo) return;
         List<ObscureFileInfo> files = new ArrayList<>();
@@ -267,12 +278,6 @@ public class BrowserManager {
         onImageFileRemoved(images);
         onVideoFileRemoved(videos);
         onAudioFileFound(audios);
-    }
-
-    private static void notifyFileChanged(List<ObscureFileInfo> files, List<FileChangeListener> listeners) {
-        for (FileChangeListener listener : listeners) {
-            listener.onFileListChanged(files);
-        }
     }
 
     /**
@@ -444,13 +449,6 @@ public class BrowserManager {
             audioFileChangeListeners.remove(listener);
         }
     }
-
-    public static final Comparator<ObscureFileInfo> fileInfoComparator = new Comparator<ObscureFileInfo>() {
-        @Override
-        public int compare(ObscureFileInfo lhs, ObscureFileInfo rhs) {
-            return lhs.encodeTime > rhs.encodeTime ? 1 : -1;
-        }
-    };
 
     public File getTypedFileDirector(ObscureFileInfo fileInfo) throws IOException {
         if (null == fileInfo) {

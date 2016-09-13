@@ -13,6 +13,12 @@ import java.util.WeakHashMap;
  */
 public class HttpContainer {
     private static HttpContainer instance = null;
+    private final List<String> ids = new LinkedList<String>();
+    private final WeakHashMap<String, ObscureFileInfo> map = new WeakHashMap<String, ObscureFileInfo>();
+    private final WeakHashMap<ObscureFileInfo, String> remap = new WeakHashMap<ObscureFileInfo, String>();
+    private HttpContainer() {
+
+    }
 
     public static synchronized HttpContainer getInstance() {
         if (null == instance) {
@@ -20,14 +26,6 @@ public class HttpContainer {
         }
         return instance;
     }
-
-    private HttpContainer() {
-
-    }
-
-    private final List<String> ids = new LinkedList<String>();
-    private final WeakHashMap<String, ObscureFileInfo> map = new WeakHashMap<String, ObscureFileInfo>();
-    private final WeakHashMap<ObscureFileInfo, String> remap = new WeakHashMap<ObscureFileInfo, String>();
 
     public synchronized String deliveryId(ObscureFileInfo fileInfo) {
         String pre = remap.get(fileInfo);

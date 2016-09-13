@@ -29,11 +29,12 @@ import java.util.Set;
  */
 public class FilePickerActivity extends AppCompatActivity {
     public static final String TAG = "FilePickerActivity";
+    private final Set<AndroidFileInfo> selectedFile = new HashSet<AndroidFileInfo>();
     private GridView contentView;
     private View submitView;
     private FileListAdapter fileListAdapter = new FileListAdapter();
-    private final Set<AndroidFileInfo> selectedFile = new HashSet<AndroidFileInfo>();
     private String type = "image";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -124,6 +125,12 @@ public class FilePickerActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    private static class ViewHolder {
+        private PickImageView image;
+        private TextView nameTextView;
+        private CheckBox checkbox;
+    }
+
     private class FileListAdapter extends BaseAdapter {
         private List<AndroidFileInfo> fileEntryList = null;
 
@@ -174,11 +181,5 @@ public class FilePickerActivity extends AppCompatActivity {
             holder.image.display(fileEntry);
             return convertView;
         }
-    }
-
-    private static class ViewHolder {
-        private PickImageView image;
-        private TextView nameTextView;
-        private CheckBox checkbox;
     }
 }

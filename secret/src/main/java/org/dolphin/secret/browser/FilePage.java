@@ -47,17 +47,33 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
     protected final int IMPORT_PHOTO_REQUEST_CODE = 1344;
     protected final int IMPORT_VIDEO_REQUEST_CODE = 1345;
     protected final int IMPORT_AUDIO_REQUEST_CODE = 1349;
-
-    public enum State {
-        Normal,
-        Selectable,
-    }
-
     protected final List<ObscureFileInfo> fileList = new LinkedList<ObscureFileInfo>();
     protected final Set<ObscureFileInfo> selected = new HashSet<ObscureFileInfo>();
     private State state = State.Normal;
     private ListView listView;
     private View editLayout;
+    private BaseAdapter listAdapter = new BaseAdapter() {
+        @Override
+        public int getCount() {
+            return fileList.size();
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return fileList.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ObscureFileInfo item = (ObscureFileInfo) getItem(position);
+            return crateItemView(item, convertView);
+        }
+    };
 
     @Nullable
     @Override
@@ -205,30 +221,6 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
         return root;
     }
 
-
-    private BaseAdapter listAdapter = new BaseAdapter() {
-        @Override
-        public int getCount() {
-            return fileList.size();
-        }
-
-        @Override
-        public Object getItem(int position) {
-            return fileList.get(position);
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            ObscureFileInfo item = (ObscureFileInfo) getItem(position);
-            return crateItemView(item, convertView);
-        }
-    };
-
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         if (isNormalState()) {
@@ -342,6 +334,11 @@ public abstract class FilePage extends Fragment implements BrowserManager.FileCh
                 }
             }
         });
+    }
+
+    public enum State {
+        Normal,
+        Selectable,
     }
 
     protected static class ItemViewHolder {

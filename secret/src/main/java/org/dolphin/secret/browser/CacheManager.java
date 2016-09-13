@@ -2,8 +2,8 @@ package org.dolphin.secret.browser;
 
 import android.util.LruCache;
 
-import org.dolphin.secret.core.ObscureFileInfo;
 import org.dolphin.secret.core.FileInfoContentCache;
+import org.dolphin.secret.core.ObscureFileInfo;
 
 /**
  * Created by hanyanan on 2016/1/20.
@@ -46,19 +46,6 @@ public class CacheManager {
 //    }
 //
     private static CacheManager sInstance = null;
-
-    public synchronized static CacheManager getInstance() {
-        if (null == sInstance) {
-            sInstance = new CacheManager();
-        }
-
-        return sInstance;
-    }
-
-    private CacheManager() {
-
-    }
-
     private final LruCache<String, FileInfoContentCache> lruCache = new LruCache<String, FileInfoContentCache>(MAX_MEM_CACHE_SIZE) {
         @Override
         protected int sizeOf(String key, FileInfoContentCache value) {
@@ -85,6 +72,18 @@ public class CacheManager {
         }
     };
 
+    private CacheManager() {
+
+    }
+
+    public synchronized static CacheManager getInstance() {
+        if (null == sInstance) {
+            sInstance = new CacheManager();
+        }
+
+        return sInstance;
+    }
+
     public synchronized void putCache(ObscureFileInfo fileInfo, FileInfoContentCache cache) {
         lruCache.put(fileInfo.originalFileName, cache);
     }
@@ -94,7 +93,7 @@ public class CacheManager {
     }
 
 
-    public synchronized void remove(ObscureFileInfo fileInfo){
+    public synchronized void remove(ObscureFileInfo fileInfo) {
         lruCache.remove(fileInfo.originalFileName);
     }
 }

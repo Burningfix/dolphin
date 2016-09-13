@@ -1,8 +1,10 @@
 package org.dolphin.secret.core;
 
 import android.util.Log;
+
 import org.dolphin.job.Operator;
 import org.dolphin.job.tuple.FourTuple;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,7 +12,7 @@ import java.util.List;
 
 /**
  * Created by hanyanan on 2016/2/15.
- *
+ * <p/>
  * 遍历整个文件的所有的文件,分别计算出所有的类型，包括图片，视频，音频
  */
 public class TraversalFolderOperator implements Operator<File,
@@ -19,8 +21,9 @@ public class TraversalFolderOperator implements Operator<File,
 
     /**
      * 遍历出目录下所有的文件
+     *
      * @param rootDir 需要遍历的根目录，需要是一个文件夹
-     * @return  按照顺序依次返回该目录下的图片，视频，音频，未加密文件
+     * @return 按照顺序依次返回该目录下的图片，视频，音频，未加密文件
      * @throws Throwable
      */
     @Override

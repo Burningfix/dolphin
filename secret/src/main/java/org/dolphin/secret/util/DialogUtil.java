@@ -61,7 +61,7 @@ public class DialogUtil {
     }
 
     public static AlertDialog showDialog(Activity activity, String title, View view, DialogInterface.OnClickListener okListener,
-                                    DialogInterface.OnClickListener cancelListener) {
+                                         DialogInterface.OnClickListener cancelListener) {
         AlertDialog dlg = createDialog(activity, title, view);
         dlg.setButton(DialogInterface.BUTTON_POSITIVE, "确定", okListener);
         dlg.setButton(DialogInterface.BUTTON_NEGATIVE, "取消", cancelListener);

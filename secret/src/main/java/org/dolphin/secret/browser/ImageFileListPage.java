@@ -21,6 +21,8 @@ import java.util.Locale;
  * Created by hanyanan on 2016/2/11.
  */
 public class ImageFileListPage extends FilePage {
+    protected String lastCreateFileName = null;
+
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         BrowserMainActivity mainActivity = (BrowserMainActivity) getActivity();
@@ -60,8 +62,6 @@ public class ImageFileListPage extends FilePage {
         inten.putExtra("position", position);
         startActivity(inten);
     }
-
-    protected String lastCreateFileName = null;
 
     private void catchPhoto() {
         Intent intent = new Intent();

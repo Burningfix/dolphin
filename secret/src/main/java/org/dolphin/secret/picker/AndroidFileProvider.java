@@ -10,7 +10,6 @@ import org.dolphin.http.MimeType;
 import org.dolphin.lib.util.ValueUtil;
 import org.dolphin.secret.SecretApplication;
 import org.dolphin.secret.file.FileAndUriHelper;
-import org.dolphin.secret.file.FileAttributeReader;
 import org.dolphin.secret.file.FileInfoAttributeReader;
 
 import java.util.LinkedList;
