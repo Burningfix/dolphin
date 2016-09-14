@@ -1,7 +1,6 @@
 package org.dolphin.secret.permission;
 
 import android.Manifest;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -113,7 +112,7 @@ public class PermissionProcessor {
      */
     public static boolean shouldShowRequestPermissionRationale(Activity activity, PermissionSpec[] permissionSpecs) {
         if (ValueUtil.isEmpty(permissionSpecs)) {
-            return true;
+            return false;
         }
 
         for (PermissionSpec permissionSpec : permissionSpecs) {
@@ -126,6 +125,12 @@ public class PermissionProcessor {
         return true;
     }
 
+    /**
+     * 获取指定相关的权限，必须是全部获取，否则就算是获取失败
+     *
+     * @param context 需要获取的Context
+     * @return {@code true} 所有权限全部获取成功，{@code false}至少有一个获取失败
+     */
     public static boolean makeSurePermissionsAllowed(Context context) {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             throw new IllegalThreadStateException("Must running on UI Thread!");

@@ -6,9 +6,11 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.annotation.NonNull;
 import android.view.View;
 
 import org.dolphin.lib.util.ValueUtil;
+import org.dolphin.secret.R;
 
 import java.util.Arrays;
 
@@ -26,7 +28,7 @@ public class PermissionActivity extends Activity {
         }
         final PermissionSpec[] permissionSpecs = Arrays.copyOf(parcelables, parcelables.length, PermissionSpec[].class);
         if (!PermissionProcessor.shouldShowRequestPermissionRationale(this, permissionSpecs)) {
-            showMessageOKCancel("You need to allow access to Contacts",
+            showMessageOKCancel(getResources().getString(R.string.need_write_storage),
                     new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
@@ -39,18 +41,15 @@ public class PermissionActivity extends Activity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (REQUEST_PERMISSION == requestCode) {
-            if (grantResults != null) {
-                for (int code : grantResults) {
-                    if (code != PackageManager.PERMISSION_GRANTED) {
-                        throw new PermissionDeniedException();
-                    }
+            for (int code : grantResults) {
+                if (code != PackageManager.PERMISSION_GRANTED) {
+                    throw new PermissionDeniedException();
                 }
-                throw new PermissionGrantedException();
             }
-            throw new PermissionDeniedException();
+            throw new PermissionGrantedException();
         }
     }
 

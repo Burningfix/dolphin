@@ -10,6 +10,35 @@ import org.dolphin.lib.util.ValueUtil;
  * Created by hanyanan on 2016/6/13.
  */
 public final class PermissionSpec implements Parcelable {
+    private static final String DEFAULT_DESCRIPTION = "";
+    final String permission;
+    final int minVersionCode;
+    final String description;
+
+    PermissionSpec(String permission, String description, int minVersionCode) {
+        this.permission = permission;
+        this.description = description;
+        this.minVersionCode = minVersionCode;
+    }
+
+    PermissionSpec(String permission, int minVersionCode) {
+        this.permission = permission;
+        this.description = DEFAULT_DESCRIPTION;
+        this.minVersionCode = minVersionCode;
+    }
+
+    PermissionSpec(String permission) {
+        this.permission = permission;
+        this.description = DEFAULT_DESCRIPTION;
+        this.minVersionCode = -1;
+    }
+
+    protected PermissionSpec(Parcel in) {
+        permission = in.readString();
+        minVersionCode = in.readInt();
+        description = in.readString();
+    }
+
     public static final Creator<PermissionSpec> CREATOR = new Creator<PermissionSpec>() {
         @Override
         public PermissionSpec createFromParcel(Parcel in) {
@@ -21,24 +50,6 @@ public final class PermissionSpec implements Parcelable {
             return new PermissionSpec[size];
         }
     };
-    final String permission;
-    final int minVersionCode;
-
-    PermissionSpec(String permission, int minVersionCode) {
-        this.permission = permission;
-        this.minVersionCode = minVersionCode;
-    }
-
-    PermissionSpec(String permission) {
-        this.permission = permission;
-        this.minVersionCode = -1;
-    }
-
-
-    private PermissionSpec(Parcel in) {
-        permission = in.readString();
-        minVersionCode = in.readInt();
-    }
 
     public boolean isSupportOnDevice() {
         return Build.VERSION.SDK_INT >= minVersionCode;
@@ -72,5 +83,6 @@ public final class PermissionSpec implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(permission);
         dest.writeInt(minVersionCode);
+        dest.writeString(description);
     }
 }
