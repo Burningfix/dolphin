@@ -5,6 +5,8 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Parcelable;
 import android.support.annotation.NonNull;
 import android.view.View;
@@ -28,7 +30,7 @@ public class PermissionActivity extends Activity {
         }
         final PermissionSpec[] permissionSpecs = Arrays.copyOf(parcelables, parcelables.length, PermissionSpec[].class);
         if (!PermissionProcessor.shouldShowRequestPermissionRationale(this, permissionSpecs)) {
-            showMessageOKCancel(getResources().getString(R.string.need_write_storage),
+            showMessageOKCancel(getResources().getString(R.string.quest_permission_tips),
                     new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
@@ -46,10 +48,23 @@ public class PermissionActivity extends Activity {
         if (REQUEST_PERMISSION == requestCode) {
             for (int code : grantResults) {
                 if (code != PackageManager.PERMISSION_GRANTED) {
-                    throw new PermissionDeniedException();
+                    new Handler(Looper.getMainLooper()).post(new Runnable() {
+                        @Override
+                        public void run() {
+                            throw new PermissionDeniedException();
+                        }
+                    });
+                    this.finish();
+                    return;
                 }
             }
-            throw new PermissionGrantedException();
+            this.finish();
+            new Handler(Looper.getMainLooper()).post(new Runnable() {
+                @Override
+                public void run() {
+                    throw new PermissionGrantedException();
+                }
+            });
         }
     }
 

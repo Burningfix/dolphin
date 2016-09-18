@@ -26,6 +26,7 @@ public class PermissionProcessor {
 
     static {
         ESSENTIAL_PERMISSIONS.add(new PermissionSpec(Manifest.permission.WRITE_EXTERNAL_STORAGE));
+        ESSENTIAL_PERMISSIONS.add(new PermissionSpec(Manifest.permission.CAMERA));
         ESSENTIAL_PERMISSIONS.add(new PermissionSpec(Manifest.permission.READ_EXTERNAL_STORAGE, Build.VERSION_CODES.JELLY_BEAN));
     }
 
@@ -38,6 +39,15 @@ public class PermissionProcessor {
         }
 
         return permissions.toArray(new PermissionSpec[0]);
+    }
+
+    private static boolean checkPermissionSpec(Context context, PermissionSpec permissionSpec) {
+        if (permissionSpec.isSupportOnDevice()) {
+            int selfPermission = ContextCompat.checkSelfPermission(context, permissionSpec.permission);
+            return selfPermission == PackageManager.PERMISSION_GRANTED;
+        }
+        // 当前平台不支持,一般是因为设备版本太低，默认为true
+        return true;
     }
 
     /**
@@ -53,15 +63,6 @@ public class PermissionProcessor {
             }
         }
 
-        return true;
-    }
-
-    private static boolean checkPermissionSpec(Context context, PermissionSpec permissionSpec) {
-        if (permissionSpec.isSupportOnDevice()) {
-            int selfPermission = ContextCompat.checkSelfPermission(context, permissionSpec.permission);
-            return selfPermission == PackageManager.PERMISSION_GRANTED;
-        }
-        // 当前平台不支持,一般是因为设备版本太低，默认为true
         return true;
     }
 
@@ -90,7 +91,7 @@ public class PermissionProcessor {
         List<String> permissions = new ArrayList<String>();
 
         for (PermissionSpec permissionSpec : permissionSpecs) {
-            if (permissionSpec.isSupportOnDevice()) {
+            if (!checkPermissionSpec(activity, permissionSpec)) {
                 permissions.add(permissionSpec.permission);
             }
         }
@@ -98,6 +99,7 @@ public class PermissionProcessor {
         if (permissions.isEmpty()) {
             throw new IllegalArgumentException("PermissionSpec is Empty!");
         }
+
         // 会调用Activity的onRequestPermissionsResult回调
         ActivityCompat.requestPermissions(activity, permissions.toArray(new String[permissions.size()]), requestCode);
     }
@@ -117,12 +119,12 @@ public class PermissionProcessor {
 
         for (PermissionSpec permissionSpec : permissionSpecs) {
             if (permissionSpec.isSupportOnDevice()
-                    && !ActivityCompat.shouldShowRequestPermissionRationale(activity, permissionSpec.permission)) {
-                return false;
+                    && ActivityCompat.shouldShowRequestPermissionRationale(activity, permissionSpec.permission)) {
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
     /**
